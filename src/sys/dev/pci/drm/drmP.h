@@ -58,7 +58,13 @@
 #include <sys/mman.h>
 #include <sys/stdint.h>
 #include <sys/agpio.h>
+#if !defined(__NetBSD__)
 #include <sys/memrange.h>
+#else /* !defined(__NetBSD__) */
+#if defined(__i386__) || defined(__x86_64__)
+#include <machine/mtrr.h>
+#endif
+#endif /* !defined(__NetBSD__) */
 #include <sys/extent.h>
 #include <sys/vnode.h>
 #include <uvm/uvm.h>
