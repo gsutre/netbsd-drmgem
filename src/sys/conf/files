@@ -1065,7 +1065,8 @@ file	dev/ic/lan9118.c		smsh
 
 # DRM - Direct Rendering Infrastructure: dev/drm
 define drm {}
-include "external/bsd/drm/conf/files.drm"
+#include "external/bsd/drm/conf/files.drm"
+include "dev/pci/drm/files.drm"
 
 # Definitions for wscons
 # device attributes: display, display with emulator, keyboard, and mouse
