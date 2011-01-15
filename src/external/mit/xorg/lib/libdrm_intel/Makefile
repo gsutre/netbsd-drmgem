@@ -7,6 +7,9 @@ LIB=	drm_intel
 
 SRCS=	intel_bufmgr.c intel_bufmgr_fake.c intel_bufmgr_gem.c mm.c
 
+INCS=	intel_bufmgr.h
+INCSDIR=${X11INCDIR}/libdrm
+
 CPPFLAGS+=	-I${DESTDIR}${X11INCDIR}/libdrm
 CPPFLAGS+=	-I${DESTDIR}${X11INCDIR}/X11 -I${X11SRCDIR.drm}
 

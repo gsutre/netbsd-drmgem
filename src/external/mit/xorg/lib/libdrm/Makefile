@@ -5,14 +5,14 @@
 LIB=	drm
 .PATH:	${X11SRCDIR.${LIB}}
 
-SRCS=	xf86drm.c xf86drmHash.c xf86drmRandom.c xf86drmSL.c
+SRCS=	xf86drm.c xf86drmHash.c xf86drmMode.c xf86drmRandom.c xf86drmSL.c
 
 INCS=	xf86drm.h xf86drmMode.h
 INCSDIR=${X11INCDIR}
 
 CPPFLAGS+=	-I${DESTDIR}${X11INCDIR}/libdrm
 
-SUBDIR=	drm kms
+SUBDIR=	drm
 
 PKGCONFIG=	libdrm
 PKGDIST=	${LIB}
