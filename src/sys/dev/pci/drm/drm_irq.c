@@ -30,8 +30,6 @@
  * handing interrupt handlers off to the drivers.
  */
 
-#include <sys/workq.h>
-
 #include "drmP.h"
 #include "drm.h"
 

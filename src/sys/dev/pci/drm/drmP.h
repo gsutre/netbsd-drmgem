@@ -67,6 +67,11 @@
 #endif /* !defined(__NetBSD__) */
 #include <sys/extent.h>
 #include <sys/vnode.h>
+
+#if defined(__NetBSD__)
+#include <sys/select.h>
+#endif /* defined(__NetBSD__) */
+
 #include <uvm/uvm.h>
 #include <dev/pci/pcidevs.h>
 #include <dev/pci/pcivar.h>

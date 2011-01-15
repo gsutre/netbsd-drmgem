@@ -40,7 +40,11 @@
  */
 
 #include <sys/param.h>
+#if !defined(__NetBSD__)
 #include <sys/limits.h>
+#else
+#include <sys/syslimits.h>
+#endif
 #include <sys/systm.h>
 #include <uvm/uvm_extern.h>
 

@@ -52,7 +52,11 @@
 #include <machine/pmap.h>
 
 #include <sys/queue.h>
+#if !defined(__NetBSD__)
 #include <sys/workq.h>
+#else
+#include <sys/workqueue.h>
+#endif
 #if 0
 #	define INTELDRM_WATCH_COHERENCY
 #	define WATCH_INACTIVE
