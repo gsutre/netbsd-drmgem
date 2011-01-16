@@ -33,9 +33,15 @@
 #include <machine/atomic.h>
 #endif
 
+#ifdef __NetBSD__
+#include <sys/atomic.h>
+#endif
+
 /* Many of these implementations are rather fake, but good enough. */
 
 typedef u_int32_t atomic_t;
+
+#if !defined(__NetBSD__)
 
 #ifdef __FreeBSD__
 #define atomic_set(p, v)	(*(p) = (v))
@@ -113,6 +119,43 @@ test_and_set_bit(u_int b, volatile void *p)
 	return r;
 }
 
+#else /* !defined(__NetBSD__) */
+
+#define	atomic_set(p, v)		(*((volatile uint32_t *)p) = (v))
+#define atomic_read(p)		(*(p))
+#define atomic_inc(p)		atomic_inc_uint(p)
+#define atomic_dec(p)		atomic_dec_uint(p)
+#define atomic_add(n, p)	atomic_add_int(p, n)
+#define atomic_sub(n, p)	atomic_add_int(p, -(n))
+
+#define	atomic_set_int(p, bits)		atomic_or_uint(p, bits)
+#define	atomic_clear_int(p, bits)	atomic_and_uint(p, ~(bits))
+#define atomic_setbits_int(p, bits)	atomic_set_int(p, bits)
+#define atomic_clearbits_int(p, bits)	atomic_clear_int(p, bits)
+
+#define	atomic_cmpset_int(p, o, n)					\
+			((old == atomic_cas_uint(p, o, n)) ? 1 : 0)
+
+static __inline atomic_t
+test_and_set_bit(u_int b, volatile void *p)
+{
+	volatile uint32_t *val;
+	uint32_t mask, old;
+
+	val = (volatile uint32_t *)p;
+	mask = 1 << b;
+
+	do {
+		old = *val;
+		if ((old & mask) != 0)
+			break;
+	} while (atomic_cas_uint(val, old, old | mask) != old);
+
+	return old & mask;
+}
+
+#endif /* !defined(__NetBSD__) */
+
 static __inline void
 clear_bit(u_int b, volatile void *p)
 {
@@ -132,12 +175,12 @@ test_bit(u_int b, volatile void *p)
 }
 
 static __inline int
-find_first_zero_bit(volatile void *p, int max)
+find_first_zero_bit(volatile void *p, int max_)
 {
 	int b;
 	volatile u_int *ptr = (volatile u_int *)p;
 
-	for (b = 0; b < max; b += 32) {
+	for (b = 0; b < max_; b += 32) {
 		if (ptr[b >> 5] != ~0) {
 			for (;;) {
 				if ((ptr[b >> 5] & (1 << (b & 0x1f))) == 0)
@@ -146,5 +189,5 @@ find_first_zero_bit(volatile void *p, int max)
 			}
 		}
 	}
-	return max;
+	return max_;
 }
