@@ -88,7 +88,9 @@
 
 #define MUTEX_ASSERT_LOCKED(mtx)	(KASSERT(mutex_owned(mtx)))
 #define MUTEX_ASSERT_UNLOCKED(mtx)	(KASSERT(!(mutex_owned(mtx))))
-#endif
+
+typedef void *			caddr_t;
+#endif /* defined(__NetBSD__) */
 
 #include "drm.h"
 #include "drm_atomic.h"
