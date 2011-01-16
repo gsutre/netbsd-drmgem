@@ -49,6 +49,7 @@
 #include <sys/resource.h>
 #include <sys/resourcevar.h>
 #include <sys/mutex.h>
+#include <sys/rwlock.h>
 #include <sys/fcntl.h>
 #include <sys/filio.h>
 #include <sys/signalvar.h>
@@ -88,6 +89,12 @@
 
 #define MUTEX_ASSERT_LOCKED(mtx)	(KASSERT(mutex_owned(mtx)))
 #define MUTEX_ASSERT_UNLOCKED(mtx)	(KASSERT(!(mutex_owned(mtx))))
+
+/* OpenBSD rwlock(9) compatibility definitions. */
+#define rw_enter_write(rwl)	rw_enter(rwl, RW_WRITER)
+#define rw_exit_write(rwl)	rw_exit(rwl)
+#define rw_enter_read(rwl)	rw_enter(rwl, RW_READER)
+#define rw_exit_read(rwl)	rw_exit(rwl)
 
 typedef void *			caddr_t;
 #endif /* defined(__NetBSD__) */
@@ -293,7 +300,11 @@ struct drm_lock_data {
  * not concurrently accessed, so no locking is needed.
  */
 struct drm_device_dma {
+#if !defined(__NetBSD__)
 	struct rwlock	 	 dma_lock;
+#else /* !defined(__NetBSD__) */
+	krwlock_t	 	 dma_lock;
+#endif /* !defined(__NetBSD__) */
 	struct drm_buf_entry	 bufs[DRM_MAX_ORDER+1];
 	struct drm_buf		**buflist;	/* Vector of pointers info bufs*/
 	unsigned long		*pagelist;
@@ -515,7 +526,11 @@ struct drm_device {
 	
 	int		  if_version;	/* Highest interface version set */
 				/* Locks */
+#if !defined(__NetBSD__)
 	struct rwlock	  dev_lock;	/* protects everything else */
+#else /* !defined(__NetBSD__) */
+	krwlock_t	  dev_lock;	/* protects everything else */
+#endif /* !defined(__NetBSD__) */
 
 				/* Usage Counters */
 	int		  open_count;	/* Outstanding files open	   */

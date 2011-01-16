@@ -379,7 +379,11 @@ drm_dma_setup(struct drm_device *dev)
 	if (dev->dma == NULL)
 		return (ENOMEM);
 
+#if !defined(__NetBSD__)
 	rw_init(&dev->dma->dma_lock, "drmdma");
+#else /* !defined(__NetBSD__) */
+	rw_init(&dev->dma->dma_lock);
+#endif /* !defined(__NetBSD__) */
 
 	return (0);
 }

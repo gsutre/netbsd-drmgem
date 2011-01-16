@@ -165,7 +165,11 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 	dev->unique = da->busid;
 	dev->unique_len = da->busid_len;
 
+#if !defined(__NetBSD__)
 	rw_init(&dev->dev_lock, "drmdevlk");
+#else /* !defined(__NetBSD__) */
+	rw_init(&dev->dev_lock);
+#endif /* !defined(__NetBSD__) */
 	mtx_init(&dev->lock.spinlock, IPL_NONE);
 	mtx_init(&dev->event_lock, IPL_TTY);
 

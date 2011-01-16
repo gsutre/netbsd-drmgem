@@ -2461,7 +2461,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 		dev_priv->entries++;
 	}
 
+#if !defined(__NetBSD__)
 	if (rw_enter(&dev->dev_lock, RW_NOSLEEP | RW_READ) != 0) {
+#else /* !defined(__NetBSD__) */
+	if (rw_tryenter(&dev->dev_lock, RW_READER) == 0) {
+#endif /* !defined(__NetBSD__) */
 		uvmfault_unlockall(ufi, NULL, &obj->uobj, NULL);
 		DRM_READLOCK();
 		locked = uvmfault_relock(ufi);
