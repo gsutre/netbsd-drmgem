@@ -133,6 +133,7 @@ timeout_add_msec(callout_t *cs, int msec)
 
 /* OpenBSD types compatibility definitions. */
 typedef void *			caddr_t;
+typedef struct vm_page *	vm_page_t;
 #endif /* defined(__NetBSD__) */
 
 #include "drm.h"
