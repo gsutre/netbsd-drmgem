@@ -812,19 +812,31 @@ drm_gem_object_unreference(struct drm_obj *obj)
 static __inline void 
 drm_lock_obj(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&obj->uobj);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 }
 
 static __inline void 
 drm_unlock_obj(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 }
 #ifdef DRMLOCKDEBUG
 
 #define DRM_ASSERT_HELD(obj)		\
 	KASSERT(obj->do_flags & DRM_BUSY && obj->holding_proc == curproc)
+#if !defined(__NetBSD__)
 #define DRM_OBJ_ASSERT_LOCKED(obj) /* XXX mutexes */
+#else /* !defined(__NetBSD__) */
+#define DRM_OBJ_ASSERT_LOCKED(obj) KASSERT(mutex_owned(&obj->uobj.vmobjlock))
+#endif /* !defined(__NetBSD__) */
 #define DRM_ASSERT_LOCKED(lock) MUTEX_ASSERT_LOCKED(lock)
 #else
 

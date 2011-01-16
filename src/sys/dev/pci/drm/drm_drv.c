@@ -1151,7 +1151,11 @@ drm_hold_object_locked(struct drm_obj *obj)
 {
 	while (obj->do_flags & DRM_BUSY) {
 		atomic_setbits_int(&obj->do_flags, DRM_WANTED);
+#if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 #ifdef DRMLOCKDEBUG
 		{
 		int ret = 0;
@@ -1163,7 +1167,11 @@ drm_hold_object_locked(struct drm_obj *obj)
 #else
 		tsleep(obj, PVM, "drm_hold", 0); /* XXX msleep */
 #endif
+#if !defined(__NetBSD__)
 		simple_lock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_enter(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	}
 #ifdef DRMLOCKDEBUG
 	obj->holding_proc = curproc;
@@ -1174,15 +1182,27 @@ drm_hold_object_locked(struct drm_obj *obj)
 void
 drm_hold_object(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	drm_hold_object_locked(obj);
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 }
 
 int
 drm_try_hold_object(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	/* if the object is free, grab it */
 	if (obj->do_flags & (DRM_BUSY | DRM_WANTED))
 		return (0);
@@ -1190,7 +1210,11 @@ drm_try_hold_object(struct drm_obj *obj)
 #ifdef DRMLOCKDEBUG
 	obj->holding_proc = curproc;
 #endif
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	return (1);
 }
 
@@ -1209,9 +1233,17 @@ drm_unhold_object_locked(struct drm_obj *obj)
 void
 drm_unhold_object(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	drm_unhold_object_locked(obj);
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 }
 
 void
@@ -1223,15 +1255,27 @@ drm_ref_locked(struct uvm_object *uobj)
 void
 drm_ref(struct uvm_object *uobj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	drm_ref_locked(uobj);
+#if !defined(__NetBSD__)
 	simple_unlock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 }
 
 void
 drm_unref(struct uvm_object *uobj)
 {
+#if !defined(__NetBSD__)
 	simple_lock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	drm_unref_locked(uobj);
 }
 
@@ -1244,23 +1288,39 @@ drm_unref_locked(struct uvm_object *uobj)
 again:
 	if (uobj->uo_refs > 1) {
 		uobj->uo_refs--;
+#if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_exit(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 		return;
 	}
 
 	/* inlined version of drm_hold because we want to trylock then sleep */
 	if (obj->do_flags & DRM_BUSY) {
 		atomic_setbits_int(&obj->do_flags, DRM_WANTED);
+#if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_exit(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 		tsleep(obj, PVM, "drm_unref", 0); /* XXX msleep */
+#if !defined(__NetBSD__)
 		simple_lock(&uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_enter(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 		goto again;
 	}
 #ifdef DRMLOCKDEBUG
 	obj->holding_proc = curproc;
 #endif
 	atomic_setbits_int(&obj->do_flags, DRM_BUSY);
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&uobj->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	/* We own this thing now. it is on no queues, though it may still
 	 * be bound to the aperture (and on the inactive list, in which case
 	 * idling the buffer is what triggered the free. Since we know no one 

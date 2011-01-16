@@ -1538,10 +1538,18 @@ inteldrm_purge_obj(struct drm_obj *obj)
 	 * OpenGL) the pages are defined to be freed if they were cleared
 	 * so kill them and free up the memory
 	 */
+#if !defined(__NetBSD__)
 	simple_lock(&obj->uao->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_enter(&obj->uao->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 	obj->uao->pgops->pgo_flush(obj->uao, 0, obj->size,
 	    PGO_ALLPAGES | PGO_FREE);
+#if !defined(__NetBSD__)
 	simple_unlock(&obj->uao->vmobjlock);
+#else /* !defined(__NetBSD__) */
+	mutex_exit(&obj->uao->vmobjlock);
+#endif /* !defined(__NetBSD__) */
 
 	/*
 	 * If flush failed, it may have halfway through, so just
