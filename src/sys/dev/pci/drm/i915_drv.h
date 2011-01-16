@@ -387,8 +387,13 @@ struct inteldrm_softc {
 		 * fire periodically while the ring is running. When it
 		 * fires, go retire requests in a workq.
 		 */
+#if !defined(__NetBSD__)
 		struct timeout retire_timer;
 		struct timeout hang_timer;
+#else /* !defined(__NetBSD__) */
+		callout_t retire_timer;
+		callout_t hang_timer;
+#endif /* !defined(__NetBSD__) */
 		/* for hangcheck */
 		int		hang_cnt;
 		u_int32_t	last_acthd;

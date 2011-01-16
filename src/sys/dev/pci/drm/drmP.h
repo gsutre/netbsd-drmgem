@@ -96,6 +96,42 @@
 #define rw_enter_read(rwl)	rw_enter(rwl, RW_READER)
 #define rw_exit_read(rwl)	rw_exit(rwl)
 
+/* OpenBSD timeout(9) compatibility definitions. */
+static __inline void
+timeout_set(callout_t *cs, void (*func)(void *), void *arg)
+{
+	callout_init(cs, 0);
+	callout_setfunc(cs, func, arg);
+}
+static __inline void
+timeout_del(callout_t *cs)
+{
+	(void)callout_stop(cs);
+}
+static __inline void
+timeout_add_sec(callout_t *cs, int sec)
+{
+	long long ticks;
+
+	ticks = (long long)hz * sec;
+	if (ticks > INT_MAX)
+		ticks = INT_MAX;
+
+	callout_schedule(cs, (int)ticks);
+}
+static __inline void
+timeout_add_msec(callout_t *cs, int msec)
+{
+	long long ticks;
+
+	ticks = (long long)msec * 1000 / tick;
+	if (ticks > INT_MAX)
+		ticks = INT_MAX;
+
+	callout_schedule(cs, (int)ticks);
+}
+
+/* OpenBSD types compatibility definitions. */
 typedef void *			caddr_t;
 #endif /* defined(__NetBSD__) */
 
@@ -362,10 +398,11 @@ struct drm_local_map {
 struct drm_vblank_info {
 #if !defined(__NetBSD__)
 	struct mutex		 vb_lock;		/* VBLANK data lock */
+	struct timeout		 vb_disable_timer;	/* timer for disable */
 #else /* !defined(__NetBSD__) */
 	kmutex_t		 vb_lock;		/* VBLANK data lock */
+	callout_t		 vb_disable_timer;	/* timer for disable */
 #endif /* !defined(__NetBSD__) */
-	struct timeout		 vb_disable_timer;	/* timer for disable */
 	int			 vb_num;		/* number of crtcs */
 	u_int32_t		 vb_max;		/* counter reg size */
 	struct drm_vblank {
