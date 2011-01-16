@@ -80,6 +80,16 @@
 #include <machine/param.h>
 #include <machine/bus.h>
 
+#if defined(__NetBSD__)
+/* OpenBSD mutex(9) compatibility definitions. */
+#define mtx_init(mtx, lvl)	mutex_init(mtx, MUTEX_DEFAULT, lvl)
+#define mtx_enter(mtx)		mutex_enter(mtx)
+#define mtx_leave(mtx)		mutex_exit(mtx)
+
+#define MUTEX_ASSERT_LOCKED(mtx)	(KASSERT(mutex_owned(mtx)))
+#define MUTEX_ASSERT_UNLOCKED(mtx)	(KASSERT(!(mutex_owned(mtx))))
+#endif
+
 #include "drm.h"
 #include "drm_atomic.h"
 
@@ -244,7 +254,11 @@ TAILQ_HEAD(drmevlist, drm_pending_event);
 struct drm_file {
 	SPLAY_HEAD(drm_obj_tree, drm_handle)	 obj_tree;
 	struct drmevlist			 evlist;
+#if !defined(__NetBSD__)
 	struct mutex				 table_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t				 table_lock;
+#endif /* !defined(__NetBSD__) */
 	struct selinfo				 rsel;
 	SPLAY_ENTRY(drm_file)			 link;
 	int					 authenticated;
@@ -259,7 +273,11 @@ struct drm_file {
 };
 
 struct drm_lock_data {
+#if !defined(__NetBSD__)
 	struct mutex		 spinlock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 spinlock;
+#endif /* !defined(__NetBSD__) */
 	struct drm_hw_lock	*hw_lock;	/* Hardware lock */
 	/* Unique identifier of holding process (NULL is kernel) */
 	struct drm_file		*file_priv;
@@ -329,7 +347,11 @@ struct drm_local_map {
 };
 
 struct drm_vblank_info {
+#if !defined(__NetBSD__)
 	struct mutex		 vb_lock;		/* VBLANK data lock */
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 vb_lock;		/* VBLANK data lock */
+#endif /* !defined(__NetBSD__) */
 	struct timeout		 vb_disable_timer;	/* timer for disable */
 	int			 vb_num;		/* number of crtcs */
 	u_int32_t		 vb_max;		/* counter reg size */
@@ -516,7 +538,11 @@ struct drm_device {
 
 	/* VBLANK support */
 	struct drm_vblank_info	*vblank;		/* One per ctrc */
+#if !defined(__NetBSD__)
 	struct mutex		 event_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 event_lock;
+#endif /* !defined(__NetBSD__) */
 
 	pid_t			 buf_pgid;
 
@@ -527,7 +553,11 @@ struct drm_device {
 	struct drm_local_map	*agp_buffer_map;
 
 	/* GEM info */
+#if !defined(__NetBSD__)
 	struct mutex		 obj_name_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 obj_name_lock;
+#endif /* !defined(__NetBSD__) */
 	atomic_t		 obj_count;
 	u_int			 obj_name;
 	atomic_t		 obj_memory;

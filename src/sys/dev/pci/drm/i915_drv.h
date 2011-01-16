@@ -125,7 +125,11 @@ struct inteldrm_softc {
 	size_t			 max_gem_obj_size; /* XXX */
 
 	/* Protects user_irq_refcount and irq_mask reg */
+#if !defined(__NetBSD__)
 	struct mutex		 user_irq_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 user_irq_lock;
+#endif /* !defined(__NetBSD__) */
 	/* Refcount for user irq, only enabled when needed */
 	int			 user_irq_refcount;
 	/* Cached value of IMR to avoid reads in updating the bitfield */
@@ -135,7 +139,11 @@ struct inteldrm_softc {
 	u_int32_t		 gt_irq_mask_reg;
 	u_int32_t		 pch_irq_mask_reg;
 
+#if !defined(__NetBSD__)
 	struct mutex		 fence_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 fence_lock;
+#endif /* !defined(__NetBSD__) */
 	struct inteldrm_fence	 fence_regs[16]; /* 965 */
 	int			 fence_reg_start; /* 4 by default */
 	int			 num_fence_regs; /* 8 pre-965, 16 post */
@@ -148,10 +156,18 @@ struct inteldrm_softc {
 	int			 entries;
 
 	/* protects inactive, flushing, active and exec locks */
+#if !defined(__NetBSD__)
 	struct mutex		 list_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 list_lock;
+#endif /* !defined(__NetBSD__) */
 
 	/* protects access to request_list */
+#if !defined(__NetBSD__)
 	struct mutex		 request_lock;
+#else /* !defined(__NetBSD__) */
+	kmutex_t		 request_lock;
+#endif /* !defined(__NetBSD__) */
 
 	/* Register state */
 	u8 saveLBB;
