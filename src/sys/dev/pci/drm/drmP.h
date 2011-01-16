@@ -70,6 +70,7 @@
 #include <sys/vnode.h>
 
 #if defined(__NetBSD__)
+#include <sys/kauth.h>
 #include <sys/select.h>
 #endif /* defined(__NetBSD__) */
 
@@ -164,11 +165,27 @@ typedef struct vm_page *	vm_page_t;
 	(minor(_kdev) < drm_cd.cd_ndevs) ? drm_cd.cd_devs[minor(_kdev)] : NULL
 #endif
 
+#if !defined(__NetBSD__)
+
 /* DRM_SUSER returns true if the user is superuser */
 #define DRM_SUSER(p)		(suser(p, p->p_acflag) == 0)
 #define DRM_MTRR_WC		MDF_WRITECOMBINE
 
 #define PAGE_ALIGN(addr)	(((addr) + PAGE_MASK) & ~PAGE_MASK)
+
+#else /* !defined(__NetBSD__) */
+
+#define DRM_SUSER(p)		(kauth_cred_getsvuid((p)->p_cred) == 0)
+
+#ifdef MTRR_TYPE_WC
+#define DRM_MTRR_WC		MTRR_TYPE_WC
+#else
+#define DRM_MTRR_WC		0
+#endif
+
+#define PAGE_ALIGN(addr)	round_page(addr)
+
+#endif /* !defined(__NetBSD__) */
 
 extern struct cfdriver drm_cd;
 
