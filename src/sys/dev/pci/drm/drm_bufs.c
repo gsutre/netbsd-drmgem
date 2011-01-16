@@ -141,7 +141,11 @@ drm_addmap(struct drm_device * dev, unsigned long offset, unsigned long size,
 
 
 	DRM_LOCK();
+#if !defined(__NetBSD__)
 	ret = extent_alloc(dev->handle_ext, map->size, PAGE_SIZE, 0,
+#else /* !defined(__NetBSD__) */
+	ret = extent_alloc(dev->handle_ext, map->size, PAGE_SIZE,
+#endif /* !defined(__NetBSD__) */
 	    0, EX_NOWAIT, &map->ext);
 	if (ret) {
 		DRM_ERROR("can't find free offset\n");
