@@ -1115,12 +1115,20 @@ drm_dmamem_alloc(bus_dma_tag_t dmat, bus_size_t size, bus_size_t alignment,
 		goto strfree;
 
 	if (bus_dmamem_alloc(dmat, size, alignment, 0, mem->segs, nsegments,
+#if !defined(__NetBSD__)
 	    &mem->nsegs, BUS_DMA_NOWAIT | BUS_DMA_ZERO) != 0)
+#else /* !defined(__NetBSD__) */
+	    &mem->nsegs, BUS_DMA_NOWAIT) != 0)
+#endif /* !defined(__NetBSD__) */
 		goto destroy;
 
 	if (bus_dmamem_map(dmat, mem->segs, mem->nsegs, size, 
 	    &mem->kva, BUS_DMA_NOWAIT | mapflags) != 0)
 		goto free;
+
+#if defined(__NetBSD__)
+	memset(mem->kva, 0, size);
+#endif /* defined(__NetBSD__) */
 
 	if (bus_dmamap_load(dmat, mem->map, mem->kva, size,
 	    NULL, BUS_DMA_NOWAIT | loadflags) != 0)
