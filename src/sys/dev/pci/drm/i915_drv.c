@@ -1413,10 +1413,18 @@ i915_gem_gtt_map_ioctl(struct drm_device *dev, void *data,
 	 * We give our reference from object_lookup to the mmap, so only
 	 * must free it in the case that the map fails.
 	 */
+#if !defined(__NetBSD__)
 	addr = uvm_map_hint(curproc, VM_PROT_READ | VM_PROT_WRITE);
 	ret = uvm_map_p(&curproc->p_vmspace->vm_map, &addr, nsize, &obj->uobj,
 	    offset, 0, UVM_MAPFLAG(UVM_PROT_RW, UVM_PROT_RW,
 	    UVM_INH_SHARE, UVM_ADV_RANDOM, 0), curproc);
+#else /* !defined(__NetBSD__) */
+	addr = curproc->p_emul->e_vm_default_addr(curproc,
+	    (vaddr_t)curproc->p_vmspace->vm_daddr, nsize);
+	ret = uvm_map(&curproc->p_vmspace->vm_map, &addr, nsize, &obj->uobj,
+	    offset, 0, UVM_MAPFLAG(UVM_PROT_RW, UVM_PROT_RW,
+	    UVM_INH_SHARE, UVM_ADV_RANDOM, 0));
+#endif /* !defined(__NetBSD__) */
 
 done:
 	if (ret == 0)
