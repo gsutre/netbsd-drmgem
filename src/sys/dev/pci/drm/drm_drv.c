@@ -103,6 +103,22 @@ boolean_t	 drm_flush(struct uvm_object *, voff_t, voff_t, int);
 SPLAY_PROTOTYPE(drm_obj_tree, drm_handle, entry, drm_handle_cmp);
 SPLAY_PROTOTYPE(drm_name_tree, drm_obj, entry, drm_name_cmp);
 
+#if defined(__NetBSD__)
+const struct cdevsw drm_cdevsw = {
+	drmopen,
+	drmclose,
+	drmread,
+	nowrite,
+	drmioctl,
+	nostop,
+	notty,
+	drmpoll,
+	drmmmap,
+	nokqfilter,
+	D_TTY | D_NEGOFFSAFE
+};
+#endif /* defined(__NetBSD__) */
+
 /*
  * attach drm to a pci-based driver.
  *
