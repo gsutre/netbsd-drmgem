@@ -521,6 +521,9 @@ drmopen(dev_t kdev, int flags, int fmt, struct lwp *p)
 	return (0);
 
 free_priv:
+#if defined(__NetBSD__)
+	mutex_destroy(&file_priv->table_lock);
+#endif /* defined(__NetBSD__) */
 	drm_free(file_priv);
 err:
 	DRM_LOCK();
@@ -607,6 +610,9 @@ drmclose(dev_t kdev, int flags, int fmt, struct lwp *p)
 	dev->buf_pgid = 0;
 
 	SPLAY_REMOVE(drm_file_tree, &dev->files, file_priv);
+#if defined(__NetBSD__)
+	mutex_destroy(&file_priv->table_lock);
+#endif /* defined(__NetBSD__) */
 	drm_free(file_priv);
 
 done:
