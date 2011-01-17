@@ -1006,7 +1006,7 @@ drm_getunique(struct drm_device *dev, void *data, struct drm_file *file_priv)
 int
 drm_version(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	struct drm_version	*version = data;
+	struct drm_version	*version_ = data;
 	int			 len;
 
 #define DRM_COPY(name, value)						\
@@ -1018,13 +1018,13 @@ drm_version(struct drm_device *dev, void *data, struct drm_file *file_priv)
 			return EFAULT;				\
 	}
 
-	version->version_major = dev->driver->major;
-	version->version_minor = dev->driver->minor;
-	version->version_patchlevel = dev->driver->patchlevel;
+	version_->version_major = dev->driver->major;
+	version_->version_minor = dev->driver->minor;
+	version_->version_patchlevel = dev->driver->patchlevel;
 
-	DRM_COPY(version->name, dev->driver->name);
-	DRM_COPY(version->date, dev->driver->date);
-	DRM_COPY(version->desc, dev->driver->desc);
+	DRM_COPY(version_->name, dev->driver->name);
+	DRM_COPY(version_->date, dev->driver->date);
+	DRM_COPY(version_->desc, dev->driver->desc);
 
 	return 0;
 }
