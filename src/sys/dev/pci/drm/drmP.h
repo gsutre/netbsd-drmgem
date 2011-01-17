@@ -173,6 +173,8 @@ typedef struct vm_page *	vm_page_t;
 #define DRM_READUNLOCK()	rw_exit_read(&dev->dev_lock)
 #define DRM_MAXUNITS		8
 
+#if !defined(__NetBSD__)
+
 /* D_CLONE only supports one device, this will be fixed eventually */
 #define drm_get_device_from_kdev(_kdev)	\
 	(drm_cd.cd_ndevs > 0 ? drm_cd.cd_devs[0] : NULL)
@@ -181,15 +183,19 @@ typedef struct vm_page *	vm_page_t;
 	(minor(_kdev) < drm_cd.cd_ndevs) ? drm_cd.cd_devs[minor(_kdev)] : NULL
 #endif
 
-#if !defined(__NetBSD__)
-
 /* DRM_SUSER returns true if the user is superuser */
 #define DRM_SUSER(p)		(suser(p, p->p_acflag) == 0)
 #define DRM_MTRR_WC		MDF_WRITECOMBINE
 
 #define PAGE_ALIGN(addr)	(((addr) + PAGE_MASK) & ~PAGE_MASK)
 
+extern struct cfdriver drm_cd;
+
 #else /* !defined(__NetBSD__) */
+
+/* D_CLONE only supports one device, this will be fixed eventually */
+#define drm_get_device_from_kdev(_kdev)	\
+	device_private(drmdev_cd.cd_ndevs > 0 ? drmdev_cd.cd_devs[0] : NULL)
 
 #define DRM_SUSER(l)		(kauth_cred_getsvuid((l)->l_cred) == 0)
 
@@ -201,9 +207,9 @@ typedef struct vm_page *	vm_page_t;
 
 #define PAGE_ALIGN(addr)	round_page(addr)
 
-#endif /* !defined(__NetBSD__) */
+extern struct cfdriver drmdev_cd;
 
-extern struct cfdriver drm_cd;
+#endif /* !defined(__NetBSD__) */
 
 typedef u_int64_t u64;
 typedef u_int32_t u32;
@@ -637,7 +643,7 @@ struct drm_device {
 	struct drm_agp_head	*agp;
 	struct drm_sg_mem	*sg;  /* Scatter gather memory */
 	atomic_t		*ctx_bitmap;
-	void			*dev_private;
+	struct device		*dev_private;
 	struct drm_local_map	*agp_buffer_map;
 
 	/* GEM info */

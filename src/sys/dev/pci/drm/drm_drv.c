@@ -63,9 +63,17 @@ int drm_debug_flag = 0;
 int	 drm_firstopen(struct drm_device *);
 int	 drm_lastclose(struct drm_device *);
 void	 drm_attach(struct device *, struct device *, void *);
+#if !defined(__NetBSD__)
 int	 drm_probe(struct device *, void *, void *);
+#else /* !defined(__NetBSD__) */
+int	 drm_probe(struct device *, struct cfdata *, void *);
+#endif /* !defined(__NetBSD__) */
 int	 drm_detach(struct device *, int);
+#if !defined(__NetBSD__)
 int	 drm_activate(struct device *, int);
+#else /* !defined(__NetBSD__) */
+int	 drm_activate(struct device *, devact_t);
+#endif /* !defined(__NetBSD__) */
 int	 drmprint(void *, const char *);
 int	 drm_dequeue_event(struct drm_device *, struct drm_file *, size_t,
 	     struct drm_pending_event **);
@@ -147,7 +155,11 @@ drm_pciprobe(struct pci_attach_args *pa, const struct drm_pcidev *idlist)
 }
 
 int
+#if !defined(__NetBSD__)
 drm_probe(struct device *parent, void *match, void *aux)
+#else /* !defined(__NetBSD__) */
+drm_probe(struct device *parent, struct cfdata *match, void *aux)
+#endif /* !defined(__NetBSD__) */
 {
 	struct drm_attach_args *da = aux;
 
@@ -264,11 +276,17 @@ drm_detach(struct device *self, int flags)
 }
 
 int
+#if !defined(__NetBSD__)
 drm_activate(struct device *self, int act)
+#else /* !defined(__NetBSD__) */
+drm_activate(struct device *self, devact_t act)
+#endif /* !defined(__NetBSD__) */
 {
 	switch (act) {
+#if !defined(__NetBSD__)
 	case DVACT_ACTIVATE:
 		break;
+#endif /* !defined(__NetBSD__) */
 
 	case DVACT_DEACTIVATE:
 		/* FIXME */
@@ -277,6 +295,7 @@ drm_activate(struct device *self, int act)
 	return (0);
 }
 
+#if !defined(__NetBSD__)
 struct cfattach drm_ca = {
 	sizeof(struct drm_device), drm_probe, drm_attach,
 	drm_detach, drm_activate
@@ -285,6 +304,17 @@ struct cfattach drm_ca = {
 struct cfdriver drm_cd = {
 	0, "drm", DV_DULL
 };
+#else /* !defined(__NetBSD__) */
+/*
+ * We do not use CFATTACH_DECL_NEW, in order to be compatible with
+ * the rest of the code, which does for instance
+ *	struct drm_device *dev = (struct drm_device *)self;
+ * instead of
+ *	struct drm_device *dev = device_private(self);
+ */
+CFATTACH_DECL(drmdev, sizeof(struct drm_device),
+    drm_probe, drm_attach, drm_detach, drm_activate);
+#endif /* !defined(__NetBSD__) */
 
 const struct drm_pcidev *
 drm_find_description(int vendor, int device, const struct drm_pcidev *idlist)
