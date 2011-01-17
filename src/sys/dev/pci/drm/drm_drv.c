@@ -1663,7 +1663,11 @@ drm_gem_load_uao(bus_dma_tag_t dmat, bus_dmamap_t map, struct uvm_object *uao,
 		goto free;
 	}
 
+#if !defined(__NetBSD__)
 	TAILQ_FOREACH(pg, &plist, pageq) {
+#else /* !defined(__NetBSD__) */
+	TAILQ_FOREACH(pg, &plist, pageq.queue) {
+#endif /* !defined(__NetBSD__) */
 		paddr_t pa = VM_PAGE_TO_PHYS(pg);
 		
 		if (i > 0 && pa == (segs[i - 1].ds_addr +
