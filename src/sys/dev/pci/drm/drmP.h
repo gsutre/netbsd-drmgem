@@ -83,6 +83,8 @@
 #include <machine/bus.h>
 
 #if defined(__NetBSD__)
+MALLOC_DECLARE(M_DRM);
+
 /* OpenBSD mutex(9) compatibility definitions. */
 #define mtx_init(mtx, lvl)	mutex_init(mtx, MUTEX_DEFAULT, lvl)
 #define mtx_enter(mtx)		mutex_enter(mtx)

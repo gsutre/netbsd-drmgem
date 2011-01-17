@@ -38,6 +38,10 @@
 
 #include "drmP.h"
 
+#if defined(__NetBSD__)
+MALLOC_DEFINE(M_DRM, "drm", "Direct Rendering Management");
+#endif /* defined(__NetBSD__) */
+
 void*
 drm_alloc(size_t size)
 {
