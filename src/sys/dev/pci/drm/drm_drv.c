@@ -85,7 +85,11 @@ void	 drm_handle_unref(struct drm_obj *);
 int	 drm_handle_cmp(struct drm_handle *, struct drm_handle *);
 int	 drm_name_cmp(struct drm_obj *, struct drm_obj *);
 int	 drm_fault(struct uvm_faultinfo *, vaddr_t, vm_page_t *, int, int,
+#if !defined(__NetBSD__)
 	     vm_fault_t, vm_prot_t, int);
+#else /* !defined(__NetBSD__) */
+	     vm_prot_t, int);
+#endif /* !defined(__NetBSD__) */
 boolean_t	 drm_flush(struct uvm_object *, voff_t, voff_t, int);
 
 SPLAY_PROTOTYPE(drm_obj_tree, drm_handle, entry, drm_handle_cmp);
@@ -1142,6 +1146,9 @@ struct uvm_pagerops drm_pgops = {
 	drm_ref,
 	drm_unref,
 	drm_fault,
+#if defined(__NetBSD__)
+	NULL,
+#endif /* defined(__NetBSD__) */
 	drm_flush,
 };
 
@@ -1359,7 +1366,11 @@ drm_flush(struct uvm_object *uobj, voff_t start, voff_t stop, int flags)
 
 int
 drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
+#if !defined(__NetBSD__)
     int npages, int centeridx, vm_fault_t fault_type,
+#else /* !defined(__NetBSD__) */
+    int npages, int centeridx,
+#endif /* !defined(__NetBSD__) */
     vm_prot_t access_type, int flags)
 {
 	struct vm_map_entry *entry = ufi->entry;

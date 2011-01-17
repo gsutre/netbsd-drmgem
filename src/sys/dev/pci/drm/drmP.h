@@ -85,6 +85,11 @@
 #if defined(__NetBSD__)
 MALLOC_DECLARE(M_DRM);
 
+/* OpenBSD UVM pager compatibility definitions. */
+#define VM_PAGER_OK		0
+#define VM_PAGER_ERROR		EIO
+#define VM_PAGER_REFAULT	ERESTART
+
 /* OpenBSD mutex(9) compatibility definitions. */
 #define mtx_init(mtx, lvl)	mutex_init(mtx, MUTEX_DEFAULT, lvl)
 #define mtx_enter(mtx)		mutex_enter(mtx)

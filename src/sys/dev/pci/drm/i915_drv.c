@@ -1548,15 +1548,15 @@ inteldrm_purge_obj(struct drm_obj *obj)
 	 */
 #if !defined(__NetBSD__)
 	simple_lock(&obj->uao->vmobjlock);
-#else /* !defined(__NetBSD__) */
-	mutex_enter(&obj->uao->vmobjlock);
-#endif /* !defined(__NetBSD__) */
 	obj->uao->pgops->pgo_flush(obj->uao, 0, obj->size,
 	    PGO_ALLPAGES | PGO_FREE);
-#if !defined(__NetBSD__)
 	simple_unlock(&obj->uao->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&obj->uao->vmobjlock);
+	mutex_enter(&obj->uao->vmobjlock);
+	obj->uao->pgops->pgo_put(obj->uao, 0, obj->size,
+	    PGO_ALLPAGES | PGO_FREE);
+	/* the mutex is already released (cf. uao_put in uvm_aobj.c) */
+	KASSERT(!mutex_owned(&obj->uao->vmobjlock));
 #endif /* !defined(__NetBSD__) */
 
 	/*
