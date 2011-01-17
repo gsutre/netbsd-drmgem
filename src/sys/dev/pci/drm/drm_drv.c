@@ -144,7 +144,12 @@ drm_attach_pci(const struct drm_driver_info *driver, struct pci_attach_args *pa,
 		return (NULL);
 	}
 	snprintf(arg.busid, arg.busid_len, "pci:%04x:%02x:%02x.%1x",
+#if !defined(__NetBSD__)
 	    pa->pa_domain, pa->pa_bus, pa->pa_device, pa->pa_function);
+#else /* !defined(__NetBSD__) */
+	    device_unit(device_parent(device_parent(dev))),
+	    pa->pa_bus, pa->pa_device, pa->pa_function);
+#endif /* !defined(__NetBSD__) */
 
 	return (config_found(dev, &arg, drmprint));
 }
