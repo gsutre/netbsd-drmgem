@@ -705,10 +705,9 @@ int			uvm_mremap(struct vm_map *, vaddr_t, vsize_t,
 			    struct proc *, int);
 
 /* uvm_object.c */
-int			uobj_wirepages(struct uvm_object *uobj, off_t start,
-			    off_t end);
-void			uobj_unwirepages(struct uvm_object *uobj, off_t start,
-			    off_t end);
+int			uobj_wirepages(struct uvm_object *, off_t, off_t,
+			    struct pglist *);
+void			uobj_unwirepages(struct uvm_object *, off_t, off_t);
 
 /* uvm_page.c */
 struct vm_page		*uvm_pagealloc_strat(struct uvm_object *,

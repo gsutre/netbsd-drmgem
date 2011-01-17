@@ -1342,6 +1342,9 @@ again:
 	atomic_sub(obj->size, &dev->obj_memory);
 	if (obj->do_flags & DRM_WANTED) /* should never happen, not on lists */
 		wakeup(obj);
+#if defined(__NetBSD__)
+	UVM_OBJ_DESTROY(&obj->uobj);
+#endif /* defined(__NetBSD__) */
 	pool_put(&dev->objpl, obj);
 }
 
@@ -1419,11 +1422,18 @@ drm_gem_object_alloc(struct drm_device *dev, size_t size)
 	/* uao create can't fail in the 0 case, it just sleeps */
 	obj->uao = uao_create(size, 0);
 	obj->size = size;
+#if !defined(__NetBSD__)
 	uvm_objinit(&obj->uobj, &drm_pgops, 1);
+#else /* !defined(__NetBSD__) */
+	UVM_OBJ_INIT(&obj->uobj, &drm_pgops, 1);
+#endif /* !defined(__NetBSD__) */
 
 	if (dev->driver->gem_init_object != NULL &&
 	    dev->driver->gem_init_object(obj) != 0) {
 		uao_detach(obj->uao);
+#if defined(__NetBSD__)
+		UVM_OBJ_DESTROY(&obj->uobj);
+#endif /* defined(__NetBSD__) */
 		pool_put(&dev->objpl, obj);
 		return (NULL);
 	}

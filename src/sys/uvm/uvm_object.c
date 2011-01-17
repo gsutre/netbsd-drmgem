@@ -60,7 +60,8 @@ __KERNEL_RCSID(0, "$NetBSD: uvm_object.c,v 1.7 2009/08/18 19:16:09 thorpej Exp $
  */
 
 int
-uobj_wirepages(struct uvm_object *uobj, off_t start, off_t end)
+uobj_wirepages(struct uvm_object *uobj, off_t start, off_t end,
+    struct pglist *list)
 {
 	int i, npages, error;
 	struct vm_page *pgs[FETCH_PAGECOUNT], *pg = NULL;
@@ -114,6 +115,8 @@ uobj_wirepages(struct uvm_object *uobj, off_t start, off_t end)
 		mutex_enter(&uvm_pageqlock);
 		for (i = 0; i < npages; i++) {
 			uvm_pagewire(pgs[i]);
+			if (list != NULL)
+				TAILQ_INSERT_TAIL(list, pgs[i], pageq.queue);
 		}
 		mutex_exit(&uvm_pageqlock);
 
