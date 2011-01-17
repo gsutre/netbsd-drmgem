@@ -256,7 +256,11 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 		KASSERT(dev->driver->gem_size >= sizeof(struct drm_obj));
 		/* XXX unique name */
 		pool_init(&dev->objpl, dev->driver->gem_size, 0, 0, 0,
+#if !defined(__NetBSD__)
 		    "drmobjpl", &pool_allocator_nointr);
+#else /* !defined(__NetBSD__) */
+		    "drmobjpl", &pool_allocator_nointr, IPL_NONE);
+#endif /* !defined(__NetBSD__) */
 	}
 
 	printf("\n");
@@ -1481,8 +1485,14 @@ drm_gem_object_alloc(struct drm_device *dev, size_t size)
 
 	KASSERT((size & (PAGE_SIZE -1)) == 0);
 
+#if !defined(__NetBSD__)
 	if ((obj = pool_get(&dev->objpl, PR_WAITOK | PR_ZERO)) == NULL)
 		return (NULL);
+#else /* !defined(__NetBSD__) */
+	if ((obj = pool_get(&dev->objpl, PR_WAITOK)) == NULL)
+		return (NULL);
+	memset(obj, 0, dev->objpl.pr_size);
+#endif /* !defined(__NetBSD__) */
 
 	obj->dev = dev;
 
