@@ -392,7 +392,11 @@ drm_lastclose(struct drm_device *dev)
 }
 
 int
+#if !defined(__NetBSD__)
 drmopen(dev_t kdev, int flags, int fmt, struct proc *p)
+#else /* !defined(__NetBSD__) */
+drmopen(dev_t kdev, int flags, int fmt, struct lwp *p)
+#endif /* !defined(__NetBSD__) */
 {
 	struct drm_device	*dev = NULL;
 	struct drm_file		*file_priv;
@@ -471,7 +475,11 @@ err:
 }
 
 int
+#if !defined(__NetBSD__)
 drmclose(dev_t kdev, int flags, int fmt, struct proc *p)
+#else /* !defined(__NetBSD__) */
+drmclose(dev_t kdev, int flags, int fmt, struct lwp *p)
+#endif /* !defined(__NetBSD__) */
 {
 	struct drm_device		*dev = drm_get_device_from_kdev(kdev);
 	struct drm_file			*file_priv;
@@ -560,7 +568,11 @@ done:
  */
 int
 drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags, 
+#if !defined(__NetBSD__)
     struct proc *p)
+#else /* !defined(__NetBSD__) */
+    struct lwp *p)
+#endif /* !defined(__NetBSD__) */
 {
 	struct drm_device *dev = drm_get_device_from_kdev(kdev);
 	struct drm_file *file_priv;
@@ -806,7 +818,11 @@ out:
 
 /* XXX kqfilter ... */
 int
+#if !defined(__NetBSD__)
 drmpoll(dev_t kdev, int events, struct proc *p)
+#else /* !defined(__NetBSD__) */
+drmpoll(dev_t kdev, int events, struct lwp *p)
+#endif /* !defined(__NetBSD__) */
 {
 	struct drm_device	*dev = drm_get_device_from_kdev(kdev);
 	struct drm_file		*file_priv;

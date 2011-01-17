@@ -191,7 +191,7 @@ typedef struct vm_page *	vm_page_t;
 
 #else /* !defined(__NetBSD__) */
 
-#define DRM_SUSER(p)		(kauth_cred_getsvuid((p)->p_cred) == 0)
+#define DRM_SUSER(l)		(kauth_cred_getsvuid((l)->l_cred) == 0)
 
 #ifdef MTRR_TYPE_WC
 #define DRM_MTRR_WC		MTRR_TYPE_WC
