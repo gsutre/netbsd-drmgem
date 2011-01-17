@@ -85,6 +85,9 @@
 #if defined(__NetBSD__)
 MALLOC_DECLARE(M_DRM);
 
+/* OpenBSD queue(3) compatibility definitions. */
+#define TAILQ_END(head)		NULL
+
 /* OpenBSD UVM pager compatibility definitions. */
 #define VM_PAGER_OK		0
 #define VM_PAGER_ERROR		EIO
