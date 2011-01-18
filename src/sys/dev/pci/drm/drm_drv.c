@@ -453,11 +453,13 @@ drm_lastclose(struct drm_device *dev)
 	if (dev->lock.hw_lock != NULL) {
 		dev->lock.hw_lock = NULL; /* SHM removed */
 		dev->lock.file_priv = NULL;
+		mtx_enter(&dev->lock.spinlock);
 #if !defined(__NetBSD__)
 		wakeup(&dev->lock); /* there should be nothing sleeping on it */
 #else /* !defined(__NetBSD__) */
 		cv_broadcast(&dev->lock.condvar);
 #endif /* !defined(__NetBSD__) */
+		mtx_leave(&dev->lock.spinlock);
 	}
 	DRM_UNLOCK();
 

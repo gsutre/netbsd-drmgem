@@ -691,11 +691,13 @@ inteldrm_ironlake_intr(void *arg)
 	ret = 1;
 
 	if (gt_iir & GT_USER_INTERRUPT) {
+		mtx_enter(&dev_priv->user_irq_lock);
 #if !defined(__NetBSD__)
 		wakeup(dev_priv);
 #else /* !defined(__NetBSD__) */
 		cv_broadcast(&dev_priv->condvar);
 #endif /* !defined(__NetBSD__) */
+		mtx_leave(&dev_priv->user_irq_lock);
 		dev_priv->mm.hang_cnt = 0;
 		timeout_add_msec(&dev_priv->mm.hang_timer, 750);
 	}
@@ -4474,11 +4476,13 @@ inteldrm_hangcheck(void *arg)
 			dev_priv->mm.wedged = 1; 
 			DRM_INFO("gpu hung!\n");
 			/* XXX locking */
+			mtx_enter(&dev_priv->user_irq_lock);
 #if !defined(__NetBSD__)
 			wakeup(dev_priv);
 #else /* !defined(__NetBSD__) */
 			cv_broadcast(&dev_priv->condvar);
 #endif /* !defined(__NetBSD__) */
+			mtx_leave(&dev_priv->user_irq_lock);
 			inteldrm_error(dev_priv);
 			return;
 		}

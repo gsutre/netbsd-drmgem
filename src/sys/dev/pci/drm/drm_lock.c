@@ -91,11 +91,13 @@ drm_lock_free(struct drm_lock_data *lock_data, unsigned int context)
 			  context, _DRM_LOCKING_CONTEXT(old));
 		return 1;
 	}
+	mtx_enter(&lock_data->spinlock);
 #if !defined(__NetBSD__)
 	wakeup(lock_data);
 #else /* !defined(__NetBSD__) */
 	cv_broadcast(&lock_data->condvar);
 #endif /* !defined(__NetBSD__) */
+	mtx_leave(&lock_data->spinlock);
 	return 0;
 }
 
