@@ -486,6 +486,9 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	mtx_init(&dev_priv->list_lock, IPL_NONE);
 	mtx_init(&dev_priv->request_lock, IPL_NONE);
 	mtx_init(&dev_priv->fence_lock, IPL_NONE);
+#if defined(__NetBSD__)
+	cv_init(&dev_priv->condvar, "gemwt");
+#endif /* defined(__NetBSD__) */
 
 	/* All intel chipsets need to be treated as agp, so just pass one */
 	dev_priv->drmdev = drm_attach_pci(&inteldrm_driver, pa, 1, self);
@@ -531,6 +534,10 @@ inteldrm_detach(struct device *self, int flags)
 		I915_WRITE(HWS_PGA, 0x1ffff000);
 		dev_priv->hw_status_page = NULL;
 	}
+
+#if defined(__NetBSD__)
+	cv_destroy(&dev_priv->condvar);
+#endif /* defined(__NetBSD__) */
 
 	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.bsh != NULL) {
 		bus_space_unmap(dev_priv->ifp.i9xx.bst, dev_priv->ifp.i9xx.bsh,
@@ -684,7 +691,11 @@ inteldrm_ironlake_intr(void *arg)
 	ret = 1;
 
 	if (gt_iir & GT_USER_INTERRUPT) {
+#if !defined(__NetBSD__)
 		wakeup(dev_priv);
+#else /* !defined(__NetBSD__) */
+		cv_broadcast(&dev_priv->condvar);
+#endif /* !defined(__NetBSD__) */
 		dev_priv->mm.hang_cnt = 0;
 		timeout_add_msec(&dev_priv->mm.hang_timer, 750);
 	}
@@ -746,7 +757,11 @@ inteldrm_intr(void *arg)
 	(void)I915_READ(IIR); /* Flush posted writes */
 
 	if (iir & I915_USER_INTERRUPT) {
+#if !defined(__NetBSD__)
 		wakeup(dev_priv);
+#else /* !defined(__NetBSD__) */
+		cv_broadcast(&dev_priv->condvar);
+#endif /* !defined(__NetBSD__) */
 		dev_priv->mm.hang_cnt = 0;
 		timeout_add_msec(&dev_priv->mm.hang_timer, 750);
 	}
@@ -1778,8 +1793,17 @@ i915_wait_request(struct inteldrm_softc *dev_priv, uint32_t seqno,
 			if (i915_seqno_passed(i915_get_gem_seqno(dev_priv),
 			    seqno) || dev_priv->mm.wedged)
 				break;
+#if !defined(__NetBSD__)
 			ret = msleep(dev_priv, &dev_priv->user_irq_lock,
 			    PZERO | (interruptible ? PCATCH : 0), "gemwt", 0);
+#else /* !defined(__NetBSD__) */
+			if (interruptible)
+				ret = cv_wait_sig(&dev_priv->condvar,
+				    &dev_priv->user_irq_lock);
+			else
+				cv_wait(&dev_priv->condvar,
+				    &dev_priv->user_irq_lock);
+#endif /* !defined(__NetBSD__) */
 		}
 		i915_user_irq_put(dev_priv);
 		mtx_leave(&dev_priv->user_irq_lock);
@@ -4450,7 +4474,11 @@ inteldrm_hangcheck(void *arg)
 			dev_priv->mm.wedged = 1; 
 			DRM_INFO("gpu hung!\n");
 			/* XXX locking */
+#if !defined(__NetBSD__)
 			wakeup(dev_priv);
+#else /* !defined(__NetBSD__) */
+			cv_broadcast(&dev_priv->condvar);
+#endif /* !defined(__NetBSD__) */
 			inteldrm_error(dev_priv);
 			return;
 		}

@@ -209,6 +209,9 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 #endif /* !defined(__NetBSD__) */
 	mtx_init(&dev->lock.spinlock, IPL_NONE);
 	mtx_init(&dev->event_lock, IPL_TTY);
+#if defined(__NetBSD__)
+	cv_init(&dev->lock.condvar, "drmlkq");
+#endif /* defined(__NetBSD__) */
 
 	TAILQ_INIT(&dev->maplist);
 	SPLAY_INIT(&dev->files);
@@ -302,6 +305,7 @@ drm_detach(struct device *self, int flags)
 		pool_destroy(&dev->objpl);
 		mutex_destroy(&dev->obj_name_lock);
 	}
+	cv_destroy(&dev->lock.condvar);
 	mutex_destroy(&dev->event_lock);
 	mutex_destroy(&dev->lock.spinlock);
 	rw_destroy(&dev->dev_lock);
@@ -449,7 +453,11 @@ drm_lastclose(struct drm_device *dev)
 	if (dev->lock.hw_lock != NULL) {
 		dev->lock.hw_lock = NULL; /* SHM removed */
 		dev->lock.file_priv = NULL;
+#if !defined(__NetBSD__)
 		wakeup(&dev->lock); /* there should be nothing sleeping on it */
+#else /* !defined(__NetBSD__) */
+		cv_broadcast(&dev->lock.condvar);
+#endif /* !defined(__NetBSD__) */
 	}
 	DRM_UNLOCK();
 
@@ -497,6 +505,9 @@ drmopen(dev_t kdev, int flags, int fmt, struct lwp *p)
 	file_priv->flags = flags;
 	file_priv->minor = minor(kdev);
 	TAILQ_INIT(&file_priv->evlist);
+#if defined(__NetBSD__)
+	cv_init(&file_priv->evlist_condvar, "drmread");
+#endif /* defined(__NetBSD__) */
 	file_priv->event_space = 4096; /* 4k for event buffer */
 	DRM_DEBUG("minor = %d\n", file_priv->minor);
 
@@ -533,6 +544,7 @@ drmopen(dev_t kdev, int flags, int fmt, struct lwp *p)
 free_priv:
 #if defined(__NetBSD__)
 	mutex_destroy(&file_priv->table_lock);
+	cv_destroy(&file_priv->evlist_condvar);
 #endif /* defined(__NetBSD__) */
 	drm_free(file_priv);
 err:
@@ -622,6 +634,7 @@ drmclose(dev_t kdev, int flags, int fmt, struct lwp *p)
 	SPLAY_REMOVE(drm_file_tree, &dev->files, file_priv);
 #if defined(__NetBSD__)
 	mutex_destroy(&file_priv->table_lock);
+	cv_destroy(&file_priv->evlist_condvar);
 #endif /* defined(__NetBSD__) */
 	drm_free(file_priv);
 
@@ -834,8 +847,12 @@ drmread(dev_t kdev, struct uio *uio, int ioflag)
 			mtx_leave(&dev->event_lock);
 			return (EAGAIN);
 		}
+#if !defined(__NetBSD__)
 		error = msleep(&file_priv->evlist, &dev->event_lock,
 		    PWAIT | PCATCH, "drmread", 0);
+#else /* !defined(__NetBSD__) */
+		error = cv_wait_sig(&file_priv->evlist_condvar, &dev->event_lock);
+#endif /* !defined(__NetBSD__) */
 	}
 	if (error) {
 		mtx_leave(&dev->event_lock);

@@ -70,6 +70,7 @@
 #include <sys/vnode.h>
 
 #if defined(__NetBSD__)
+#include <sys/condvar.h>
 #include <sys/kauth.h>
 #include <sys/select.h>
 #endif /* defined(__NetBSD__) */
@@ -258,6 +259,7 @@ do {									\
 	}								\
 } while (0)
 
+#if !defined(__NetBSD__)
 #define DRM_WAIT_ON(ret, queue, lock,  timeout, msg, condition ) do {	\
 	mtx_enter(lock);						\
 	while ((ret) == 0) {						\
@@ -268,6 +270,18 @@ do {									\
 	}								\
 	mtx_leave(lock);						\
 } while (/* CONSTCOND */ 0)
+#else /* !defined(__NetBSD__) */
+#define DRM_WAIT_ON(ret, queue, lock,  timeout, msg, condition ) do {	\
+	mtx_enter(lock);						\
+	while ((ret) == 0) {						\
+		if (condition)						\
+			break;						\
+		ret = cv_timedwait_sig((queue.condvar), (lock),		\
+		    (timeout));						\
+	}								\
+	mtx_leave(lock);						\
+} while (/* CONSTCOND */ 0)
+#endif /* !defined(__NetBSD__) */
 
 #define DRM_ERROR(fmt, arg...) \
 	printf("error: [" DRM_NAME ":pid%d:%s] *ERROR* " fmt,		\
@@ -346,6 +360,7 @@ struct drm_file {
 	struct mutex				 table_lock;
 #else /* !defined(__NetBSD__) */
 	kmutex_t				 table_lock;
+	kcondvar_t				 evlist_condvar;
 #endif /* !defined(__NetBSD__) */
 	struct selinfo				 rsel;
 	SPLAY_ENTRY(drm_file)			 link;
@@ -365,6 +380,7 @@ struct drm_lock_data {
 	struct mutex		 spinlock;
 #else /* !defined(__NetBSD__) */
 	kmutex_t		 spinlock;
+	kcondvar_t		 condvar;
 #endif /* !defined(__NetBSD__) */
 	struct drm_hw_lock	*hw_lock;	/* Hardware lock */
 	/* Unique identifier of holding process (NULL is kernel) */
@@ -455,6 +471,9 @@ struct drm_vblank_info {
 		int		 vbl_refs;		/* Number of users */
 		int		 vbl_enabled;		/* Enabled? */
 		int		 vbl_inmodeset;		/* in a modeset? */
+#if defined(__NetBSD__)
+		kcondvar_t	 condvar;
+#endif /* defined(__NetBSD__) */
 	}			 vb_crtcs[1];
 };
 

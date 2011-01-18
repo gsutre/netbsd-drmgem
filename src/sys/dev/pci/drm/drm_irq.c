@@ -114,7 +114,11 @@ drm_irq_uninstall(struct drm_device *dev)
 	if (dev->vblank != NULL) {
 		mtx_enter(&dev->vblank->vb_lock);
 		for (i = 0; i < dev->vblank->vb_num; i++) {
+#if !defined(__NetBSD__)
 			wakeup(&dev->vblank->vb_crtcs[i]);
+#else /* !defined(__NetBSD__) */
+			cv_broadcast(&dev->vblank->vb_crtcs[i].condvar);
+#endif /* !defined(__NetBSD__) */
 			dev->vblank->vb_crtcs[i].vbl_enabled = 0;
 			dev->vblank->vb_crtcs[i].vbl_last =
 			    dev->driver->get_vblank_counter(dev, i);
@@ -177,6 +181,10 @@ vblank_disable(void *arg)
 void
 drm_vblank_cleanup(struct drm_device *dev)
 {
+#if defined(__NetBSD__)
+	int	i;
+#endif /* defined(__NetBSD__) */
+
 	if (dev->vblank == NULL)
 		return; /* not initialised */
 
@@ -188,6 +196,8 @@ drm_vblank_cleanup(struct drm_device *dev)
 	vblank_disable(dev);
 
 #if defined(__NetBSD__)
+	for (i = 0; i < dev->vblank->vb_num; i++)
+		cv_destroy(&dev->vblank->vb_crtcs[i].condvar);
 	mutex_destroy(&dev->vblank->vb_lock);
 #endif /* defined(__NetBSD__) */
 
@@ -210,6 +220,10 @@ drm_vblank_init(struct drm_device *dev, int num_crtcs)
 	timeout_set(&dev->vblank->vb_disable_timer, vblank_disable, dev);
 	for (i = 0; i < num_crtcs; i++)
 		TAILQ_INIT(&dev->vblank->vb_crtcs[i].vbl_events);
+#if defined(__NetBSD__)
+	for (i = 0; i < num_crtcs; i++)
+		cv_init(&dev->vblank->vb_crtcs[i].condvar, "drmvblq");
+#endif /* defined(__NetBSD__) */
 
 	return (0);
 }
@@ -429,7 +443,11 @@ drm_queue_vblank_event(struct drm_device *dev, int crtc,
 		    __func__, crtc, seq);
 		drm_vblank_put(dev, crtc);
 		TAILQ_INSERT_TAIL(&file_priv->evlist, &vev->base, link);
+#if !defined(__NetBSD__)
 		wakeup(&file_priv->evlist);
+#else /* !defined(__NetBSD__) */
+		cv_broadcast(&file_priv->evlist_condvar);
+#endif /* !defined(__NetBSD__) */
 		selwakeup(&file_priv->rsel);
 	} else {
 		TAILQ_INSERT_TAIL(&dev->vblank->vb_crtcs[crtc].vbl_events,
@@ -470,7 +488,11 @@ drm_handle_vblank_events(struct drm_device *dev, int crtc)
 		drm_vblank_put(dev, crtc);
 		TAILQ_REMOVE(list, ev, link);
 		TAILQ_INSERT_TAIL(&ev->file_priv->evlist, ev, link);
+#if !defined(__NetBSD__)
 		wakeup(&ev->file_priv->evlist);
+#else /* !defined(__NetBSD__) */
+		cv_broadcast(&ev->file_priv->evlist_condvar);
+#endif /* !defined(__NetBSD__) */
 		selwakeup(&ev->file_priv->rsel);
 	}
 	mtx_leave(&dev->event_lock);
@@ -485,7 +507,11 @@ drm_handle_vblank(struct drm_device *dev, int crtc)
 	 */
 	mtx_enter(&dev->vblank->vb_lock);
 	dev->vblank->vb_crtcs[crtc].vbl_count++;
+#if !defined(__NetBSD__)
 	wakeup(&dev->vblank->vb_crtcs[crtc]);
+#else /* !defined(__NetBSD__) */
+	cv_broadcast(&dev->vblank->vb_crtcs[crtc].condvar);
+#endif /* !defined(__NetBSD__) */
 	mtx_leave(&dev->vblank->vb_lock);
 	drm_handle_vblank_events(dev, crtc);
 }

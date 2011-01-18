@@ -129,6 +129,7 @@ struct inteldrm_softc {
 	struct mutex		 user_irq_lock;
 #else /* !defined(__NetBSD__) */
 	kmutex_t		 user_irq_lock;
+	kcondvar_t		 condvar;
 #endif /* !defined(__NetBSD__) */
 	/* Refcount for user irq, only enabled when needed */
 	int			 user_irq_refcount;

@@ -91,7 +91,11 @@ drm_lock_free(struct drm_lock_data *lock_data, unsigned int context)
 			  context, _DRM_LOCKING_CONTEXT(old));
 		return 1;
 	}
+#if !defined(__NetBSD__)
 	wakeup(lock_data);
+#else /* !defined(__NetBSD__) */
+	cv_broadcast(&lock_data->condvar);
+#endif /* !defined(__NetBSD__) */
 	return 0;
 }
 
@@ -119,8 +123,12 @@ drm_lock(struct drm_device *dev, void *data, struct drm_file *file_priv)
 		}
 
 		/* Contention */
+#if !defined(__NetBSD__)
 		ret = msleep(&dev->lock, &dev->lock.spinlock,
 		    PZERO | PCATCH, "drmlkq", 0);
+#else /* !defined(__NetBSD__) */
+		ret = cv_wait_sig(&dev->lock.condvar, &dev->lock.spinlock);
+#endif /* !defined(__NetBSD__) */
 		if (ret != 0)
 			break;
 	}
