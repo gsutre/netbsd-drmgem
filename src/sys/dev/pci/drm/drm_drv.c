@@ -1296,8 +1296,14 @@ drm_try_hold_object(struct drm_obj *obj)
 	mutex_enter(&obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	/* if the object is free, grab it */
-	if (obj->do_flags & (DRM_BUSY | DRM_WANTED))
+	if (obj->do_flags & (DRM_BUSY | DRM_WANTED)) {
+#if !defined(__NetBSD__)
+		simple_unlock(&obj->uobj->vmobjlock);
+#else /* !defined(__NetBSD__) */
+		mutex_exit(&obj->uobj.vmobjlock);
+#endif /* !defined(__NetBSD__) */
 		return (0);
+	}
 	atomic_setbits_int(&obj->do_flags, DRM_BUSY);
 #ifdef DRMLOCKDEBUG
 	obj->holding_proc = curproc;
