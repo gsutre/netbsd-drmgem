@@ -148,6 +148,9 @@ timeout_add_msec(callout_t *cs, int msec)
 	callout_schedule(cs, (int)ticks);
 }
 
+/* OpenBSD selrecord/selwakeup compatibility definitions. */
+#define selwakeup(sip)		selnotify(sip, 0, 0)
+
 /* OpenBSD types compatibility definitions. */
 typedef void *			caddr_t;
 typedef struct vm_page *	vm_page_t;
