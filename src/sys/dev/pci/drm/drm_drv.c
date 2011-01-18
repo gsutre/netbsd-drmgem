@@ -297,6 +297,16 @@ drm_detach(struct device *self, int flags)
 		dev->agp = NULL;
 	}
 
+#if defined(__NetBSD__)
+	if (dev->driver->flags & DRIVER_GEM) {
+		pool_destroy(&dev->objpl);
+		mutex_destroy(&dev->obj_name_lock);
+	}
+	mutex_destroy(&dev->event_lock);
+	mutex_destroy(&dev->lock.spinlock);
+	rw_destroy(&dev->dev_lock);
+#endif /* defined(__NetBSD__) */
+
 	return 0;
 }
 

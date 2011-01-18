@@ -181,8 +181,15 @@ drm_vblank_cleanup(struct drm_device *dev)
 		return; /* not initialised */
 
 	timeout_del(&dev->vblank->vb_disable_timer);
+#if defined(__NetBSD__)
+	callout_destroy(&dev->vblank->vb_disable_timer);
+#endif /* defined(__NetBSD__) */
 
 	vblank_disable(dev);
+
+#if defined(__NetBSD__)
+	mutex_destroy(&dev->vblank->vb_lock);
+#endif /* defined(__NetBSD__) */
 
 	drm_free(dev->vblank);
 	dev->vblank = NULL;
