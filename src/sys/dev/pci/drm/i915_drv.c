@@ -385,7 +385,11 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	 */
 	dev_priv->irqh = pci_intr_establish(dev_priv->pc, dev_priv->ih, IPL_TTY,
 	    (HAS_PCH_SPLIT(dev_priv) ? inteldrm_ironlake_intr : inteldrm_intr),
+#if !defined(__NetBSD__)
 	    dev_priv, dev_priv->dev.dv_xname);
+#else /* !defined(__NetBSD__) */
+	    dev_priv);
+#endif /* !defined(__NetBSD__) */
 	if (dev_priv->irqh == NULL) {
 		printf(": couldn't  establish interrupt\n");
 		return;
