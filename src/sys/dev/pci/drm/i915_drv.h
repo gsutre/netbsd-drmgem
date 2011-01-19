@@ -76,6 +76,10 @@ struct inteldrm_fence {
 	u_int32_t			 last_rendering_seqno;
 };
 
+#if defined(__NetBSD__)
+struct workq;
+#endif /* defined(__NetBSD__) */
+
 /*
  * lock ordering:
  * exec lock,

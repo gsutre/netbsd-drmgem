@@ -55,6 +55,7 @@
 #if !defined(__NetBSD__)
 #include <sys/workq.h>
 #else
+#include <sys/pool.h>
 #include <sys/workqueue.h>
 #endif
 #if 0
@@ -327,6 +328,82 @@ inteldrm_gmch_match(struct pci_attach_args *pa)
 		return (1);
 	return (0);
 }
+
+#if defined(__NetBSD__)
+
+/*
+ * Task work queue.  Implements OpenBSD's workq_add_task(9) API.
+ */
+
+struct workq {
+	struct pool		 wq_pool;
+	struct workqueue	*wq_queue;
+};
+
+typedef void (*workq_fn)(void *, void *);
+
+struct workq_task {
+	struct work		 wqt_work;
+	workq_fn		 wqt_func;
+	void			*wqt_arg1;
+	void			*wqt_arg2;
+};
+
+#define WQ_WAITOK	(1<<0)
+
+static void
+workq_worker(struct work *wk, void *arg)
+{
+	struct workq_task	*wqt = (struct workq_task *)wk;
+	struct pool		*wpl = arg;
+
+	KASSERT(wqt != NULL && wpl != NULL);
+	KASSERT(wk == &wqt->wqt_work);
+
+	wqt->wqt_func(wqt->wqt_arg1, wqt->wqt_arg2);
+
+	pool_put(wpl, wqt);
+}
+
+static struct workq *
+workq_create(const char *name, int maxqs, int ipl)
+{
+	struct workq		*wq;
+
+	wq = malloc(sizeof(*wq), M_DRM, M_NOWAIT);
+	if (wq == NULL)
+		return NULL;
+
+	if (workqueue_create(&wq->wq_queue, name, workq_worker,
+	    &wq->wq_pool, PRI_BIO, ipl, 0))
+		return NULL;
+
+	pool_init(&wq->wq_pool, sizeof(struct workq_task), 0, 0, 0,
+	    name, NULL, IPL_HIGH);
+
+	return wq;
+}
+
+static int
+workq_add_task(struct workq *wq, int flags, workq_fn func, void *a1, void *a2)
+{
+	struct workq_task	*wqt;
+
+	wqt = pool_get(&wq->wq_pool, (flags & WQ_WAITOK) ?
+	    PR_WAITOK : PR_NOWAIT);
+	if (wqt == NULL)
+		return ENOMEM;
+
+	wqt->wqt_func = func;
+	wqt->wqt_arg1 = a1;
+	wqt->wqt_arg2 = a2;
+
+	workqueue_enqueue(wq->wq_queue, &wqt->wqt_work, NULL);
+
+	return 0;
+}
+
+#endif /* defined(__NetBSD__) */
 
 void
 inteldrm_attach(struct device *parent, struct device *self, void *aux)
