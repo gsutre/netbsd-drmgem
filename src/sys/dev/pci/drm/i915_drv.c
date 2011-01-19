@@ -218,7 +218,7 @@ void inteldrm_verify_inactive(struct inteldrm_softc *, char *, int);
 #define inteldrm_verify_inactive(dev,file,line)
 #endif
 
-const static struct drm_pcidev inteldrm_pciidlist[] = {
+static const struct drm_pcidev inteldrm_pciidlist[] = {
 	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_82830M_IGD,
 	    CHIP_I830|CHIP_M|CHIP_GEN2},
 	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_82845G_IGD,
