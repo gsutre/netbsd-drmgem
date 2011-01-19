@@ -587,6 +587,16 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 
 	dev = (struct drm_device *)dev_priv->drmdev;
 
+	/*
+	 * XXX [GS] I'm not sure about what the following does.  It seems
+	 * related to the use of write combining.  But x86_mem_add_mapping
+	 * already does it in NetBSD since BUS_SPACE_MAP_PREFETCHABLE will
+	 * be used in agp_map_subregion.
+	 *
+	 * XXX [GS] See OpenBSD's uvm_page_physload_flags which differs
+	 * from NetBSD's uvm_page_physload.
+	 */
+#if !defined(__NetBSD__)
 	/* XXX would be a lot nicer to get agp info before now */
 	uvm_page_physload_flags(atop(dev->agp->base), atop(dev->agp->base +
 	    dev->agp->info.ai_aperture_size), atop(dev->agp->base),
@@ -602,6 +612,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	 */
 	for (i = 0; i < atop(dev->agp->info.ai_aperture_size); i++)
 		atomic_setbits_int(&(dev_priv->pgs[i].pg_flags), PG_PMAP_WC);
+#endif /* !defined(__NetBSD__) */
 	if (agp_init_map(dev_priv->bst, dev->agp->base,
 	    dev->agp->info.ai_aperture_size, BUS_SPACE_MAP_LINEAR |
 	    BUS_SPACE_MAP_PREFETCHABLE, &dev_priv->agph))
@@ -1128,7 +1139,9 @@ void
 inteldrm_lastclose(struct drm_device *dev)
 {
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
+#if !defined(__NetBSD__)
 	struct vm_page		*p;
+#endif /* !defined(__NetBSD__) */
 	int			 ret;
 
 	ret = i915_gem_idle(dev_priv);
@@ -1142,9 +1155,11 @@ inteldrm_lastclose(struct drm_device *dev)
 		 * they get unbound and any accesses will segfault.
 		 * XXX only do ones in GEM.
 		 */
+#if !defined(__NetBSD__)
 		for (p = dev_priv->pgs; p < dev_priv->pgs +
 		    (dev->agp->info.ai_aperture_size / PAGE_SIZE); p++)
 			pmap_page_protect(p, VM_PROT_NONE);
+#endif /* !defined(__NetBSD__) */
 		agp_bus_dma_destroy((struct agp_softc *)dev->agp->agpdev,
 		    dev_priv->agpdmat);
 	}
@@ -2717,10 +2732,12 @@ error:
 void
 inteldrm_wipe_mappings(struct drm_obj *obj)
 {
+#if !defined(__NetBSD__)
 	struct inteldrm_obj	*obj_priv = (struct inteldrm_obj *)obj;
 	struct drm_device	*dev = obj->dev;
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	struct vm_page		*pg;
+#endif /* !defined(__NetBSD__) */
 
 	DRM_ASSERT_HELD(obj);
 	/* make sure any writes hit the bus before we do whatever change
@@ -2728,9 +2745,11 @@ inteldrm_wipe_mappings(struct drm_obj *obj)
 	 */
 	DRM_MEMORYBARRIER();
 	/* nuke all our mappings. XXX optimise. */
+#if !defined(__NetBSD__)
 	for (pg = &dev_priv->pgs[atop(obj_priv->gtt_offset)]; pg !=
 	    &dev_priv->pgs[atop(obj_priv->gtt_offset + obj->size)]; pg++)
 		pmap_page_protect(pg, VM_PROT_NONE);
+#endif /* !defined(__NetBSD__) */
 }
 
 /**

@@ -125,7 +125,9 @@ struct inteldrm_softc {
 	}			 ifp;
 	struct inteldrm_ring	 ring;
 	struct workq		*workq;
+#if !defined(__NetBSD__) /* XXX [GS] Cf. comment in inteldrm_attach(). */
 	struct vm_page		*pgs;
+#endif /* !defined(__NetBSD__) */
 	union hws {
 		struct drm_obj		*obj;
 		struct drm_dmamem	*dmamem;
