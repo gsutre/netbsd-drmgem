@@ -81,7 +81,9 @@ struct agp_i810_softc {
 };
 
 /* XXX hack, see below */
+static bool agp_i810_vga_mapped = false;
 static bus_addr_t agp_i810_vga_regbase;
+static bus_space_tag_t agp_i810_vga_bst;
 static bus_space_handle_t agp_i810_vga_bsh;
 
 static u_int32_t agp_i810_get_aperture(struct agp_softc *);
@@ -395,7 +397,9 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 	 * XXX horrible hack to allow drm code to use our mapping
 	 * of VGA chip registers
 	 */
+	agp_i810_vga_mapped = true;
 	agp_i810_vga_regbase = mmadr;
+	agp_i810_vga_bst = isc->bst;
 	agp_i810_vga_bsh = isc->bsh;
 
 	return agp_i810_init(sc);
@@ -406,11 +410,13 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
  * of VGA chip registers
  */
 int
-agp_i810_borrow(bus_addr_t base, bus_space_handle_t *hdlp)
+agp_i810_borrow(bus_addr_t base, bus_space_tag_t *tagp, bus_space_handle_t *hdlp)
 {
 
-	if (!agp_i810_vga_regbase || base != agp_i810_vga_regbase)
+	if (!agp_i810_vga_mapped || !agp_i810_vga_regbase ||
+	    base != agp_i810_vga_regbase)
 		return 0;
+	*tagp = agp_i810_vga_bst;
 	*hdlp = agp_i810_vga_bsh;
 	return 1;
 }

@@ -333,7 +333,11 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 {
 	struct inteldrm_softc	*dev_priv = (struct inteldrm_softc *)self;
 	struct pci_attach_args	*pa = aux, bpa;
+#if !defined(__NetBSD__)
 	struct vga_pci_bar	*bar;
+#else /* !defined(__NetBSD__) */
+	bus_addr_t		 vb_base;
+#endif /* !defined(__NetBSD__) */
 	struct drm_device	*dev;
 	const struct drm_pcidev	*id_entry;
 	int			 i;
@@ -348,6 +352,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	dev_priv->dmat = pa->pa_dmat;
 	dev_priv->bst = pa->pa_memt;
 
+#if !defined(__NetBSD__)
 	/* we need to use this api for now due to sharing with intagp */
 	bar = vga_pci_bar_info((struct vga_pci_softc *)parent,
 	    (IS_I9XX(dev_priv) ? 0 : 1));
@@ -359,6 +364,12 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	dev_priv->regs = vga_pci_bar_map((struct vga_pci_softc *)parent,
 	    bar->addr, 0, 0);
 	if (dev_priv->regs == NULL) {
+#else /* !defined(__NetBSD__) */
+	vb_base = vga_bar_base(parent, (IS_I9XX(dev_priv) ? 0 : 1));
+	/* XXX horrible kludge: agp might have mapped it */
+	if (!agp_i810_borrow(vb_base, &dev_priv->regs->bst,
+	    &dev_priv->regs->bsh)) {
+#endif /* !defined(__NetBSD__) */
 		printf(": can't map mmio space\n");
 		return;
 	}
@@ -551,8 +562,10 @@ inteldrm_detach(struct device *self, int flags)
 
 	pci_intr_disestablish(dev_priv->pc, dev_priv->irqh);
 
+#if !defined(__NetBSD__)
 	if (dev_priv->regs != NULL)
 		vga_pci_bar_unmap(dev_priv->regs);
+#endif /* !defined(__NetBSD__) */
 
 	return (0);
 }

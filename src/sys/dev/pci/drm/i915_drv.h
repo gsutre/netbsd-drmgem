@@ -100,7 +100,14 @@ struct inteldrm_softc {
 	pci_intr_handle_t	 ih;
 	void			*irqh;
 
+#if !defined(__NetBSD__)
 	struct vga_pci_bar	*regs;
+#else /* !defined(__NetBSD__) */
+	struct {
+		bus_space_tag_t		bst;
+		bus_space_handle_t	bsh;
+	}			 regs[1];
+#endif /* !defined(__NetBSD__) */
 
 	union flush {
 		struct {

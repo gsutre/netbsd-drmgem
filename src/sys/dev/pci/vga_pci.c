@@ -299,6 +299,15 @@ vga_drm_print(void *aux, const char *pnp)
 	return (UNCONF);
 }
 
+bus_addr_t
+vga_bar_base(device_t dv, int bar)
+{
+	struct vga_pci_softc *sc;
+
+	KASSERT(dv != NULL && device_is_a(dv, "vga"));
+	sc = device_private(dv);
+	return sc->sc_bars[bar].vb_base;
+}
 
 static int
 vga_pci_ioctl(void *v, u_long cmd, void *data, int flag, struct lwp *l)

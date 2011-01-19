@@ -37,3 +37,5 @@ int vga_pci_cnattach(bus_space_tag_t, bus_space_tag_t,
 			  pci_chipset_tag_t, int, int, int);
 
 int vga_drm_print(void *aux, const char *pnp);
+
+bus_addr_t vga_bar_base(device_t, int);
