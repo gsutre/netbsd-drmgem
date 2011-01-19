@@ -665,7 +665,7 @@ struct drm_device {
 	struct drm_agp_head	*agp;
 	struct drm_sg_mem	*sg;  /* Scatter gather memory */
 	atomic_t		*ctx_bitmap;
-	struct device		*dev_private;
+	void			*dev_private;
 	struct drm_local_map	*agp_buffer_map;
 
 	/* GEM info */
