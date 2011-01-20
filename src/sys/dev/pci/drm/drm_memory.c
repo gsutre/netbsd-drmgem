@@ -83,7 +83,7 @@ drm_free(void *pt)
 void
 drm_core_ioremap(struct drm_local_map *map, struct drm_device *dev)
 {
-	DRM_DEBUG("offset: 0x%x size: 0x%x type: %d\n", map->offset, map->size,
+	DRM_DEBUG("offset: 0x%lx size: 0x%lx type: %d\n", map->offset, map->size,
 	    map->type);
 
 	/* default to failure. */

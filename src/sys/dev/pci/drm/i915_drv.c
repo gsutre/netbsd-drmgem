@@ -2391,8 +2391,8 @@ i915_write_fence_reg(struct inteldrm_fence *reg)
 
 	if ((obj_priv->gtt_offset & ~I915_FENCE_START_MASK) ||
 	    (obj_priv->gtt_offset & (obj->size - 1))) {
-		DRM_ERROR("object 0x%lx not 1M or size (0x%zx) aligned\n",
-		     obj_priv->gtt_offset, obj->size);
+		DRM_ERROR("object 0x%jx not 1M or size (0x%zx) aligned\n",
+		    (uintmax_t)obj_priv->gtt_offset, obj->size);
 		return;
 	}
 
@@ -2439,8 +2439,8 @@ i830_write_fence_reg(struct inteldrm_fence *reg)
 
 	if ((obj_priv->gtt_offset & ~I830_FENCE_START_MASK) ||
 	    (obj_priv->gtt_offset & (obj->size - 1))) {
-		DRM_ERROR("object 0x%08x not 512K or size aligned 0x%lx\n",
-		     obj_priv->gtt_offset, obj->size);
+		DRM_ERROR("object 0x%08jx not 512K or size aligned 0x%zx\n",
+		    (uintmax_t)obj_priv->gtt_offset, obj->size);
 		return;
 	}
 
@@ -2500,15 +2500,15 @@ i915_gem_get_fence_reg(struct drm_obj *obj, int interruptible)
 		if (obj_priv->stride == 0)
 			return (EINVAL);
 		if (obj_priv->stride & (512 - 1))
-			DRM_ERROR("object 0x%08x is X tiled but has non-512B"
-			    " pitch\n", obj_priv->gtt_offset);
+			DRM_ERROR("object 0x%08jx is X tiled but has non-512B"
+			    " pitch\n", (uintmax_t)obj_priv->gtt_offset);
 		break;
 	case I915_TILING_Y:
 		if (obj_priv->stride == 0)
 			return (EINVAL);
 		if (obj_priv->stride & (128 - 1))
-			DRM_ERROR("object 0x%08x is Y tiled but has non-128B"
-			    " pitch\n", obj_priv->gtt_offset);
+			DRM_ERROR("object 0x%08jx is Y tiled but has non-128B"
+			    " pitch\n", (uintmax_t)obj_priv->gtt_offset);
 		break;
 	}
 
@@ -2853,7 +2853,8 @@ i915_gem_object_bind_to_gtt(struct drm_obj *obj, bus_size_t alignment,
 	if (alignment == 0) {
 		alignment = i915_gem_get_gtt_alignment(obj);
 	} else if (alignment & (i915_gem_get_gtt_alignment(obj) - 1)) {
-		DRM_ERROR("Invalid object alignment requested %u\n", alignment);
+		DRM_ERROR("Invalid object alignment requested %ju\n",
+		    (uintmax_t)alignment);
 		return (EINVAL);
 	}
 
@@ -4251,7 +4252,7 @@ i915_gem_init_hws(struct inteldrm_softc *dev_priv)
 	memset(dev_priv->hw_status_page, 0, PAGE_SIZE);
 	I915_WRITE(HWS_PGA, obj_priv->gtt_offset);
 	I915_READ(HWS_PGA); /* posting read */
-	DRM_DEBUG("hws offset: 0x%08x\n", obj_priv->gtt_offset);
+	DRM_DEBUG("hws offset: 0x%08jx\n", (uintmax_t)obj_priv->gtt_offset);
 
 	return 0;
 }
@@ -4459,7 +4460,10 @@ inteldrm_error(struct inteldrm_softc *dev_priv)
 {
 	u_int32_t	eir, ipeir;
 	u_int8_t	reset = GDRST_RENDER;
-	char 		*errbitstr;
+	const char	*errbitstr;
+#if defined(__NetBSD__)
+	char		errbuf[128];
+#endif /* defined(__NetBSD__) */
 
 	eir = I915_READ(EIR);
 	if (eir == 0)
@@ -4474,7 +4478,12 @@ inteldrm_error(struct inteldrm_softc *dev_priv)
 		errbitstr = "\20\x5PTEERR\x2REFRESHERR\x1INSTERR";
 	}
 
+#if !defined(__NetBSD__)
 	printf("render error detected, EIR: %b\n", eir, errbitstr);
+#else /* !defined(__NetBSD__) */
+	snprintb(errbuf, sizeof(errbuf), errbitstr, eir);
+	printf("render error detected, EIR: %s\n", errbuf);
+#endif /* !defined(__NetBSD__) */
 	if (IS_IRONLAKE(dev_priv)) {
 		if (eir & GT_ERROR_PTE) {
 			dev_priv->mm.wedged = 1;

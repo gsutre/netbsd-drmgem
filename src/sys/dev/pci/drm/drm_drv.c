@@ -593,8 +593,8 @@ drmclose(dev_t kdev, int flags, int fmt, struct lwp *p)
 	if (dev->driver->close != NULL)
 		dev->driver->close(dev, file_priv);
 
-	DRM_DEBUG("pid = %d, device = 0x%lx, open_count = %d\n",
-	    DRM_CURRENTPID, (long)&dev->device, dev->open_count);
+	DRM_DEBUG("pid = %d, device = %p, open_count = %d\n",
+	    DRM_CURRENTPID, &dev->device, dev->open_count);
 
 	if (dev->lock.hw_lock && _DRM_LOCK_IS_HELD(dev->lock.hw_lock->lock)
 	    && dev->lock.file_priv == file_priv) {
@@ -684,8 +684,8 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 
 	++file_priv->ioctl_count;
 
-	DRM_DEBUG("pid=%d, cmd=0x%02lx, nr=0x%02x, dev 0x%lx, auth=%d\n",
-	    DRM_CURRENTPID, cmd, DRM_IOCTL_NR(cmd), (long)&dev->device,
+	DRM_DEBUG("pid=%d, cmd=0x%02lx, nr=0x%02lx, dev %p, auth=%d\n",
+	    DRM_CURRENTPID, cmd, DRM_IOCTL_NR(cmd), &dev->device,
 	    file_priv->authenticated);
 
 	switch (cmd) {
