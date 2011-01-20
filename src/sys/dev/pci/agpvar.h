@@ -167,6 +167,7 @@ int agpbusprint(void *, const char *);
  * Functions private to the AGP code.
  */
 void agp_flush_cache(void);
+void agp_flush_cache_range(vaddr_t, vsize_t);
 int agp_find_caps(pci_chipset_tag_t, pcitag_t);
 int agp_map_aperture(struct pci_attach_args *, struct agp_softc *, int);
 struct agp_gatt *agp_alloc_gatt(struct agp_softc *);
@@ -195,6 +196,22 @@ int agp_alloc_dmamem(bus_dma_tag_t, size_t, int, bus_dmamap_t *, void **,
 		     bus_addr_t *, bus_dma_segment_t *, int, int *);
 void agp_free_dmamem(bus_dma_tag_t, size_t, bus_dmamap_t, void *,
 		     bus_dma_segment_t *, int) ;
+
+int	agp_bus_dma_init(struct agp_softc *, bus_addr_t, bus_addr_t,
+	    bus_dma_tag_t *);
+void	agp_bus_dma_destroy(struct agp_softc *, bus_dma_tag_t);
+void	agp_bus_dma_set_alignment(bus_dma_tag_t, bus_dmamap_t,
+	    u_long);
+
+struct agp_map;
+
+int	agp_init_map(bus_space_tag_t, bus_addr_t, bus_size_t, int, struct
+	    agp_map **);
+void	agp_destroy_map(struct agp_map *);
+int	agp_map_subregion(struct agp_map *, bus_size_t, bus_size_t,
+	    bus_space_handle_t *);
+void	agp_unmap_subregion(struct agp_map *, bus_space_handle_t,
+	    bus_size_t);
 
 MALLOC_DECLARE(M_AGP);
 
