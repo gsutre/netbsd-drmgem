@@ -349,7 +349,7 @@ struct drm_agp_head *
 drm_agp_init(void)
 {
 #ifndef DRM_NO_AGP
-	struct device		*agpdev;
+	struct agp_softc	*agpdev;
 	struct drm_agp_head	*head = NULL;
 	int		 	 agp_available = 1;
    

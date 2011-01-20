@@ -1160,7 +1160,7 @@ inteldrm_lastclose(struct drm_device *dev)
 		    (dev->agp->info.ai_aperture_size / PAGE_SIZE); p++)
 			pmap_page_protect(p, VM_PROT_NONE);
 #endif /* !defined(__NetBSD__) */
-		agp_bus_dma_destroy((struct agp_softc *)dev->agp->agpdev,
+		agp_bus_dma_destroy(dev->agp->agpdev,
 		    dev_priv->agpdmat);
 	}
 	dev_priv->agpdmat = NULL;
@@ -1239,7 +1239,7 @@ i915_gem_init_ioctl(struct drm_device *dev, void *data,
 	if (args->gtt_end == dev->agp->info.ai_aperture_size)
 		args->gtt_end -= 4096;
 
-	if (agp_bus_dma_init((struct agp_softc *)dev->agp->agpdev,
+	if (agp_bus_dma_init(dev->agp->agpdev,
 	    dev->agp->base + args->gtt_start, dev->agp->base + args->gtt_end,
 	    &dev_priv->agpdmat) != 0) {
 		DRM_UNLOCK();

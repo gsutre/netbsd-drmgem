@@ -422,7 +422,7 @@ struct drm_agp_mem {
 };
 
 struct drm_agp_head {
-	struct device				*agpdev;
+	struct agp_softc			*agpdev;
 	const char				*chipset;
 	TAILQ_HEAD(agp_memlist, drm_agp_mem)	 memory;
 	struct agp_info				 info;
