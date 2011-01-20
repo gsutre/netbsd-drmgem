@@ -2671,6 +2671,10 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 	vm_prot_t		 mapprot;
 	boolean_t		 locked = TRUE;
 
+#if defined(__NetBSD__)
+	UVMHIST_FUNC(__func__); UVMHIST_CALLED(maphist);
+#endif /* defined(__NetBSD__) */
+
 	/* Are we about to suspend?, if so wait until we're done */
 	if (dev_priv->sc_flags & INTELDRM_QUIET) {
 		/* we're about to sleep, unlock the map etc */
