@@ -125,10 +125,17 @@ void	i965_alloc_ifp(struct inteldrm_softc *, struct pci_attach_args *);
 void	inteldrm_detect_bit_6_swizzle(struct inteldrm_softc *,
 	    struct pci_attach_args *);
 
+#if !defined(__NetBSD__)
 int	inteldrm_setup_mchbar(struct inteldrm_softc *,
 	    struct pci_attach_args *);
 void	inteldrm_teardown_mchbar(struct inteldrm_softc *,
 	    struct pci_attach_args *, int);
+#else /* !defined(__NetBSD__) */
+int	inteldrm_setup_mchbar(struct inteldrm_softc *,
+	    struct pci_attach_args *, bus_space_handle_t *);
+void	inteldrm_teardown_mchbar(struct inteldrm_softc *,
+	    struct pci_attach_args *, int, bus_space_handle_t);
+#endif /* !defined(__NetBSD__) */
 
 /* Ioctls */
 int	inteldrm_getparam(struct inteldrm_softc *dev_priv, void *data);
@@ -668,7 +675,11 @@ inteldrm_detach(struct device *self, int flags)
 #endif /* defined(__NetBSD__) */
 
 	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.valid) {
+#if !defined(__NetBSD__)
 		bus_space_unmap(dev_priv->ifp.i9xx.bst, dev_priv->ifp.i9xx.bsh,
+#else /* !defined(__NetBSD__) */
+		bus_space_free(dev_priv->ifp.i9xx.bst, dev_priv->ifp.i9xx.bsh,
+#endif /* !defined(__NetBSD__) */
 		    PAGE_SIZE);
 	} else if (dev_priv->flags & (CHIP_I830 | CHIP_I845G | CHIP_I85X |
 	    CHIP_I865G) && dev_priv->ifp.i8xx.kva != NULL) {
@@ -1121,9 +1132,14 @@ i915_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 		    &dev_priv->ifp.i9xx.bsh) != 0)
 			goto nope;
 		return;
+#if !defined(__NetBSD__)
 	} else if (bpa->pa_memex == NULL || extent_alloc(bpa->pa_memex,
 	    PAGE_SIZE, PAGE_SIZE, 0, 0, 0, &addr) || bus_space_map(bpa->pa_memt,
 	    addr, PAGE_SIZE, 0, &dev_priv->ifp.i9xx.bsh))
+#else /* !defined(__NetBSD__) */
+	} else if (bus_space_alloc(bpa->pa_memt, 0, 0xffffffff,
+	    PAGE_SIZE, PAGE_SIZE, 0, 0, &addr, &dev_priv->ifp.i9xx.bsh))
+#endif /* !defined(__NetBSD__) */
 		goto nope;
 
 	pci_conf_write(bpa->pa_pc, bpa->pa_tag, I915_IFPADDR, addr | 0x1);
@@ -1154,9 +1170,14 @@ i965_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 		    &dev_priv->ifp.i9xx.bsh) != 0)
 			goto nope;
 		return;
+#if !defined(__NetBSD__)
 	} else if (bpa->pa_memex == NULL || extent_alloc(bpa->pa_memex,
 	    PAGE_SIZE, PAGE_SIZE, 0, 0, 0, &addr) || bus_space_map(bpa->pa_memt,
 	    addr, PAGE_SIZE, 0, &dev_priv->ifp.i9xx.bsh))
+#else /* !defined(__NetBSD__) */
+	} else if (bus_space_alloc(bpa->pa_memt, 0, 0xffffffff,
+	    PAGE_SIZE, PAGE_SIZE, 0, 0, &addr, &dev_priv->ifp.i9xx.bsh))
+#endif /* !defined(__NetBSD__) */
 		goto nope;
 
 	pci_conf_write(bpa->pa_pc, bpa->pa_tag, I965_IFPADDR + 4,
@@ -4759,7 +4780,11 @@ i915_list_remove(struct inteldrm_obj *obj_priv)
  */
 int
 inteldrm_setup_mchbar(struct inteldrm_softc *dev_priv,
+#if !defined(__NetBSD__)
     struct pci_attach_args *bpa)
+#else /* !defined(__NetBSD__) */
+    struct pci_attach_args *bpa, bus_space_handle_t *mchbsh)
+#endif /* !defined(__NetBSD__) */
 {
 	u_int64_t	mchbar_addr;
 	pcireg_t	tmp, low, high = 0;
@@ -4795,8 +4820,13 @@ inteldrm_setup_mchbar(struct inteldrm_softc *dev_priv,
 	 */
 	if (mchbar_addr == 0) {
 		addr = (u_long)mchbar_addr;
+#if !defined(__NetBSD__)
 		if (bpa->pa_memex == NULL || extent_alloc(bpa->pa_memex,
 	            MCHBAR_SIZE, MCHBAR_SIZE, 0, 0, 0, &addr)) {
+#else /* !defined(__NetBSD__) */
+		if (bus_space_alloc(bpa->pa_memt, 0, 0xffffffff,
+		    MCHBAR_SIZE, MCHBAR_SIZE, 0, 0, &addr, mchbsh)) {
+#endif /* !defined(__NetBSD__) */
 			return (0); /* just say we don't need to disable */
 		} else {
 			mchbar_addr = addr;
@@ -4827,7 +4857,11 @@ inteldrm_setup_mchbar(struct inteldrm_softc *dev_priv,
  */
 void
 inteldrm_teardown_mchbar(struct inteldrm_softc *dev_priv,
+#if !defined(__NetBSD__)
     struct pci_attach_args *bpa, int disable)
+#else /* !defined(__NetBSD__) */
+    struct pci_attach_args *bpa, int disable, bus_space_handle_t mchbsh)
+#endif /* !defined(__NetBSD__) */
 {
 	u_int64_t	mchbar_addr;
 	pcireg_t	tmp, low, high = 0;
@@ -4839,8 +4873,12 @@ inteldrm_teardown_mchbar(struct inteldrm_softc *dev_priv,
 			high = pci_conf_read(bpa->pa_pc, bpa->pa_tag, reg + 4);
 		low = pci_conf_read(bpa->pa_pc, bpa->pa_tag, reg);
 		mchbar_addr = ((u_int64_t)high << 32) | low;
+#if !defined(__NetBSD__)
 		if (bpa->pa_memex)
 			extent_free(bpa->pa_memex, mchbar_addr, MCHBAR_SIZE, 0);
+#else /* !defined(__NetBSD__) */
+		bus_space_free(bpa->pa_memt, mchbsh, MCHBAR_SIZE);
+#endif /* !defined(__NetBSD__) */
 		/* FALLTHROUGH */
 	case 1:
 		if (IS_I915G(dev_priv) || IS_I915GM(dev_priv)) {
@@ -4886,9 +4924,16 @@ inteldrm_detect_bit_6_swizzle(struct inteldrm_softc *dev_priv,
 		swizzle_y = I915_BIT_6_SWIZZLE_9;
 	} else if (IS_MOBILE(dev_priv)) {
 		uint32_t dcc;
+#if defined(__NetBSD__)
+		bus_space_handle_t mchbsh;
+#endif /* defined(__NetBSD__) */
 
 		/* try to enable MCHBAR, a lot of biosen disable it */
+#if !defined(__NetBSD__)
 		need_disable = inteldrm_setup_mchbar(dev_priv, bpa);
+#else /* !defined(__NetBSD__) */
+		need_disable = inteldrm_setup_mchbar(dev_priv, bpa, &mchbsh);
+#endif /* !defined(__NetBSD__) */
 
 		/* On 915-945 and GM965, channel interleave by the CPU is
 		 * determined by DCC.  The CPU will alternate based on bit 6
@@ -4929,7 +4974,11 @@ inteldrm_detect_bit_6_swizzle(struct inteldrm_softc *dev_priv,
 			swizzle_y = I915_BIT_6_SWIZZLE_UNKNOWN;
 		}
 
+#if !defined(__NetBSD__)
 		inteldrm_teardown_mchbar(dev_priv, bpa, need_disable);
+#else /* !defined(__NetBSD__) */
+		inteldrm_teardown_mchbar(dev_priv, bpa, need_disable, mchbsh);
+#endif /* !defined(__NetBSD__) */
 	} else {
 		/* The 965, G33, and newer, have a very flexible memory
 		 * configuration. It will enable dual-channel mode
