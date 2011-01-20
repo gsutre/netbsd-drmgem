@@ -68,7 +68,12 @@
 int	inteldrm_probe(struct device *, void *, void *);
 void	inteldrm_attach(struct device *, struct device *, void *);
 int	inteldrm_detach(struct device *, int);
+#if !defined(__NetBSD__)
 int	inteldrm_activate(struct device *, int);
+#else /* !defined(__NetBSD__) */
+static bool	inteldrm_suspend(struct device *, const pmf_qual_t *);
+static bool	inteldrm_resume(struct device *, const pmf_qual_t *);
+#endif /* !defined(__NetBSD__) */
 int	inteldrm_ioctl(struct drm_device *, u_long, caddr_t, struct drm_file *);
 int	inteldrm_doioctl(struct drm_device *, u_long, caddr_t, struct drm_file *);
 int	inteldrm_intr(void *);
@@ -621,12 +626,20 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	    dev->agp->info.ai_aperture_size, BUS_SPACE_MAP_LINEAR |
 	    BUS_SPACE_MAP_PREFETCHABLE, &dev_priv->agph))
 		panic("can't map aperture");
+
+#if defined(__NetBSD__)
+	(void)pmf_device_register(self, inteldrm_suspend, inteldrm_resume);
+#endif /* defined(__NetBSD__) */
 }
 
 int
 inteldrm_detach(struct device *self, int flags)
 {
 	struct inteldrm_softc *dev_priv = (struct inteldrm_softc *)self;
+
+#if defined(__NetBSD__)
+	pmf_device_deregister(self);
+#endif /* defined(__NetBSD__) */
 
 	/* this will quiesce any dma that's going on and kill the timeouts. */
 	if (dev_priv->drmdev != NULL) {
@@ -666,6 +679,7 @@ inteldrm_detach(struct device *self, int flags)
 	return (0);
 }
 
+#if !defined(__NetBSD__)
 int
 inteldrm_activate(struct device *arg, int act)
 {
@@ -688,6 +702,31 @@ inteldrm_activate(struct device *arg, int act)
 
 	return (0);
 }
+#else /* !defined(__NetBSD__) */
+static bool
+inteldrm_suspend(struct device *arg, const pmf_qual_t *qual)
+{
+	struct inteldrm_softc	*dev_priv = (struct inteldrm_softc *)arg;
+
+	inteldrm_quiesce(dev_priv);
+	inteldrm_save_state(dev_priv);
+
+	return true;
+}
+
+static bool
+inteldrm_resume(struct device *arg, const pmf_qual_t *qual)
+{
+	struct inteldrm_softc	*dev_priv = (struct inteldrm_softc *)arg;
+
+	inteldrm_restore_state(dev_priv);
+	/* entrypoints can stop sleeping now */
+	atomic_clearbits_int(&dev_priv->sc_flags, INTELDRM_QUIET);
+	wakeup(&dev_priv->flags);
+
+	return true;
+}
+#endif /* !defined(__NetBSD__) */
 
 struct cfattach inteldrm_ca = {
 	sizeof(struct inteldrm_softc), inteldrm_probe, inteldrm_attach,

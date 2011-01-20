@@ -266,6 +266,10 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 #endif /* !defined(__NetBSD__) */
 	}
 
+#if defined(__NetBSD__)
+	(void)pmf_device_register(self, NULL, NULL);
+#endif /* defined(__NetBSD__) */
+
 	printf("\n");
 	return;
 
@@ -277,6 +281,10 @@ int
 drm_detach(struct device *self, int flags)
 {
 	struct drm_device *dev = (struct drm_device *)self;
+
+#if defined(__NetBSD__)
+	pmf_device_deregister(self);
+#endif /* defined(__NetBSD__) */
 
 	drm_lastclose(dev);
 
