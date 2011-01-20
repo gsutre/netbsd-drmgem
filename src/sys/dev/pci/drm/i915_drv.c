@@ -375,8 +375,10 @@ workq_create(const char *name, int maxqs, int ipl)
 		return NULL;
 
 	if (workqueue_create(&wq->wq_queue, name, workq_worker,
-	    &wq->wq_pool, PRI_BIO, ipl, 0))
+	    &wq->wq_pool, PRI_BIO, ipl, 0)) {
+		free(wq, M_DRM);
 		return NULL;
+	}
 
 	pool_init(&wq->wq_pool, sizeof(struct workq_task), 0, 0, 0,
 	    name, NULL, IPL_HIGH);
@@ -388,6 +390,8 @@ static int
 workq_add_task(struct workq *wq, int flags, workq_fn func, void *a1, void *a2)
 {
 	struct workq_task	*wqt;
+
+	KASSERT(wq != NULL);
 
 	wqt = pool_get(&wq->wq_pool, (flags & WQ_WAITOK) ?
 	    PR_WAITOK : PR_NOWAIT);
