@@ -667,7 +667,7 @@ inteldrm_detach(struct device *self, int flags)
 	cv_destroy(&dev_priv->condvar);
 #endif /* defined(__NetBSD__) */
 
-	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.bsh != NULL) {
+	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.valid) {
 		bus_space_unmap(dev_priv->ifp.i9xx.bst, dev_priv->ifp.i9xx.bsh,
 		    PAGE_SIZE);
 	} else if (dev_priv->flags & (CHIP_I830 | CHIP_I845G | CHIP_I85X |
@@ -1109,6 +1109,7 @@ i915_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	bus_addr_t	addr;
 	u_int32_t	reg;
 
+	dev_priv->ifp.i9xx.valid = true;
 	dev_priv->ifp.i9xx.bst = bpa->pa_memt;
 
 	reg = pci_conf_read(bpa->pa_pc, bpa->pa_tag, I915_IFPADDR);
@@ -1130,7 +1131,7 @@ i915_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	return;
 
 nope:
-	dev_priv->ifp.i9xx.bsh = NULL;
+	dev_priv->ifp.i9xx.valid = false;
 	printf(": no ifp ");
 }
 
@@ -1140,6 +1141,7 @@ i965_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	bus_addr_t	addr;
 	u_int32_t	lo, hi;
 
+	dev_priv->ifp.i9xx.valid = true;
 	dev_priv->ifp.i9xx.bst = bpa->pa_memt;
 
 	hi = pci_conf_read(bpa->pa_pc, bpa->pa_tag, I965_IFPADDR + 4);
@@ -1165,7 +1167,7 @@ i965_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	return;
 
 nope:
-	dev_priv->ifp.i9xx.bsh = NULL;
+	dev_priv->ifp.i9xx.valid = false;
 	printf(": no ifp ");
 }
 
@@ -1177,7 +1179,7 @@ inteldrm_chipset_flush(struct inteldrm_softc *dev_priv)
 	 * The write will return when it is done.
 	 */
 	if (IS_I9XX(dev_priv)) {
-	    if (dev_priv->ifp.i9xx.bsh != NULL)
+	    if (dev_priv->ifp.i9xx.valid)
 		bus_space_write_4(dev_priv->ifp.i9xx.bst,
 		    dev_priv->ifp.i9xx.bsh, 0, 1);
 	} else {

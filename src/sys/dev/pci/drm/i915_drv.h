@@ -117,6 +117,7 @@ struct inteldrm_softc {
 		struct {
 			bus_space_tag_t		bst;
 			bus_space_handle_t	bsh;
+			bool			valid;
 		} i9xx;
 		struct {
 			bus_dma_segment_t	seg;
