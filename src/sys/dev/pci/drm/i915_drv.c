@@ -65,7 +65,11 @@
 
 #define I915_GEM_GPU_DOMAINS	(~(I915_GEM_DOMAIN_CPU | I915_GEM_DOMAIN_GTT))
 
+#if !defined(__NetBSD__)
 int	inteldrm_probe(struct device *, void *, void *);
+#else /* !defined(__NetBSD__) */
+int	inteldrm_probe(struct device *, struct cfdata *, void *);
+#endif /* !defined(__NetBSD__) */
 void	inteldrm_attach(struct device *, struct device *, void *);
 int	inteldrm_detach(struct device *, int);
 #if !defined(__NetBSD__)
@@ -313,7 +317,11 @@ static const struct drm_driver_info inteldrm_driver = {
 };
 
 int
+#if !defined(__NetBSD__)
 inteldrm_probe(struct device *parent, void *match, void *aux)
+#else /* !defined(__NetBSD__) */
+inteldrm_probe(struct device *parent, struct cfdata *match, void *aux)
+#endif /* !defined(__NetBSD__) */
 {
 	return (drm_pciprobe((struct pci_attach_args *)aux,
 	    inteldrm_pciidlist));
@@ -728,6 +736,7 @@ inteldrm_resume(struct device *arg, const pmf_qual_t *qual)
 }
 #endif /* !defined(__NetBSD__) */
 
+#if !defined(__NetBSD__)
 struct cfattach inteldrm_ca = {
 	sizeof(struct inteldrm_softc), inteldrm_probe, inteldrm_attach,
 	inteldrm_detach, inteldrm_activate
@@ -736,6 +745,14 @@ struct cfattach inteldrm_ca = {
 struct cfdriver inteldrm_cd = {
 	0, "inteldrm", DV_DULL
 };
+#else /* !defined(__NetBSD__) */
+/*
+ * We do not use CFATTACH_DECL_NEW, in order to be compatible with
+ * the rest of the code (see similar comment in drm_drv.c).
+ */
+CFATTACH_DECL(inteldrm, sizeof(struct inteldrm_softc),
+    inteldrm_probe, inteldrm_attach, inteldrm_detach, NULL);
+#endif /* !defined(__NetBSD__) */
 
 int
 inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
