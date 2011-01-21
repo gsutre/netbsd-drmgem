@@ -2974,7 +2974,7 @@ int
 i915_gem_object_set_to_gtt_domain(struct drm_obj *obj, int write,
     int interruptible)
 {
-	struct drm_device	*dev = (struct drm_device *)obj->dev;
+	struct drm_device	*dev = obj->dev;
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	struct inteldrm_obj	*obj_priv = (struct inteldrm_obj *)obj;
 	int			 ret;
@@ -5121,7 +5121,7 @@ i915_gem_save_bit_17_swizzle(struct drm_obj *obj)
 		 */
 		size_t nb17 = ((page_count + 31) & ~31)/32;
 		obj_priv->bit_17 = drm_alloc(nb17 * sizeof(u_int32_t));
-		if (obj_priv-> bit_17 == NULL) {
+		if (obj_priv->bit_17 == NULL) {
 			return;
 		}
 
