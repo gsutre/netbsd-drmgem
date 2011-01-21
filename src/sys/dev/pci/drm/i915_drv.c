@@ -49,7 +49,11 @@
 #include "i915_drm.h"
 #include "i915_drv.h"
 
+#if !defined(__NetBSD__)
 #include <machine/pmap.h>
+#else /* !defined(__NetBSD__) */
+#include <uvm/uvm_pmap.h>
+#endif /* !defined(__NetBSD__) */
 
 #include <sys/queue.h>
 #if !defined(__NetBSD__)
@@ -5037,10 +5041,19 @@ inteldrm_swizzle_page(struct vm_page *pg)
 #if defined (__HAVE_PMAP_DIRECT)
 	va = pmap_map_direct(pg);
 #else
+#if !defined(__NetBSD__)
 	va = uvm_km_valloc(kernel_map, PAGE_SIZE);
+#else /* !defined(__NetBSD__) */
+	va = uvm_km_alloc(kernel_map, PAGE_SIZE, 0, UVM_KMF_VAONLY);
+#endif /* !defined(__NetBSD__) */
 	if (va == 0)
 		return (ENOMEM);
+#if !defined(__NetBSD__)
 	pmap_kenter_pa(va, VM_PAGE_TO_PHYS(pg), UVM_PROT_RW);
+#else /* !defined(__NetBSD__) */
+	pmap_kenter_pa(va, VM_PAGE_TO_PHYS(pg),
+	    VM_PROT_READ | VM_PROT_WRITE, PMAP_WRITE_COMBINE);
+#endif /* !defined(__NetBSD__) */
 	pmap_update(pmap_kernel());
 #endif
 	vaddr = (u_int8_t *)va;
@@ -5056,7 +5069,11 @@ inteldrm_swizzle_page(struct vm_page *pg)
 #else
 	pmap_kremove(va, PAGE_SIZE);
 	pmap_update(pmap_kernel());
+#if !defined(__NetBSD__)
 	uvm_km_free(kernel_map, va, PAGE_SIZE);
+#else /* !defined(__NetBSD__) */
+	uvm_km_free(kernel_map, va, PAGE_SIZE, UVM_KMF_VAONLY);
+#endif /* !defined(__NetBSD__) */
 #endif
 	return (0);
 }
