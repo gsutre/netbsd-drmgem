@@ -660,6 +660,15 @@ inteldrm_detach(struct device *self, int flags)
 	pmf_device_deregister(self);
 #endif /* defined(__NetBSD__) */
 
+	timeout_del(&dev_priv->mm.retire_timer);
+	timeout_del(&dev_priv->mm.hang_timer);
+#if defined(__NetBSD__)
+	callout_destroy(&dev_priv->mm.retire_timer);
+	callout_destroy(&dev_priv->mm.hang_timer);
+#endif /* defined(__NetBSD__) */
+
+	agp_destroy_map(dev_priv->agph);
+
 	/* this will quiesce any dma that's going on and kill the timeouts. */
 	if (dev_priv->drmdev != NULL) {
 		config_detach(dev_priv->drmdev, flags);
@@ -673,10 +682,6 @@ inteldrm_detach(struct device *self, int flags)
 		I915_WRITE(HWS_PGA, 0x1ffff000);
 		dev_priv->hw_status_page = NULL;
 	}
-
-#if defined(__NetBSD__)
-	cv_destroy(&dev_priv->condvar);
-#endif /* defined(__NetBSD__) */
 
 	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.valid) {
 #if !defined(__NetBSD__)
@@ -693,6 +698,16 @@ inteldrm_detach(struct device *self, int flags)
 	}
 
 	pci_intr_disestablish(dev_priv->pc, dev_priv->irqh);
+
+#if defined(__NetBSD__)
+	cv_destroy(&dev_priv->condvar);
+	mutex_destroy(&dev_priv->fence_lock);
+	mutex_destroy(&dev_priv->request_lock);
+	mutex_destroy(&dev_priv->list_lock);
+	mutex_destroy(&dev_priv->user_irq_lock);
+#endif /* defined(__NetBSD__) */
+
+	/* XXX Destroy the task queue dev_priv->workq. */
 
 #if !defined(__NetBSD__)
 	if (dev_priv->regs != NULL)
