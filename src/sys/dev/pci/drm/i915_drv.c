@@ -5107,7 +5107,12 @@ i915_gem_bit_17_swizzle(struct drm_obj *obj)
 			ret = inteldrm_swizzle_page(pg);
 			if (ret)
 				return;
+#if !defined(__NetBSD__)
 			atomic_clearbits_int(&pg->pg_flags, PG_CLEAN);
+#else /* !defined(__NetBSD__) */
+			/* XXX This assignment should be atomic. */
+			pg->flags &= ~(PG_CLEAN);
+#endif /* !defined(__NetBSD__) */
 		}
 
 		n += PAGE_SIZE;
