@@ -3754,8 +3754,8 @@ i915_gem_execbuffer2(struct drm_device *dev, void *data,
 			    I915_FENCED_EXEC);
 		}
 
-		i915_gem_object_move_to_active(object_list[i]);
 		drm_unlock_obj(obj);
+		i915_gem_object_move_to_active(object_list[i]);
 	}
 	mtx_leave(&dev_priv->list_lock);
 
