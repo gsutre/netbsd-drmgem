@@ -66,14 +66,17 @@
 #ifndef _X86_SG_DMA_H_
 #define _X86_SG_DMA_H_
 
+#include <sys/types.h>
+#include <sys/extent.h>
 #include <sys/mutex.h>
+#include <sys/proc.h>
 #include <sys/tree.h>
 
-struct extent;
+#include <machine/bus.h>
 
 /* Scatter gather bus_dma functions. */
 struct sg_cookie {
-	struct mutex	 sg_mtx;
+	kmutex_t	 sg_mtx;
 	struct extent	*sg_ex;
 	void		*sg_hdl;
 
@@ -82,7 +85,7 @@ struct sg_cookie {
 	void		(*flush_tlb)(void *);
 };
 
-/* 
+/*
  * per-map DVMA page table
  */
 struct sg_page_entry {
@@ -107,8 +110,8 @@ struct sg_page_map {
 };
 
 struct sg_cookie	*sg_dmatag_init(char *, void *, bus_addr_t, bus_size_t,
-			    void (*)(void *, vaddr_t, paddr_t, int),
-			    void (*)(void *, vaddr_t), void (*)(void *));
+			    void (*)(void *, bus_addr_t, paddr_t, int),
+			    void (*)(void *, bus_addr_t), void (*)(void *));
 void	sg_dmatag_destroy(struct sg_cookie *);
 int	sg_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
 	    bus_size_t, int, bus_dmamap_t *);
