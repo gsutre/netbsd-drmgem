@@ -105,12 +105,16 @@ static int agp_i810_init(struct agp_softc *);
 static void agp_i810_write_gtt_entry(struct agp_i810_softc *, off_t,
 				     u_int32_t);
 
+extern void intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+			    bus_size_t, int);
+
 static struct agp_methods agp_i810_methods = {
 	agp_i810_get_aperture,
 	agp_i810_set_aperture,
 	agp_i810_bind_page,
 	agp_i810_unbind_page,
 	agp_i810_flush_tlb,
+	intagp_dma_sync,
 	agp_i810_enable,
 	agp_i810_alloc_memory,
 	agp_i810_free_memory,

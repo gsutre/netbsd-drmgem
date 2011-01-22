@@ -64,6 +64,7 @@ static struct agp_methods agp_sis_methods = {
 	agp_sis_bind_page,
 	agp_sis_unbind_page,
 	agp_sis_flush_tlb,
+	NULL,
 	agp_generic_enable,
 	agp_generic_alloc_memory,
 	agp_generic_free_memory,

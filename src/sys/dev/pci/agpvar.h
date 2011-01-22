@@ -106,6 +106,8 @@ struct agp_methods {
 	int (*bind_page)(struct agp_softc *, off_t, bus_addr_t);
 	int (*unbind_page)(struct agp_softc *, off_t);
 	void (*flush_tlb)(struct agp_softc *);
+	void (*dma_sync)(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+	    bus_size_t, int);
 	int (*enable)(struct agp_softc *, u_int32_t mode);
 	struct agp_memory *(*alloc_memory)(struct agp_softc *, int, vsize_t);
 	int (*free_memory)(struct agp_softc *, struct agp_memory *);
