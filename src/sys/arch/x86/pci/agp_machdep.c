@@ -68,6 +68,10 @@ void	intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 #endif /* NAGP_I810 > 0 */
 
+static void	agp_sg_bind_page(void *, bus_addr_t, paddr_t, int);
+static void	agp_sg_unbind_page(void *, bus_addr_t);
+static void	agp_sg_flush_tlb(void *);
+
 void
 agp_flush_cache(void)
 {
@@ -100,6 +104,41 @@ agp_flush_cache_range(vaddr_t va, vsize_t sz)
  * for the init function at present.
  */
 
+static void
+agp_sg_bind_page(void *dev, bus_addr_t address, paddr_t physical, int flags)
+{
+	struct agp_softc *sc = dev;
+	int error;
+
+	/* XXX flags */
+	error = AGP_BIND_PAGE(sc, address - sc->as_apaddr,
+	    _BUS_PHYS_TO_BUS(physical));
+	if (error)
+		aprint_error_dev(sc->as_dev,
+		    "%s: failed: ba %#"PRIxPADDR", pa %#"PRIxPADDR"\n",
+		    __func__, address, physical);
+}
+
+static void
+agp_sg_unbind_page(void *dev, bus_addr_t address)
+{
+	struct agp_softc *sc = dev;
+	int error;
+
+	error = AGP_UNBIND_PAGE(sc, address - sc->as_apaddr);
+	if (error)
+		aprint_error_dev(sc->as_dev, "%s: failed: ba %#"PRIxPADDR"\n",
+		    __func__, address);
+}
+
+static void
+agp_sg_flush_tlb(void *dev)
+{
+	struct agp_softc *sc = dev;
+
+	AGP_FLUSH_TLB(sc);
+}
+
 int
 agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
     bus_dma_tag_t *dmat)
@@ -115,10 +154,9 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 	    M_WAITOK | M_CANFAIL)) == NULL)
 		return (ENOMEM);
 
-	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc->as_chipc,
+	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc,
 	    start, end - start,
-	    sc->as_methods->bind_page, sc->as_methods->unbind_page,
-	    sc->as_methods->flush_tlb)) == NULL) {
+	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb)) == NULL) {
 		free(tag, M_DMAMAP);
 		return (ENOMEM);
 	}
@@ -169,7 +207,7 @@ agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 	 */
 	for (offset = cookie->sg_ex->ex_start;
 	    offset < cookie->sg_ex->ex_end; offset += PAGE_SIZE)
-		sc->as_methods->unbind_page(sc->as_chipc, offset);
+		agp_sg_unbind_page(sc, offset);
 
 	sg_dmatag_destroy(cookie);
 	free(dmat, M_DMAMAP);
