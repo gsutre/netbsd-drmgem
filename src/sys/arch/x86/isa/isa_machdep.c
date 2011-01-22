@@ -96,6 +96,7 @@ __KERNEL_RCSID(0, "$NetBSD: isa_machdep.c,v 1.28 2009/08/19 15:04:27 dyoung Exp 
 static int _isa_dma_may_bounce(bus_dma_tag_t, bus_dmamap_t, int, int *);
 
 struct x86_bus_dma_tag isa_bus_dma_tag = {
+	NULL,				/* cookie */
 	0,				/* _tag_needs_free */
 	ISA_DMA_BOUNCE_THRESHOLD,	/* _bounce_thresh */
 	0,				/* _bounce_alloc_lo */

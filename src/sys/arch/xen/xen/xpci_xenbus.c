@@ -91,6 +91,7 @@ CFATTACH_DECL_NEW(xpci_xenbus, sizeof(struct xpci_xenbus_softc),
    xpci_xenbus_match, xpci_xenbus_attach, xpci_xenbus_detach, NULL);
 
 struct x86_bus_dma_tag pci_bus_dma_tag = {
+	NULL,				/* cookie */
 	0,			     /* tag_needs_free */
 #if defined(_LP64) || defined(PAE)
 	PCI32_DMA_BOUNCE_THRESHOLD,     /* bounce_thresh */
@@ -121,6 +122,7 @@ struct x86_bus_dma_tag pci_bus_dma_tag = {
 
 #ifdef _LP64
 struct x86_bus_dma_tag pci_bus_dma64_tag = {
+	NULL,				/* cookie */
 	0,			     /* tag_needs_free */
 	0,
 	0,

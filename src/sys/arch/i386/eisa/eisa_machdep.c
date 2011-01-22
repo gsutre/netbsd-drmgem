@@ -93,6 +93,7 @@ __KERNEL_RCSID(0, "$NetBSD: eisa_machdep.c,v 1.34 2009/11/17 23:51:59 dyoung Exp
  * of these funcions.
  */
 struct x86_bus_dma_tag eisa_bus_dma_tag = {
+	NULL,			/* cookie */
 	0,			/* _tag_needs_free */
 	0,			/* _bounce_thresh */
 	0,			/* _bounce_alloc_lo */
