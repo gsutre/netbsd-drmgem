@@ -41,29 +41,32 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/types.h>
+#include <sys/device.h>
 #include <sys/param.h>
 #include <sys/systm.h>
-#include <sys/device.h>
 #include <sys/malloc.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
-#include <dev/pci/pcidevs.h>
 #include <dev/pci/agpvar.h>
+#include <dev/pci/agpreg.h>
 
+#include <machine/cpu.h>
 #include <machine/cpufunc.h>
 #include <machine/bus.h>
+#include <machine/bus_private.h>
 
-#include <uvm/uvm.h>
+#include <x86/sg_dma.h>
 
-#include "intagp.h"
+#include "agp_i810.h"
 
 /* bus_dma functions */
 
-#if NINTAGP > 0
+#if NAGP_I810 > 0
 void	intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
-#endif
+#endif /* NAGP_I810 > 0 */
 
 void
 agp_flush_cache(void)
@@ -101,21 +104,22 @@ int
 agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
     bus_dma_tag_t *dmat)
 {
-	struct bus_dma_tag	*tag;
+	struct x86_bus_dma_tag	*tag;
 	struct sg_cookie	*cookie;
 
-	/* 
+	/*
 	 * XXX add agp map into the main queue that takes up our chunk of
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
-	if ((tag = malloc(sizeof(*tag), M_DEVBUF,
+	if ((tag = malloc(sizeof(*tag), M_DMAMAP,
 	    M_WAITOK | M_CANFAIL)) == NULL)
 		return (ENOMEM);
 
-	if ((cookie = sg_dmatag_init("agpgtt", sc->sc_chipc, start, end - start,
-	    sc->sc_methods->bind_page, sc->sc_methods->unbind_page,
-	    sc->sc_methods->flush_tlb)) == NULL) {
-		free(tag, M_DEVBUF);
+	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc->as_chipc,
+	    start, end - start,
+	    sc->as_methods->bind_page, sc->as_methods->unbind_page,
+	    sc->as_methods->flush_tlb)) == NULL) {
+		free(tag, M_DMAMAP);
 		return (ENOMEM);
 	}
 
@@ -134,8 +138,8 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 	tag->_dmamem_mmap = _bus_dmamem_mmap;
 
 	/* Driver may need special sync handling */
-	if (sc->sc_methods->dma_sync != NULL) {
-		tag->_dmamap_sync = sc->sc_methods->dma_sync;
+	if (sc->as_methods->dma_sync != NULL) {
+		tag->_dmamap_sync = sc->as_methods->dma_sync;
 	} else {
 #ifdef __i386__
 		tag->_dmamap_sync = NULL;
@@ -143,7 +147,7 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 		tag->_dmamap_sync = _bus_dmamap_sync;
 #endif
 	}
-	
+
 	*dmat = tag;
 	return (0);
 }
@@ -156,7 +160,7 @@ agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 
 
 	/*
-	 * XXX clear up blocker queue 
+	 * XXX clear up blocker queue
 	 */
 
 	/*
@@ -165,10 +169,10 @@ agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 	 */
 	for (offset = cookie->sg_ex->ex_start;
 	    offset < cookie->sg_ex->ex_end; offset += PAGE_SIZE)
-		sc->sc_methods->unbind_page(sc->sc_chipc, offset);
+		sc->as_methods->unbind_page(sc->as_chipc, offset);
 
 	sg_dmatag_destroy(cookie);
-	free(dmat, M_DEVBUF);
+	free(dmat, M_DMAMAP);
 }
 
 void
@@ -205,18 +209,13 @@ agp_init_map(bus_space_tag_t tag, bus_addr_t address, bus_size_t size,
 	int		 error;
 
 #ifdef __i386__
-	switch (tag) {
-	case I386_BUS_SPACE_IO:
+	if (tag->bst_type == X86_BUS_SPACE_IO) {
 		ex = ioport_ex;
 		if (flags & BUS_SPACE_MAP_LINEAR)
 			return (EINVAL);
-		break;
-
-	case I386_BUS_SPACE_MEM:
+	} else if (tag->bst_type == X86_BUS_SPACE_MEM) {
 		ex = iomem_ex;
-		break;
-
-	default:
+	} else {
 		panic("agp_init_map: bad bus space tag");
 	}
 	/*
@@ -255,18 +254,12 @@ agp_destroy_map(struct agp_map *map)
 #ifdef __i386__
 	struct extent	*ex;
 
-	switch (map->bst) {
-	case I386_BUS_SPACE_IO:
+	if (map->bst->bst_type == X86_BUS_SPACE_IO)
 		ex = ioport_ex;
-		break;
-
-	case I386_BUS_SPACE_MEM:
+	else if (map->bst->bst_type == X86_BUS_SPACE_MEM)
 		ex = iomem_ex;
-		break;
-
-	default:
+	else
 		panic("agp_destroy_map: bad bus space tag");
-	}
 
 	if (extent_free(ex, map->addr, map->size,
 	    EX_NOWAIT | EX_MALLOCOK ))
@@ -283,7 +276,7 @@ agp_map_subregion(struct agp_map *map, bus_size_t offset, bus_size_t size,
     bus_space_handle_t *bshp)
 {
 #ifdef __i386__
-	return (_bus_space_map(map->bst, map->addr + offset, size,
+	return (_x86_memio_map(map->bst, map->addr + offset, size,
 	    map->flags, bshp));
 #else
 	if (offset > map->size || size > map->size || offset + size > map->size)
@@ -297,7 +290,7 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
     bus_size_t size)
 {
 #ifdef __i386__
-	return (_bus_space_unmap(map->bst, bsh, size, NULL));
+	return (_x86_memio_unmap(map->bst, bsh, size, NULL));
 #else
 	/* subregion doesn't need unmapping, do nothing */
 #endif
@@ -308,7 +301,7 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
  * they only exist on x86), so this can't be in dev/pci.
  */
 
-#if NINTAGP > 0
+#if NAGP_I810 > 0
 
 /*
  * bus_dmamap_sync routine for intagp.
@@ -324,13 +317,13 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
  * work. on i386 we need to check for the presence of cflush() in cpuid,
  * however, all cpus that have a new enough intel GMCH should be suitable.
  */
-void	
+void
 intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
 	bus_dma_segment_t	*segp;
 	struct sg_page_map	*spm;
-	void			*addr;
+	vaddr_t			 addr;
 	paddr_t	 		 pa;
 	bus_addr_t		 poff, endoff, soff;
 
@@ -344,7 +337,7 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 	if (size == 0 || (offset + size) > dmam->dm_mapsize)
 		panic("intagp_dma_sync: bad length");
 #endif /* DIAGNOSTIC */
-	
+
 	/* Coherent mappings need no sync. */
 	if (dmam->_dm_flags & BUS_DMA_COHERENT)
 		return;
@@ -358,7 +351,7 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 	 * - preread we need to flush data which will very soon be stale from
 	 * the caches
 	 *
-	 * - prewrite we need to make sure our data hits the memory before the 
+	 * - prewrite we need to make sure our data hits the memory before the
 	 * gpu hoovers it up.
 	 *
 	 * The chipset also may need flushing, but that fits badly into
@@ -368,23 +361,23 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 	endoff = round_page(offset + size);
 	if (ops & BUS_DMASYNC_POSTREAD || ops & BUS_DMASYNC_PREREAD ||
 	    ops & BUS_DMASYNC_PREWRITE) {
-		if (curcpu()->ci_cflushsz == 0) {
+		if (curcpu()->ci_cflush_lsize == 0) {
 			/* save some wbinvd()s. we're MD anyway so it's ok */
 			wbinvd();
 			return;
 		}
 
-		mfence();
+		x86_mfence();
 		spm = dmam->_dm_cookie;
 		switch (spm->spm_buftype) {
-		case BUS_BUFTYPE_LINEAR:
-			addr = spm->spm_origbuf + soff;
+		case X86_DMA_BUFTYPE_LINEAR:
+			addr = (vaddr_t)spm->spm_origbuf + soff;
 			while (soff < endoff) {
-				pmap_flush_cache((vaddr_t)addr, PAGE_SIZE);
+				pmap_flush_cache(addr, PAGE_SIZE);
 				soff += PAGE_SIZE;
 				addr += PAGE_SIZE;
 			} break;
-		case BUS_BUFTYPE_RAW:
+		case X86_DMA_BUFTYPE_RAW:
 			segp = (bus_dma_segment_t *)spm->spm_origbuf;
 			poff = 0;
 
@@ -408,16 +401,15 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 			}
 			break;
 		/* You do not want to load mbufs or uios onto a graphics card */
-		case BUS_BUFTYPE_MBUF:
+		case X86_DMA_BUFTYPE_MBUF:
 			/* FALLTHROUGH */
-		case BUS_BUFTYPE_UIO:
+		case X86_DMA_BUFTYPE_UIO:
 			/* FALLTHROUGH */
 		default:
 			panic("intagp_dmamap_sync: bad buftype %d",
 			    spm->spm_buftype);
-			
 		}
-		mfence();
+		x86_mfence();
 	}
 }
-#endif /* NINTAGP > 0 */
+#endif /* NAGP_I810 > 0 */
