@@ -67,6 +67,11 @@
 #define MAX_DMA_SEGS	20
 #endif
 
+/* Disable 24-bit DMA support if it's not supported by arch. */
+#ifndef BUS_DMA_24BIT
+#define BUS_DMA_24BIT	0
+#endif
+
 int		sg_dmamap_load_seg(bus_dma_tag_t, struct sg_cookie *,
 		    bus_dmamap_t, bus_dma_segment_t *, int, int, bus_size_t,
 		    bus_size_t);
