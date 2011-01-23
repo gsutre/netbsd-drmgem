@@ -81,7 +81,11 @@ agp_flush_cache(void)
 void
 agp_flush_cache_range(vaddr_t va, vsize_t sz)
 {
+#if defined(__HAVE_PMAP_FLUSH_CACHE)
 	pmap_flush_cache(va, sz);
+#else /* defined(__HAVE_PMAP_FLUSH_CACHE) */
+	wbinvd();
+#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) */
 }
 
 /*
@@ -361,11 +365,13 @@ void
 intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
+#if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
 	bus_dma_segment_t	*segp;
 	struct sg_page_map	*spm;
 	vaddr_t			 addr;
 	paddr_t	 		 pa;
 	bus_addr_t		 poff, endoff, soff;
+#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
 
 #ifdef DIAGNOSTIC
 	if ((ops & (BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE)) != 0 &&
@@ -397,16 +403,17 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 	 * The chipset also may need flushing, but that fits badly into
 	 * bus_dma and it done in the driver.
 	 */
-	soff = trunc_page(offset);
-	endoff = round_page(offset + size);
 	if (ops & BUS_DMASYNC_POSTREAD || ops & BUS_DMASYNC_PREREAD ||
 	    ops & BUS_DMASYNC_PREWRITE) {
+#if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
 		if (curcpu()->ci_cflush_lsize == 0) {
 			/* save some wbinvd()s. we're MD anyway so it's ok */
 			wbinvd();
 			return;
 		}
 
+		soff = trunc_page(offset);
+		endoff = round_page(offset + size);
 		x86_mfence();
 		spm = dmam->_dm_cookie;
 		switch (spm->spm_buftype) {
@@ -450,6 +457,9 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 			    spm->spm_buftype);
 		}
 		x86_mfence();
+#else /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
+		wbinvd();
+#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
 	}
 }
 #endif /* NAGP_I810 > 0 */
