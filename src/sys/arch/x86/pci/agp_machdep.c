@@ -370,7 +370,7 @@ intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
 	    (ops & (BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE)) != 0)
 		panic("agp_dmamap_sync: mix PRE and POST");
 	if (offset >= dmam->dm_mapsize)
-		panic("_intagp_dma_sync: bad offset %lu (size = %lu)",
+		panic("_intagp_dma_sync: bad offset %lu (size = %zu)",
 		    offset, dmam->dm_mapsize);
 	if (size == 0 || (offset + size) > dmam->dm_mapsize)
 		panic("intagp_dma_sync: bad length");

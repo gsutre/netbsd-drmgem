@@ -231,7 +231,7 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 			paddr_t pa;
 
 			if (pmap_extract(pmap, a, &pa) == FALSE) {
-				printf("iomap pmap error addr 0x%llx\n", a);
+				printf("iomap pmap error addr %#"PRIxPADDR"\n", a);
 				sg_iomap_clear_pages(spm);
 				return (EFBIG);
 			}
@@ -239,8 +239,8 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 			err = sg_iomap_insert_page(spm, pa);
 			if (err) {
 				printf("iomap insert error: %d for "
-				    "va 0x%llx pa 0x%lx "
-				    "(buf %p len %lld/%llx)\n",
+				    "va %#"PRIxPADDR" pa %#"PRIxPADDR" "
+				    "(buf %p len %zd/%zx)\n",
 				    err, a, pa, buf, buflen, buflen);
 				sg_iomap_clear_pages(spm);
 				return (EFBIG);
@@ -293,7 +293,7 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 
 			/* Yuck... Redoing the same pmap_extract... */
 			if (pmap_extract(pmap, a, &pa) == FALSE) {
-				printf("iomap pmap error addr 0x%llx\n", a);
+				printf("iomap pmap error addr %#"PRIxPADDR"\n", a);
 				err = EFBIG;
 				break;
 			}
@@ -312,7 +312,7 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 				break;
 			else if (err) {
 				printf("iomap load seg page: %d for "
-				    "va 0x%llx pa %lx (%llx - %llx) "
+				    "va %#"PRIxPADDR" pa %#"PRIxPADDR" (%#"PRIxPADDR" - %#"PRIxPADDR") "
 				    "for %d/0x%x\n",
 				    err, a, pa, pgstart, pgend, pglen, pglen);
 				break;
@@ -536,7 +536,7 @@ sg_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 			err = sg_iomap_insert_page(spm, a);
 			if (err) {
 				printf("iomap insert error: %d for "
-				    "pa 0x%llx\n", err, a);
+				    "pa %#"PRIxPADDR"\n", err, a);
 				sg_iomap_clear_pages(spm);
 				return (EFBIG);
 			}
@@ -612,8 +612,8 @@ sg_dmamap_append_range(bus_dma_tag_t t, bus_dmamap_t map, paddr_t pa,
 
 #ifdef DIAGNOSTIC
 	if (sgstart == 0 || sgstart > sgend) {
-		printf("append range invalid mapping for %lx "
-		    "(0x%llx - 0x%llx)\n", pa, sgstart, sgend);
+		printf("append range invalid mapping for %#"PRIxPADDR" "
+		    "(%#"PRIxPADDR" - %#"PRIxPADDR")\n", pa, sgstart, sgend);
 		map->dm_nsegs = 0;
 		return (EINVAL);
 	}
@@ -622,7 +622,7 @@ sg_dmamap_append_range(bus_dma_tag_t t, bus_dmamap_t map, paddr_t pa,
 #ifdef DEBUG
 	if (trunc_page(sgstart) != trunc_page(sgend)) {
 		printf("append range crossing page boundary! "
-		    "pa %lx length %lld/0x%llx sgstart %llx sgend %llx\n",
+		    "pa %#"PRIxPADDR" length %zd/0x%zx sgstart %#"PRIxPADDR" sgend %#"PRIxPADDR"\n",
 		    pa, length, length, sgstart, sgend);
 	}
 #endif
@@ -748,7 +748,7 @@ sg_dmamap_load_seg(bus_dma_tag_t t, struct sg_cookie *is,
 				return (err);
 			if (err) {
 				printf("iomap load seg page: %d for "
-				    "pa 0x%llx (%llx - %llx for %d/%x\n",
+				    "pa %#"PRIxPADDR" (%#"PRIxPADDR" - %#"PRIxPADDR" for %d/%x\n",
 				    err, a, pgstart, pgend, pglen, pglen);
 				return (err);
 			}
@@ -785,7 +785,7 @@ sg_dmamap_unload(bus_dma_tag_t t, bus_dmamap_t map)
 	spm->spm_size = 0;
 	mutex_exit(&is->sg_mtx);
 	if (error != 0)
-		printf("warning: %qd of DVMA space lost\n", sgsize);
+		printf("warning: %zd of DVMA space lost\n", sgsize);
 
 	spm->spm_buftype = X86_DMA_BUFTYPE_INVALID;
 	spm->spm_origbuf = NULL;
