@@ -430,7 +430,7 @@ sg_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
 	if (uio->uio_resid > map->_dm_size)
 		return (EINVAL);
 
-	if (uio->uio_segflg != UIO_SYSSPACE)
+	if (!VMSPACE_IS_KERNEL_P(uio->uio_vmspace))
 		return (EOPNOTSUPP);
 
 	i = j = 0;
