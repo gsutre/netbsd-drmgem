@@ -116,6 +116,7 @@ sg_dmatag_init(char *name, void *hdl, bus_addr_t start, bus_size_t size,
 void
 sg_dmatag_destroy(struct sg_cookie *cookie)
 {
+	mutex_destroy(&cookie->sg_mtx);
 	extent_destroy(cookie->sg_ex);
 	free(cookie, M_DMAMAP);
 }

@@ -151,7 +151,7 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
 	if ((tag = malloc(sizeof(*tag), M_DMAMAP,
-	    M_WAITOK | M_CANFAIL)) == NULL)
+	    M_ZERO | M_WAITOK | M_CANFAIL)) == NULL)
 		return (ENOMEM);
 
 	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc,
@@ -174,6 +174,8 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 	tag->_dmamem_map = _bus_dmamem_map;
 	tag->_dmamem_unmap = _bus_dmamem_unmap;
 	tag->_dmamem_mmap = _bus_dmamem_mmap;
+	tag->_dmatag_subregion = _bus_dmatag_subregion;
+	tag->_dmatag_destroy = _bus_dmatag_destroy;
 
 	/* Driver may need special sync handling */
 	if (sc->as_methods->dma_sync != NULL) {
