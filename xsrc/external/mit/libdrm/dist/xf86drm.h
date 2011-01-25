@@ -48,9 +48,9 @@
 #define DRM_DEV_MODE	 (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP)
 
 
-#define DRM_DIR_NAME  "/dev"
-#define DRM_DEV_NAME  "%s/drm%d"
-#define DRM_CONTROL_DEV_NAME  "%s/drmC%d"
+#define DRM_DIR_NAME  "/dev/dri"
+#define DRM_DEV_NAME  "%s/card%d"
+#define DRM_CONTROL_DEV_NAME  "%s/controlD%d"
 #define DRM_PROC_NAME "/proc/dri/" /* For backward Linux compatibility */
 
 #define DRM_ERR_NO_DEVICE  (-1001)
