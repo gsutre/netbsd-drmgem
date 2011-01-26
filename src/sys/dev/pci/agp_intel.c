@@ -65,7 +65,7 @@ struct agp_intel_softc {
 
 static u_int32_t agp_intel_get_aperture(struct agp_softc *);
 static int agp_intel_set_aperture(struct agp_softc *, u_int32_t);
-static int agp_intel_bind_page(struct agp_softc *, off_t, bus_addr_t);
+static int agp_intel_bind_page(struct agp_softc *, off_t, bus_addr_t, int);
 static int agp_intel_unbind_page(struct agp_softc *, off_t);
 static void agp_intel_flush_tlb(struct agp_softc *);
 static int agp_intel_init(struct agp_softc *);
@@ -343,7 +343,8 @@ agp_intel_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 }
 
 static int
-agp_intel_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
+agp_intel_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
+    int flags)
 {
 	struct agp_intel_softc *isc = sc->as_chipc;
 

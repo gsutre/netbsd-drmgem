@@ -56,6 +56,9 @@ __KERNEL_RCSID(0, "$NetBSD: agp_i810.c,v 1.70 2011/01/25 10:52:11 gsutre Exp $")
 #define READ4(off)	bus_space_read_4(isc->bst, isc->bsh, off)
 #define WRITE4(off,v)	bus_space_write_4(isc->bst, isc->bsh, off, v)
 
+/* Memory is snooped, must not be accessed through gtt from the cpu. */
+#define	INTEL_COHERENT	0x6
+
 #define CHIP_I810 0	/* i810/i815 */
 #define CHIP_I830 1	/* 830M/845G */
 #define CHIP_I855 2	/* 852GM/855GM/865G */
@@ -91,7 +94,7 @@ static bus_space_handle_t agp_i810_vga_bsh;
 
 static u_int32_t agp_i810_get_aperture(struct agp_softc *);
 static int agp_i810_set_aperture(struct agp_softc *, u_int32_t);
-static int agp_i810_bind_page(struct agp_softc *, off_t, bus_addr_t);
+static int agp_i810_bind_page(struct agp_softc *, off_t, bus_addr_t, int);
 static int agp_i810_unbind_page(struct agp_softc *, off_t);
 static void agp_i810_flush_tlb(struct agp_softc *);
 static int agp_i810_enable(struct agp_softc *, u_int32_t mode);
@@ -840,7 +843,8 @@ agp_i810_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 }
 
 static int
-agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
+agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
+    int flags)
 {
 	struct agp_i810_softc *isc = sc->as_chipc;
 
@@ -862,6 +866,13 @@ agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
 			return EINVAL;
 		}
 	}
+
+	/*
+	 * COHERENT mappings mean set the snoop bit. this should never be
+	 * accessed by the gpu through the gtt.
+	 */
+	if (flags & BUS_DMA_COHERENT)
+		physical |= INTEL_COHERENT;
 
 	agp_i810_write_gtt_entry(isc, offset, physical | 1);
 	return 0;
@@ -1023,7 +1034,7 @@ agp_i810_bind_memory(struct agp_softc *sc, struct agp_memory *mem,
 	if (mem->am_type == 2) {
 		for (i = 0; i < mem->am_size; i += AGP_PAGE_SIZE)
 			agp_i810_bind_page(sc, offset + i,
-			    mem->am_physical + i);
+			    mem->am_physical + i, 0);
 		mem->am_offset = offset;
 		mem->am_is_bound = 1;
 		return 0;

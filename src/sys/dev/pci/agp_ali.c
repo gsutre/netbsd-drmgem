@@ -54,7 +54,7 @@ struct agp_ali_softc {
 
 static u_int32_t agp_ali_get_aperture(struct agp_softc *);
 static int agp_ali_set_aperture(struct agp_softc *sc, u_int32_t);
-static int agp_ali_bind_page(struct agp_softc *, off_t, bus_addr_t);
+static int agp_ali_bind_page(struct agp_softc *, off_t, bus_addr_t, int);
 static int agp_ali_unbind_page(struct agp_softc *, off_t);
 static void agp_ali_flush_tlb(struct agp_softc *);
 
@@ -215,7 +215,8 @@ agp_ali_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 }
 
 static int
-agp_ali_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
+agp_ali_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
+    int flags)
 {
 	struct agp_ali_softc *asc = sc->as_chipc;
 
