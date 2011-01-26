@@ -65,6 +65,7 @@ static struct agp_methods agp_ali_methods = {
 	agp_ali_bind_page,
 	agp_ali_unbind_page,
 	agp_ali_flush_tlb,
+	NULL,
 	agp_generic_enable,
 	agp_generic_alloc_memory,
 	agp_generic_free_memory,

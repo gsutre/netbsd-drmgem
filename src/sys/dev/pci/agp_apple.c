@@ -56,6 +56,7 @@ static struct agp_methods agp_apple_methods = {
 	agp_apple_bind_page,
 	agp_apple_unbind_page,
 	agp_apple_flush_tlb,
+	NULL,
 	agp_generic_enable,
 	agp_generic_alloc_memory,
 	agp_generic_free_memory,

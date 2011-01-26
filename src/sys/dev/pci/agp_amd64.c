@@ -90,6 +90,7 @@ static struct agp_methods agp_amd64_methods = {
 	agp_amd64_bind_page,
 	agp_amd64_unbind_page,
 	agp_amd64_flush_tlb,
+	NULL,
 	agp_generic_enable,
 	agp_generic_alloc_memory,
 	agp_generic_free_memory,

@@ -101,6 +101,7 @@ static void	_mca_bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t,
 #define	MCA_DMA_BOUNCE_THRESHOLD	(16 * 1024 * 1024)
 
 struct x86_bus_dma_tag mca_bus_dma_tag = {
+	NULL,					/* cookie */
 	0,
 	MCA_DMA_BOUNCE_THRESHOLD,		/* _bounce_thresh */
 	0,					/* _bounce_alloc_lo */

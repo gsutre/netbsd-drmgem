@@ -192,6 +192,8 @@ _bus_virt_to_bus(struct pmap *pm, vaddr_t va)
 #endif
 
 struct x86_bus_dma_tag {
+	void	*_cookie;		/* cookie used in the guts */
+
 	/*
 	 * The `bounce threshold' is checked while we are loading
 	 * the DMA map.  If the physical address of the segment

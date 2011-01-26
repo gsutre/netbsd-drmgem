@@ -111,6 +111,13 @@ typedef struct x86_bus_dmamap		*bus_dmamap_t;
 typedef struct x86_bus_dma_segment {
 	bus_addr_t	ds_addr;	/* DMA address */
 	bus_size_t	ds_len;		/* length of transfer */
+	/*
+	 * Ugh. need this so can pass alignment down from bus_dmamem_alloc
+	 * to scatter gather maps. only the first one is used so the rest is
+	 * wasted space. bus_dma could do with fixing the api for this.
+	 */
+	bus_size_t	_ds_boundary;	/* don't cross */
+	bus_size_t	_ds_align;	/* align to me */
 } bus_dma_segment_t;
 
 /*
@@ -141,5 +148,12 @@ struct x86_bus_dmamap {
 };
 
 #include <sys/bus_proto.h>
+
+/*
+ * Used to tune _bus_dmamem_alloc_range() for sg_dmamem_alloc().
+ * See also comment in struct x86_bus_dma_segment.
+ * XXX Fix this!
+ */
+#define	BUS_DMA_SG		0x8000	/* Internal. memory is for SG map */
 
 #endif /* _X86_BUS_H_ */

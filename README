@@ -3,6 +3,61 @@
 +------------------------------------------------------------------------------+
 
 
-Use at your won risk!  This is work-in-progress.
+The X.org intel driver included in NetBSD -current does not support the recent
+Ironlake IGPs found in Core i3/i5 based laptops.  However, OpenBSD 4.8 supports
+them (kudos to OpenBSD developers!).  This support involves three components of
+the system:
 
-More to come...
+1. Kernel DRM driver (with GEM support)
+2. Userland DRM library
+3. X.org video driver
+
+This project aims at porting these three components from OpenBSD to NetBSD, with
+a focus on Intel graphics chipsets.  The OpenBSD Xenocara DRM library and X.org
+Intel video driver should not require much work.  So the main challenge of this
+project is the port of OpenBSD's DRM/GEM kernel driver to NetBSD.
+
+
+*****      Use at your own risk        ******        Work in progress      *****
+
+
+1. Patch kernel source tree (/usr/src and /usr/xsrc)
+
+$ git clone https://github.com/gsutre/netbsd-drmgem.git
+
+Replace files in /usr/src and /usr/xsrc by the ones provided in the src and xsrc
+sub-directories of this project.  This can be achieved for instance as follows:
+
+(WARNING: this overwrites your local source tree.)
+
+$ cd netbsd-drmgem
+$ cp -av src xsrc /usr
+
+Alternatively, for /usr/src, you can generate a patch to apply to your source
+tree with the following command, run from within the cloned git repository:
+
+$ git diff remotes/origin/netbsd-current remotes/origin/master -- src
+
+
+2. Build and install new kernel
+
+See for instance http://www.netbsd.org/docs/guide/en/part-compile.html.
+
+
+3. Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
+
+Refer to the above link for details.  In most cases, the following should work:
+
+$ cd /usr/src/external/mit/xorg/lib/libdrm
+$ su root -c "make includes"
+$ make
+$ su root -c "make install"
+
+$ cd /usr/src/external/mit/xorg/lib/libdrm_intel
+$ su root -c "make includes"
+$ make
+$ su root -c "make install"
+
+$ cd /usr/src/external/mit/xorg/server/drivers/xf86-video-intel
+$ make
+$ su root -c "make install"

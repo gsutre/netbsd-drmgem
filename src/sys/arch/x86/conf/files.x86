@@ -66,6 +66,7 @@ file 	arch/x86/x86/patch.c
 file	arch/x86/x86/platform.c
 file 	arch/x86/x86/pmap.c
 file	arch/x86/x86/procfs_machdep.c	procfs
+file	arch/x86/x86/sg_dma.c
 file	arch/x86/x86/sys_machdep.c
 file	arch/x86/x86/syscall.c
 file	arch/x86/x86/vm_machdep.c
