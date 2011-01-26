@@ -3,83 +3,61 @@
 +------------------------------------------------------------------------------+
 
 
-The X.org intel driver included in NetBSD -current does not support recent Intel
-graphics chipsets.  However, OpenBSD 4.8 supports even the recent Ironlake IGPs
-found in Core i3/i5 based laptops (kudos to OpenBSD developers!).  This support
-involves three components of the system:
+The X.org intel driver included in NetBSD -current does not support the recent
+Ironlake IGPs found in Core i3/i5 based laptops.  However, OpenBSD 4.8 supports
+them (kudos to OpenBSD developers!).  This support involves three components of
+the system:
 
-1. kernel DRM driver with GEM support
-2. userland DRM library
+1. Kernel DRM driver (with GEM support)
+2. Userland DRM library
 3. X.org video driver
 
-The OpenBSD Xenocara DRM library and X.org video driver work fine on NetBSD.  So
-this small project aims at porting OpenBSD's DRM/GEM kernel driver to NetBSD.
+This project aims at porting these three components from OpenBSD to NetBSD, with
+a focus on Intel graphics chipsets.  The OpenBSD Xenocara DRM library and X.org
+Intel video driver should not require much work.  So the main challenge of this
+project is the port of OpenBSD's DRM/GEM kernel driver to NetBSD.
 
 
 *****      Use at your own risk        ******        Work in progress      *****
 
 
-1. Patch kernel source tree (/usr/src)
+1. Patch kernel source tree (/usr/src and /usr/xsrc)
 
 $ git clone https://github.com/gsutre/netbsd-drmgem.git
 
-Replace the files in /usr/src by the ones provided in the src subdirectory of
-this project.  Alternatively, you can generate a patch to apply to your source
+Replace files in /usr/src and /usr/xsrc by the ones provided in the src and xsrc
+sub-directories of this project.  This can be achieved for instance as follows:
+
+(WARNING: this overwrites your local source tree.)
+
+$ cd netbsd-drmgem
+$ cp -av src xsrc /usr
+
+Alternatively, for /usr/src, you can generate a patch to apply to your source
 tree with the following command, run from within the cloned git repository:
 
 $ git diff remotes/origin/netbsd-current remotes/origin/master -- src
 
 
-2. Build new kernel
+2. Build and install new kernel
 
-I personally always use build.sh, and set /usr/build as obj root directory.
-
-$ cd /usr/src
-$ ./build.sh -U -M /usr/build tools
-$ ./build.sh -U -M /usr/build kernel=GENERIC
+See for instance http://www.netbsd.org/docs/guide/en/part-compile.html.
 
 
-3. Replace the libdrm distribution with OpenBSD Xenocara's one
+3. Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
 
-Choose an OpenBSD AnonCVS server (see http://www.openbsd.org/anoncvs.html), set
-the shell variable OPENBSD_CVSROOT accordingly, and then run:
-
-$ cd /usr/xsrc/external/mit/libdrm
-$ mv dist dist.orig
-$ cvs -d ${OPENBSD_CVSROOT} export -D now -d dist xenocara/lib/libdrm
-$ echo "PACKAGE_VERSION='2.4.15'" > dist/configure
-
-
-4. Build and install the replaced libdrm
-
-Run the following commands, where <nbmake> should be replaced by the path to the
-build.sh make wrapper (see ./build.sh -M /usr/build params).
+Refer to the above link for details.  In most cases, the following should work:
 
 $ cd /usr/src/external/mit/xorg/lib/libdrm
-$ <nbmake> includes DESTDIR=/ MKX11=yes
-$ cd ../libdrm_intel
-$ <nbmake> includes DESTDIR=/ MKX11=yes
-$ cd ../libdrm
-$ <nbmake>          DESTDIR=/ MKX11=yes
-$ <nbmake> install  DESTDIR=/ MKX11=yes
-$ cd ../libdrm_intel
-$ <nbmake>          DESTDIR=/ MKX11=yes
-$ <nbmake> install  DESTDIR=/ MKX11=yes
-
-
-5. Install OpenBSD Xenocara's Xorg intel driver
-
-Download the driver via cvs, help configure a bit and adjust installation paths:
-
-$ cvs -d ${OPENBSD_CVSROOT} export -D now \
-  -d xf86-video-intel xenocara/driver/xf86-video-intel
-$ cd xf86-video-intel
-$ chmod u+x ./configure
-$ export CFLAGS='-I/usr/X11R7/include/xorg -I/usr/X11R7/include/pixman-1'
-$ export PKG_CONFIG_LIBDIR=/usr/X11R7/lib/pkgconfig
-$ ./configure --prefix=/usr/X11R7 \
-              --mandir=/usr/X11R7/man \
-              --with-xorg-module-dir=/usr/X11R7/lib/modules
+$ su root -c "make includes"
 $ make
-$ su
-$ make install
+$ su root -c "make install"
+
+$ cd /usr/src/external/mit/xorg/lib/libdrm_intel
+$ su root -c "make includes"
+$ make
+$ su root -c "make install"
+
+$ cd /usr/src/external/mit/xorg/server/drivers/xf86-video-intel
+$ make
+$ su root -c "make install"
