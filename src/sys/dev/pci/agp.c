@@ -665,7 +665,7 @@ agp_generic_bind_memory(struct agp_softc *sc, struct agp_memory *mem,
 			AGP_DPF(("binding offset %#lx to pa %#lx\n",
 				(unsigned long)(offset + done + j),
 				(unsigned long)pa));
-			error = AGP_BIND_PAGE(sc, offset + done + j, pa);
+			error = AGP_BIND_PAGE(sc, offset + done + j, pa, 0);
 			if (error) {
 				/*
 				 * Bail out. Reverse all the mappings
