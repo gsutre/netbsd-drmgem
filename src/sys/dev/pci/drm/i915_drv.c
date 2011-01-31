@@ -4260,9 +4260,9 @@ i915_gem_init_hws(struct inteldrm_softc *dev_priv)
 
 	dev_priv->hw_status_page = (void *)vm_map_min(kernel_map);
 	obj->uao->pgops->pgo_reference(obj->uao);
-	if ((ret = uvm_map(kernel_map, (vaddr_t *)&dev_priv->hw_status_page,
+	ret = uvm_map(kernel_map, (vaddr_t *)&dev_priv->hw_status_page,
 	    PAGE_SIZE, obj->uao, 0, 0, UVM_MAPFLAG(UVM_PROT_RW, UVM_PROT_RW,
-	    UVM_INH_SHARE, UVM_ADV_RANDOM, 0))) != 0)
+	    UVM_INH_SHARE, UVM_ADV_RANDOM, 0));
 	if (ret != 0) {
 		DRM_ERROR("Failed to map status page.\n");
 		obj->uao->pgops->pgo_detach(obj->uao);
@@ -6383,9 +6383,9 @@ i915_gem_fence_regs_info(int kdev)
 
 			obj_priv = (struct inteldrm_obj *)obj;
 			printf("Fenced object[%2d] = %p: %s "
-				   "%08x %08zx %08x %s %08x %08x %d",
+				   "%08jx %08zx %08x %s %08x %08x %d",
 				   i, obj, get_pin_flag(obj_priv),
-				   obj_priv->gtt_offset,
+				   (uintmax_t)obj_priv->gtt_offset,
 				   obj->size, obj_priv->stride,
 				   get_tiling_flag(obj_priv),
 				   obj->read_domains, obj->write_domain,
@@ -6453,8 +6453,8 @@ i915_batchbuffer_info(int kdev)
 				DRM_ERROR("Failed to map pages: %d\n", ret);
 				return;
 			}
-			printf("--- gtt_offset = 0x%08x\n",
-			    obj_priv->gtt_offset);
+			printf("--- gtt_offset = 0x%08jx\n",
+			    (uintmax_t)obj_priv->gtt_offset);
 			i915_dump_pages(dev_priv->bst, bsh, obj->size);
 			agp_unmap_subregion(dev_priv->agph, dev_priv->ring.bsh,
 			    obj->size);
@@ -6475,7 +6475,7 @@ i915_ringbuffer_data(int kdev)
 	}
 
 	for (off = 0; off < dev_priv->ring.size; off += 4)
-		printf("%08x :  %08x\n", off, bus_space_read_4(dev_priv->bst,
+		printf("%08zx :  %08x\n", off, bus_space_read_4(dev_priv->bst,
 		    dev_priv->ring.bsh, off));
 }
 
@@ -6491,8 +6491,8 @@ i915_ringbuffer_info(int kdev)
 
 	printf("RingHead :  %08x\n", head);
 	printf("RingTail :  %08x\n", tail);
-	printf("RingMask :  %08x\n", dev_priv->ring.size - 1);
-	printf("RingSize :  %08lx\n", dev_priv->ring.size);
+	printf("RingMask :  %08zx\n", dev_priv->ring.size - 1);
+	printf("RingSize :  %08zx\n", dev_priv->ring.size);
 	printf("Acthd :  %08x\n", I915_READ(IS_I965G(dev_priv) ?
 	    ACTHD_I965 : ACTHD));
 }
