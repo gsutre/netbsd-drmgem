@@ -330,6 +330,8 @@ struct _i830_memory {
 #define I830_OUTPUT_LVDS 6
 #define I830_OUTPUT_TVOUT 7
 #define I830_OUTPUT_HDMI 8
+#define I830_OUTPUT_DISPLAYPORT 9
+#define I830_OUTPUT_EDP 10
 
 struct _I830DVODriver {
 	int type;
@@ -658,10 +660,23 @@ typedef struct intel_screen_private {
 	Bool lvds_dither;
 	DisplayModePtr lvds_fixed_mode;
 	DisplayModePtr sdvo_lvds_fixed_mode;
+	DisplayModePtr panel_fixed_mode;
 	Bool skip_panel_detect;
 	Bool integrated_lvds; /* LVDS config from driver feature BDB */
 
 	Bool tv_present; /* TV connector present (from VBIOS) */
+
+	struct {
+		int rate;
+		int lanes;
+		int preemphasis;
+		int vswing;
+
+		Bool initialized;
+		Bool support;
+		int bpp;
+	} edp;
+	Bool no_aux_handshake;
 
 	/* Driver phase/state information */
 	Bool preinit;
