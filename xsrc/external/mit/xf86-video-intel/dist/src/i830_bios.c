@@ -37,7 +37,10 @@
 #include "xf86.h"
 #include "i830.h"
 #include "i830_bios.h"
+#include "i830_dp.h"
 #include "edid.h"
+
+#define SUPPORTS_EDP(x)		IS_IGDNG_M(x)
 
 #define INTEL_BIOS_8(_addr)	(bios[_addr])
 #define INTEL_BIOS_16(_addr)	(bios[_addr] |			\
@@ -49,6 +52,9 @@
 
 #define		SLAVE_ADDR1	0x70
 #define		SLAVE_ADDR2	0x72
+
+static int panel_type;
+
 static void *find_section(struct bdb_header *bdb, int section_id)
 {
 	unsigned char *base = (unsigned char *)bdb;
@@ -130,6 +136,8 @@ static void parse_integrated_panel_data(intel_screen_private *intel, struct bdb_
 	if (lvds_options->panel_type == 0xff)
 		return;
 
+	panel_type = lvds_options->panel_type;
+
 	lvds_data = find_section(bdb, BDB_LVDS_LFP_DATA);
 	if (!lvds_data) {
 		return;
@@ -201,6 +209,9 @@ static void parse_general_features(intel_screen_private *intel, struct bdb_heade
 	/* Set sensible defaults in case we can't find the general block */
 	intel->tv_present = 1;
 
+	/* eDP data */
+	intel->edp.bpp = 18;
+
 	general = find_section(bdb, BDB_GENERAL_FEATURES);
 	if (!general)
 		return;
@@ -229,18 +240,101 @@ static void parse_driver_feature(intel_screen_private *intel, struct bdb_header 
 	if (!IS_I9XX(intel))
 		return;
 
+#if 0	/* We remove this workaround to enable eDP support. */
 	/* XXX Disable this parsing, as it looks doesn't work for all
 	   VBIOS. Reenable it if we could find out the reliable VBT parsing
 	   for LVDS config later. */
 	if (1)
 		return;
+#endif
 
 	feature = find_section(bdb, BDB_DRIVER_FEATURES);
 	if (!feature)
 		return;
 
+	if (SUPPORTS_EDP(intel) &&
+	    feature->lvds_config == BDB_DRIVER_EDP)
+		intel->edp.support = TRUE;
+	else
+		intel->edp.support = FALSE;
+
 	if (feature->lvds_config != BDB_DRIVER_INT_LVDS)
 		intel->integrated_lvds = FALSE;
+}
+
+static void parse_edp(intel_screen_private *intel, struct bdb_header *bdb)
+{
+	struct bdb_edp *edp;
+	struct edp_link_params *edp_link_params;
+
+	edp = find_section(bdb, BDB_EDP);
+	if (!edp) {
+		if (SUPPORTS_EDP(intel) && intel->edp.support) {
+			DPRINTF(PFX, "No eDP BDB found but eDP panel "
+				      "supported, assume %dbpp panel color "
+				      "depth.\n",
+				      intel->edp.bpp);
+		}
+		return;
+	}
+
+	switch ((edp->color_depth >> (panel_type * 2)) & 3) {
+	case EDP_18BPP:
+		intel->edp.bpp = 18;
+		break;
+	case EDP_24BPP:
+		intel->edp.bpp = 24;
+		break;
+	case EDP_30BPP:
+		intel->edp.bpp = 30;
+		break;
+	}
+
+	/* Get the eDP link info */
+	edp_link_params = &edp->link_params[panel_type];
+
+	intel->edp.rate = edp_link_params->rate ? DP_LINK_BW_2_7 :
+		DP_LINK_BW_1_62;
+	switch (edp_link_params->lanes) {
+	case 0:
+		intel->edp.lanes = 1;
+		break;
+	case 1:
+		intel->edp.lanes = 2;
+		break;
+	case 3:
+	default:
+		intel->edp.lanes = 4;
+		break;
+	}
+	switch (edp_link_params->preemphasis) {
+	case 0:
+		intel->edp.preemphasis = DP_TRAIN_PRE_EMPHASIS_0;
+		break;
+	case 1:
+		intel->edp.preemphasis = DP_TRAIN_PRE_EMPHASIS_3_5;
+		break;
+	case 2:
+		intel->edp.preemphasis = DP_TRAIN_PRE_EMPHASIS_6;
+		break;
+	case 3:
+		intel->edp.preemphasis = DP_TRAIN_PRE_EMPHASIS_9_5;
+		break;
+	}
+	switch (edp_link_params->vswing) {
+	case 0:
+		intel->edp.vswing = DP_TRAIN_VOLTAGE_SWING_400;
+		break;
+	case 1:
+		intel->edp.vswing = DP_TRAIN_VOLTAGE_SWING_600;
+		break;
+	case 2:
+		intel->edp.vswing = DP_TRAIN_VOLTAGE_SWING_800;
+		break;
+	case 3:
+		intel->edp.vswing = DP_TRAIN_VOLTAGE_SWING_1200;
+		break;
+	}
 }
 
 static
@@ -389,6 +483,7 @@ int i830_bios_init(ScrnInfoPtr scrn)
 	parse_panel_data(intel, bdb);
 	parse_driver_feature(intel, bdb);
 	parse_sdvo_mapping(scrn, bdb);
+	parse_edp(intel, bdb);
 
 	free(bios);
 
