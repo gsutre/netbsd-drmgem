@@ -723,11 +723,13 @@ i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
 	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;
 	int lane_count = 4, bpp = 24;
 	struct i830_dp_priv_m_n m_n;
+	int i;
 
 	/*
 	 * Find the lane count in the intel_output private
 	 */
-	list_for_each_entry(output, &xf86_config->encoder_list, head) {
+	for (i = 0; i < xf86_config->num_output; i++) {
+		xf86OutputPtr output = xf86_config->output[i];
 		struct i830_dp_priv *dev_priv;
 
 		if (output->crtc != crtc)
@@ -1297,7 +1299,7 @@ i830_dp_start_link_train(xf86OutputPtr output)
 	/* Enable output, wait for it to become active */
 	I915_WRITE(dev_priv->output_reg, dev_priv->DP);
 	POSTING_READ(dev_priv->output_reg);
-	intel_wait_for_vblank(scrn, intel_crtc->pipe);
+	i830WaitForVblank(scrn);
 
 	/* Write the link configuration data */
 	i830_dp_aux_native_write(output, DP_LINK_BW_SET,
@@ -1482,8 +1484,7 @@ i830_dp_link_down(xf86OutputPtr output)
 		/* Changes to enable or select take place the vblank
 		 * after being written.
 		 */
-		intel_wait_for_vblank(output->scrn,
-				      intel_crtc->pipe);
+		i830WaitForVblank(scrn);
 	}
 
 	I915_WRITE(dev_priv->output_reg, DP & ~DP_PORT_EN);
@@ -1587,7 +1588,7 @@ g4x_dp_detect(xf86OutputPtr output)
  * \return false if DP port is disconnected.
  */
 static xf86OutputStatus
-i830_dp_detect(xf86OutputPtr output, Bool force)
+i830_dp_detect(xf86OutputPtr output)
 {
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
@@ -1605,19 +1606,19 @@ i830_dp_detect(xf86OutputPtr output, Bool force)
 	return XF86OutputStatusConnected;
 }
 
-static int i830_dp_get_modes(xf86OutputPtr output)
+static DisplayModePtr
+i830_dp_get_modes(xf86OutputPtr output)
 {
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
-	int ret;
+	DisplayModePtr modes;
 
-	ret = intel_ddc_get_modes(connector, &dev_priv->adapter);
-	if (ret) {
+	modes = i830_ddc_get_modes(output);
+	if (modes != NULL) {
 		if (is_edp(output) && !intel->panel_fixed_mode) {
 			DisplayModePtr newmode;
-			list_for_each_entry(newmode, &connector->probed_modes,
-					    head) {
+			for (newmode = modes; newmode != NULL; newmode = newmode->next) {
 				if (newmode->type & M_T_PREFERRED) {
 					intel->panel_fixed_mode =
 						xf86DuplicateModes(scrn, newmode);
@@ -1626,19 +1627,17 @@ static int i830_dp_get_modes(xf86OutputPtr output)
 			}
 		}
 
-		return ret;
+		return modes;
 	}
 
 	/* if eDP has no EDID, try to use fixed panel mode from VBT */
 	if (is_edp(output)) {
 		if (intel->panel_fixed_mode != NULL) {
-			DisplayModePtr mode;
-			mode = xf86DuplicateModes(scrn, intel->panel_fixed_mode);
-			drm_mode_probed_add(connector, mode);
-			return 1;
+			modes = xf86DuplicateModes(scrn, intel->panel_fixed_mode);
+			return modes;
 		}
 	}
-	return 0;
+	return NULL;
 }
 
 static void
@@ -1691,8 +1690,10 @@ i830_trans_dp_port_sel (xf86CrtcPtr crtc)
 	ScrnInfoPtr scrn = crtc->scrn;
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
 	xf86OutputPtr output;
+	int i;
 
-	list_for_each_entry(output, &xf86_config->encoder_list, head) {
+	for (i = 0; i < xf86_config->num_output; i++) {
+		xf86OutputPtr output = xf86_config->output[i];
 		struct i830_dp_priv *dev_priv;
 
 		if (output->crtc != crtc)
