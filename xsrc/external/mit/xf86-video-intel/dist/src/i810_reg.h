@@ -909,6 +909,10 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 # define PP_SEQUENCE_OFF			(2 << 28)
 # define PP_SEQUENCE_MASK			0x30000000
 
+# define PP_CYCLE_DELAY_ACTIVE			(1 << 27)
+# define PP_SEQUENCE_STATE_ON_IDLE		(1 << 3)
+# define PP_SEQUENCE_STATE_MASK			0x0000000f
+
 #define PP_CONTROL	0x61204
 # define POWER_DOWN_ON_RESET			(1 << 1)
 # define POWER_TARGET_ON			(1 << 0)
@@ -1277,8 +1281,11 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define PORT_HOTPLUG_STAT	0x61114
 # define HDMIB_HOTPLUG_INT_STATUS		(1 << 29)
+# define DPB_HOTPLUG_INT_STATUS			(1 << 29)
 # define HDMIC_HOTPLUG_INT_STATUS		(1 << 28)
+# define DPC_HOTPLUG_INT_STATUS			(1 << 28)
 # define HDMID_HOTPLUG_INT_STATUS		(1 << 27)
+# define DPD_HOTPLUG_INT_STATUS			(1 << 27)
 # define CRT_HOTPLUG_INT_STATUS			(1 << 11)
 # define TV_HOTPLUG_INT_STATUS			(1 << 10)
 # define CRT_HOTPLUG_MONITOR_MASK		(3 << 8)
@@ -1514,7 +1521,100 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /** @} */
 
+/* Display Port */
+#define DP_A			0x64000 /* eDP */
 #define DP_B			0x64100
+#define DP_C			0x64200
+#define DP_D			0x64300
+
+#define   DP_PORT_EN			(1 << 31)
+#define   DP_PIPEB_SELECT		(1 << 30)
+
+/* Link training mode - select a suitable mode for each stage */
+#define   DP_LINK_TRAIN_PAT_1		(0 << 28)
+#define   DP_LINK_TRAIN_PAT_2		(1 << 28)
+#define   DP_LINK_TRAIN_PAT_IDLE	(2 << 28)
+#define   DP_LINK_TRAIN_OFF		(3 << 28)
+#define   DP_LINK_TRAIN_MASK		(3 << 28)
+#define   DP_LINK_TRAIN_SHIFT		28
+
+/* CPT Link training mode */
+#define   DP_LINK_TRAIN_PAT_1_CPT	(0 << 8)
+#define   DP_LINK_TRAIN_PAT_2_CPT	(1 << 8)
+#define   DP_LINK_TRAIN_PAT_IDLE_CPT	(2 << 8)
+#define   DP_LINK_TRAIN_OFF_CPT		(3 << 8)
+#define   DP_LINK_TRAIN_MASK_CPT	(7 << 8)
+#define   DP_LINK_TRAIN_SHIFT_CPT	8
+
+/* Signal voltages. These are mostly controlled by the other end */
+#define   DP_VOLTAGE_0_4		(0 << 25)
+#define   DP_VOLTAGE_0_6		(1 << 25)
+#define   DP_VOLTAGE_0_8		(2 << 25)
+#define   DP_VOLTAGE_1_2		(3 << 25)
+#define   DP_VOLTAGE_MASK		(7 << 25)
+#define   DP_VOLTAGE_SHIFT		25
+
+/* Signal pre-emphasis levels, like voltages, the other end tells us what
+ * they want
+ */
+#define   DP_PRE_EMPHASIS_0		(0 << 22)
+#define   DP_PRE_EMPHASIS_3_5		(1 << 22)
+#define   DP_PRE_EMPHASIS_6		(2 << 22)
+#define   DP_PRE_EMPHASIS_9_5		(3 << 22)
+#define   DP_PRE_EMPHASIS_MASK		(7 << 22)
+#define   DP_PRE_EMPHASIS_SHIFT		22
+
+/* How many wires to use. I guess 3 was too hard */
+#define   DP_PORT_WIDTH_1		(0 << 19)
+#define   DP_PORT_WIDTH_2		(1 << 19)
+#define   DP_PORT_WIDTH_4		(3 << 19)
+#define   DP_PORT_WIDTH_MASK		(7 << 19)
+
+/* Mystic DPCD version 1.1 special mode */
+#define   DP_ENHANCED_FRAMING		(1 << 18)
+
+/* eDP */
+#define   DP_PLL_FREQ_270MHZ		(0 << 16)
+#define   DP_PLL_FREQ_160MHZ		(1 << 16)
+#define   DP_PLL_FREQ_MASK		(3 << 16)
+
+/** locked once port is enabled */
+#define   DP_PORT_REVERSAL		(1 << 15)
+
+/* eDP */
+#define   DP_PLL_ENABLE			(1 << 14)
+
+/** sends the clock on lane 15 of the PEG for debug */
+#define   DP_CLOCK_OUTPUT_ENABLE	(1 << 13)
+
+#define   DP_SCRAMBLING_DISABLE		(1 << 12)
+#define   DP_SCRAMBLING_DISABLE_IRONLAKE	(1 << 7)
+
+/** limit RGB values to avoid confusing TVs */
+#define   DP_COLOR_RANGE_16_235		(1 << 8)
+
+/** Turn on the audio link */
+#define   DP_AUDIO_OUTPUT_ENABLE	(1 << 6)
+
+/** vs and hs sync polarity */
+#define   DP_SYNC_VS_HIGH		(1 << 4)
+#define   DP_SYNC_HS_HIGH		(1 << 3)
+
+/** A fantasy */
+#define   DP_DETECTED			(1 << 2)
+
+/** The aux channel provides a way to talk to the
+ * signal sink for DDC etc. Max packet size supported
+ * is 20 bytes in each direction, hence the 5 fixed
+ * data registers
+ */
+#define DPA_AUX_CH_CTL		0x64010
+#define DPA_AUX_CH_DATA1	0x64014
+#define DPA_AUX_CH_DATA2	0x64018
+#define DPA_AUX_CH_DATA3	0x6401c
+#define DPA_AUX_CH_DATA4	0x64020
+#define DPA_AUX_CH_DATA5	0x64024
+
 #define DPB_AUX_CH_CTL		0x64110
 #define DPB_AUX_CH_DATA1	0x64114
 #define DPB_AUX_CH_DATA2	0x64118
@@ -1522,7 +1622,6 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DPB_AUX_CH_DATA4	0x64120
 #define DPB_AUX_CH_DATA5	0x64124
 
-#define DP_C			0x64200
 #define DPC_AUX_CH_CTL		0x64210
 #define DPC_AUX_CH_DATA1	0x64214
 #define DPC_AUX_CH_DATA2	0x64218
@@ -1530,13 +1629,34 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define DPC_AUX_CH_DATA4	0x64220
 #define DPC_AUX_CH_DATA5	0x64224
 
-#define DP_D			0x64300
 #define DPD_AUX_CH_CTL		0x64310
 #define DPD_AUX_CH_DATA1	0x64314
 #define DPD_AUX_CH_DATA2	0x64318
 #define DPD_AUX_CH_DATA3	0x6431c
 #define DPD_AUX_CH_DATA4	0x64320
 #define DPD_AUX_CH_DATA5	0x64324
+
+#define   DP_AUX_CH_CTL_SEND_BUSY	    (1 << 31)
+#define   DP_AUX_CH_CTL_DONE		    (1 << 30)
+#define   DP_AUX_CH_CTL_INTERRUPT	    (1 << 29)
+#define   DP_AUX_CH_CTL_TIME_OUT_ERROR	    (1 << 28)
+#define   DP_AUX_CH_CTL_TIME_OUT_400us	    (0 << 26)
+#define   DP_AUX_CH_CTL_TIME_OUT_600us	    (1 << 26)
+#define   DP_AUX_CH_CTL_TIME_OUT_800us	    (2 << 26)
+#define   DP_AUX_CH_CTL_TIME_OUT_1600us	    (3 << 26)
+#define   DP_AUX_CH_CTL_TIME_OUT_MASK	    (3 << 26)
+#define   DP_AUX_CH_CTL_RECEIVE_ERROR	    (1 << 25)
+#define   DP_AUX_CH_CTL_MESSAGE_SIZE_MASK    (0x1f << 20)
+#define   DP_AUX_CH_CTL_MESSAGE_SIZE_SHIFT   20
+#define   DP_AUX_CH_CTL_PRECHARGE_2US_MASK   (0xf << 16)
+#define   DP_AUX_CH_CTL_PRECHARGE_2US_SHIFT  16
+#define   DP_AUX_CH_CTL_AUX_AKSV_SELECT	    (1 << 15)
+#define   DP_AUX_CH_CTL_MANCHESTER_TEST	    (1 << 14)
+#define   DP_AUX_CH_CTL_SYNC_TEST	    (1 << 13)
+#define   DP_AUX_CH_CTL_DEGLITCH_TEST	    (1 << 12)
+#define   DP_AUX_CH_CTL_PRECHARGE_TEST	    (1 << 11)
+#define   DP_AUX_CH_CTL_BIT_CLOCK_2X_MASK    (0x7ff)
+#define   DP_AUX_CH_CTL_BIT_CLOCK_2X_SHIFT   0
 
 /*
  * Two channel clock control. Turn this on if you need clkb for two channel mode
@@ -2892,6 +3012,23 @@ typedef enum {
 #define SWF31			0x72418
 #define SWF32			0x7241c
 
+/* Clocking configuration register */
+#define CLKCFG			0x10c00
+#define CLKCFG_FSB_400					(5 << 0)	/* hrawclk 100 */
+#define CLKCFG_FSB_533					(1 << 0)	/* hrawclk 133 */
+#define CLKCFG_FSB_667					(3 << 0)	/* hrawclk 166 */
+#define CLKCFG_FSB_800					(2 << 0)	/* hrawclk 200 */
+#define CLKCFG_FSB_1067					(6 << 0)	/* hrawclk 266 */
+#define CLKCFG_FSB_1333					(7 << 0)	/* hrawclk 333 */
+/* Note, below two are guess */
+#define CLKCFG_FSB_1600					(4 << 0)	/* hrawclk 400 */
+#define CLKCFG_FSB_1600_ALT				(0 << 0)	/* hrawclk 400 */
+#define CLKCFG_FSB_MASK					(7 << 0)
+#define CLKCFG_MEM_533					(1 << 4)
+#define CLKCFG_MEM_667					(2 << 4)
+#define CLKCFG_MEM_800					(3 << 4)
+#define CLKCFG_MEM_MASK					(7 << 4)
+
 /*
  * Overlay registers.  These are overlay registers accessed via MMIO.
  * Those loaded via the overlay register page are defined in i830_video.c.
@@ -3430,7 +3567,7 @@ typedef enum {
 
 #define PCH_DP_B 0xe4100
 #define PCH_DP_C 0xe4200
-#define PCH_DP_D 0xe4200
+#define PCH_DP_D 0xe4300
 
 #define BLC_PWM_CPU_CTL2	0x48250
 #define  PWM_ENABLE		(1 << 31)
@@ -3449,6 +3586,7 @@ typedef enum {
 
 #define PCH_PP_STATUS		0xc7200
 #define PCH_PP_CONTROL		0xc7204
+#define  PANEL_UNLOCK_REGS	(0xabcd << 16)
 #define  EDP_FORCE_VDD		(1 << 3)
 #define  EDP_BLC_ENABLE		(1 << 2)
 #define  PANEL_POWER_RESET	(1 << 1)
@@ -3501,5 +3639,18 @@ typedef enum {
 #define AUD_CTS_ENABLE          0x62128
 
 #define VIDEO_DIP_CTL           0x61170
+
+/* SNB eDP training params */
+/* SNB A-stepping */
+#define  EDP_LINK_TRAIN_400MV_0DB_SNB_A		(0x38<<22)
+#define  EDP_LINK_TRAIN_400MV_6DB_SNB_A		(0x02<<22)
+#define  EDP_LINK_TRAIN_600MV_3_5DB_SNB_A	(0x01<<22)
+#define  EDP_LINK_TRAIN_800MV_0DB_SNB_A		(0x0<<22)
+/* SNB B-stepping */
+#define  EDP_LINK_TRAIN_400MV_0DB_SNB_B		(0x0<<22)
+#define  EDP_LINK_TRAIN_400MV_6DB_SNB_B		(0x3a<<22)
+#define  EDP_LINK_TRAIN_600MV_3_5DB_SNB_B	(0x39<<22)
+#define  EDP_LINK_TRAIN_800MV_0DB_SNB_B		(0x38<<22)
+#define  EDP_LINK_TRAIN_VOL_EMP_MASK_SNB	(0x3f<<22)
 
 #endif /* _I810_REG_H */
