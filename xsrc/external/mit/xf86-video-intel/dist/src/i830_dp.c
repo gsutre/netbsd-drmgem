@@ -94,12 +94,17 @@ struct i830_dp_priv {
 	uint8_t link_bw;
 	uint8_t lane_count;
 	uint8_t dpcd[4];
-	struct i2c_adapter adapter;
-	struct i2c_algo_dp_aux_data algo;
+	struct {
+		Bool running;
+		uint16_t address;
+		Bool reading;
+	} i2c_state;
 	Bool is_pch_edp;
 	uint8_t	train_set[4];
 	uint8_t link_status[DP_LINK_STATUS_SIZE];
 };
+
+static I2CBusPtr i830_dp_i2c_init(xf86OutputPtr, struct i830_dp_priv *, const char *);
 
 /**
  * is_edp - is the given port attached to an eDP panel (either CPU or PCH)
@@ -502,13 +507,12 @@ i830_dp_aux_native_read(xf86OutputPtr output,
 	}
 }
 
-static int
+static Bool
 i830_dp_i2c_aux_ch(xf86OutputPtr output, int mode,
 		    uint8_t write_byte, uint8_t *read_byte)
 {
-	struct i2c_algo_dp_aux_data *algo_data = adapter->algo_data;
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
-	uint16_t address = algo_data->address;
+	uint16_t address = dev_priv->i2c_state.address;
 	uint8_t msg[5];
 	uint8_t reply[2];
 	unsigned retry;
@@ -552,7 +556,7 @@ i830_dp_i2c_aux_ch(xf86OutputPtr output, int mode,
 				      reply, reply_bytes);
 		if (ret < 0) {
 			DRM_DEBUG_KMS("aux_ch failed %d\n", ret);
-			return ret;
+			return FALSE;
 		}
 
 		switch (reply[0] & AUX_NATIVE_REPLY_MASK) {
@@ -563,14 +567,14 @@ i830_dp_i2c_aux_ch(xf86OutputPtr output, int mode,
 			break;
 		case AUX_NATIVE_REPLY_NACK:
 			DRM_DEBUG_KMS("aux_ch native nack\n");
-			return -EREMOTEIO;
+			return FALSE;
 		case AUX_NATIVE_REPLY_DEFER:
 			usleep(100);
 			continue;
 		default:
 			DRM_ERROR("aux_ch invalid native reply 0x%02x\n",
 				  reply[0]);
-			return -EREMOTEIO;
+			return FALSE;
 		}
 
 		switch (reply[0] & AUX_I2C_REPLY_MASK) {
@@ -578,42 +582,22 @@ i830_dp_i2c_aux_ch(xf86OutputPtr output, int mode,
 			if (mode == MODE_I2C_READ) {
 				*read_byte = reply[1];
 			}
-			return reply_bytes - 1;
+			return TRUE;
 		case AUX_I2C_REPLY_NACK:
 			DRM_DEBUG_KMS("aux_i2c nack\n");
-			return -EREMOTEIO;
+			return FALSE;
 		case AUX_I2C_REPLY_DEFER:
 			DRM_DEBUG_KMS("aux_i2c defer\n");
 			usleep(100);
 			break;
 		default:
 			DRM_ERROR("aux_i2c invalid reply 0x%02x\n", reply[0]);
-			return -EREMOTEIO;
+			return FALSE;
 		}
 	}
 
 	DRM_ERROR("too many retries, giving up\n");
-	return -EREMOTEIO;
-}
-
-static int
-i830_dp_i2c_init(struct i830_dp_priv *dev_priv,
-		  struct intel_connector *intel_connector, const char *name)
-{
-	DRM_DEBUG_KMS("i2c_init %s\n", name);
-	dev_priv->algo.running = FALSE;
-	dev_priv->algo.address = 0;
-	dev_priv->algo.aux_ch = i830_dp_i2c_aux_ch;
-
-	memset(&dev_priv->adapter, '\0', sizeof (dev_priv->adapter));
-	dev_priv->adapter.owner = THIS_MODULE;
-	dev_priv->adapter.class = I2C_CLASS_DDC;
-	strncpy (dev_priv->adapter.name, name, sizeof(dev_priv->adapter.name) - 1);
-	dev_priv->adapter.name[sizeof(dev_priv->adapter.name) - 1] = '\0';
-	dev_priv->adapter.algo_data = &dev_priv->algo;
-	dev_priv->adapter.dev.parent = &intel_connector->base.kdev;
-
-	return i2c_dp_aux_add_bus(&dev_priv->adapter);
+	return FALSE;
 }
 
 /* Taken from Linux intel_panel.c. */
@@ -1825,7 +1809,7 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 			break;
 	}
 
-	i830_dp_i2c_init(dev_priv, intel_connector, name);
+	intel_output->pDDCBus = i830_dp_i2c_init(output, dev_priv, name);
 
 	/* Cache some DPCD data in the eDP case */
 	if (is_edp(output)) {
@@ -1869,4 +1853,128 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 		uint32_t temp = I915_READ(PEG_BAND_GAP_DATA);
 		I915_WRITE(PEG_BAND_GAP_DATA, (temp & ~0xf) | 0xd);
 	}
+}
+
+/*
+ * I2C over AUX CH
+ */
+
+static Bool
+i830_dp_i2c_get_byte(I2CDevPtr d, I2CByte *byte, Bool last)
+{
+	xf86OutputPtr output = d->pI2CBus->DriverPrivate.ptr;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+
+	if (!dev_priv->i2c_state.running)
+		return FALSE;
+
+	dev_priv->i2c_state.reading = TRUE;
+
+	return i830_dp_i2c_aux_ch(output, MODE_I2C_READ, 0, byte);
+}
+
+static Bool
+i830_dp_i2c_put_byte(I2CDevPtr d, I2CByte byte)
+{
+	xf86OutputPtr output = d->pI2CBus->DriverPrivate.ptr;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+
+	if (!dev_priv->i2c_state.running)
+		return FALSE;
+
+	dev_priv->i2c_state.reading = FALSE;
+
+	return i830_dp_i2c_aux_ch(output, MODE_I2C_WRITE, byte, NULL);
+}
+
+static Bool
+i830_dp_i2c_start(I2CBusPtr b, int timeout)
+{
+	/* XXX We probably should do something here, but what? */
+	return TRUE;
+}
+
+static void
+i830_dp_i2c_stop(I2CDevPtr d)
+{
+	xf86OutputPtr output = d->pI2CBus->DriverPrivate.ptr;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	int mode = MODE_I2C_STOP;
+
+	if (dev_priv->i2c_state.reading)
+		mode |= MODE_I2C_READ;
+	else
+		mode |= MODE_I2C_WRITE;
+
+	if (dev_priv->i2c_state.running) {
+		(void)i830_dp_i2c_aux_ch(output, mode, 0, NULL);
+		dev_priv->i2c_state.running = FALSE;
+	}
+}
+
+static Bool
+i830_dp_i2c_address(I2CDevPtr d, I2CSlaveAddr address)
+{
+	xf86OutputPtr output = d->pI2CBus->DriverPrivate.ptr;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	int mode = MODE_I2C_START;
+
+	dev_priv->i2c_state.reading = (address & 0x1) ? TRUE : FALSE;
+
+	if (dev_priv->i2c_state.reading)
+		mode |= MODE_I2C_READ;
+	else
+		mode |= MODE_I2C_WRITE;
+
+	dev_priv->i2c_state.address = address;
+	dev_priv->i2c_state.running = TRUE;
+
+	return i830_dp_i2c_aux_ch(output, mode, 0, NULL);
+}
+
+/*
+ * Adaptation of I830I2CInit().
+ */
+static I2CBusPtr
+i830_dp_i2c_init(xf86OutputPtr output, struct i830_dp_priv *dev_priv, const char *name)
+{
+	I2CBusPtr pI2CBus;
+	int mode;
+
+	DRM_DEBUG_KMS("%s %s\n", __FUNCTION__, name);
+
+	pI2CBus = xf86CreateI2CBusRec();
+
+	if (!pI2CBus)
+		return NULL;
+
+	pI2CBus->BusName = __UNCONST(name);
+	pI2CBus->scrnIndex = output->scrn->scrnIndex;
+	pI2CBus->I2CGetByte = i830_dp_i2c_get_byte;
+	pI2CBus->I2CPutByte = i830_dp_i2c_put_byte;
+	pI2CBus->I2CStart = i830_dp_i2c_start;
+	pI2CBus->I2CStop = i830_dp_i2c_stop;
+	pI2CBus->I2CAddress = i830_dp_i2c_address;
+	pI2CBus->DriverPrivate.ptr = output;
+
+	pI2CBus->ByteTimeout = 2200;	/* VESA DDC spec 3 p. 43 (+10 %) */
+	pI2CBus->StartTimeout = 550;
+	pI2CBus->BitTimeout = 40;
+	pI2CBus->AcknTimeout = 40;
+	pI2CBus->RiseFallTime = 20;
+
+	if (!xf86I2CBusInit(pI2CBus))
+		return NULL;
+
+	dev_priv->i2c_state.running = FALSE;
+	dev_priv->i2c_state.address = 0;
+	dev_priv->i2c_state.reading = FALSE;
+
+	/* Simulate Linux i2c_dp_aux_reset_bus. */
+	mode = MODE_I2C_START | MODE_I2C_WRITE;
+	(void)i830_dp_i2c_aux_ch(output, mode, 0, NULL);
+	mode = MODE_I2C_STOP | MODE_I2C_WRITE;
+	(void)i830_dp_i2c_aux_ch(output, mode, 0, NULL);
+
+	return pI2CBus;
 }

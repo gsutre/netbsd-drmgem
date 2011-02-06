@@ -166,15 +166,4 @@
 #define MODE_I2C_READ	4
 #define MODE_I2C_STOP	8
 
-struct i2c_algo_dp_aux_data {
-	bool running;
-	u16 address;
-	int (*aux_ch) (struct i2c_adapter *adapter,
-		       int mode, uint8_t write_byte,
-		       uint8_t *read_byte);
-};
-
-int
-i2c_dp_aux_add_bus(struct i2c_adapter *adapter);
-
 #endif /* _DRM_DP_HELPER_H_ */
