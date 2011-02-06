@@ -54,7 +54,6 @@
 #define DP_LINK_CONFIGURATION_SIZE	9
 
 struct i830_dp_priv {
-	struct intel_output base;
 	uint32_t output_reg;
 	uint32_t DP;
 	uint8_t  link_configuration[DP_LINK_CONFIGURATION_SIZE];
@@ -76,9 +75,9 @@ struct i830_dp_priv {
  * If a CPU or PCH DP output is attached to an eDP panel, this function
  * will return true, and false otherwise.
  */
-static Bool is_edp(struct i830_dp_priv *dev_priv)
+static Bool is_edp(xf86OutputPtr output)
 {
-	return dev_priv->base.type == I830_OUTPUT_EDP;
+	return ((I830OutputPrivatePtr)output->driver_private)->type == I830_OUTPUT_EDP;
 }
 
 /**
@@ -96,13 +95,7 @@ static Bool is_pch_edp(struct i830_dp_priv *dev_priv)
 
 static struct i830_dp_priv *output_to_i830_dp(xf86OutputPtr output)
 {
-	return container_of(output, struct i830_dp_priv, base.base);
-}
-
-static struct i830_dp_priv *intel_attached_dp(struct drm_connector *connector)
-{
-	return container_of(intel_attached_encoder(connector),
-			    struct i830_dp_priv, base);
+	return ((I830OutputPrivatePtr)output->driver_private)->dev_priv;
 }
 
 /**
@@ -124,15 +117,15 @@ Bool i830_encoder_is_pch_edp(xf86OutputPtr output)
 	return is_pch_edp(dev_priv);
 }
 
-static void i830_dp_start_link_train(struct i830_dp_priv *dev_priv);
-static void i830_dp_complete_link_train(struct i830_dp_priv *dev_priv);
-static void i830_dp_link_down(struct i830_dp_priv *dev_priv);
+static void i830_dp_start_link_train(xf86OutputPtr output);
+static void i830_dp_complete_link_train(xf86OutputPtr output);
+static void i830_dp_link_down(xf86OutputPtr output);
 
 void
 i830_edp_link_config (I830OutputPrivatePtr intel_output,
 		       int *lane_num, int *link_bw)
 {
-	struct i830_dp_priv *dev_priv = container_of(intel_output, struct i830_dp_priv, base);
+	struct i830_dp_priv *dev_priv = intel_output->dev_priv;
 
 	*lane_num = dev_priv->lane_count;
 	if (dev_priv->link_bw == DP_LINK_BW_1_62)
@@ -185,11 +178,11 @@ i830_dp_link_clock(uint8_t link_bw)
 
 /* I think this is a fiction */
 static int
-i830_dp_link_required(ScrnInfoPtr scrn, struct i830_dp_priv *dev_priv, int pixel_clock)
+i830_dp_link_required(xf86OutputPtr output, struct i830_dp_priv *dev_priv, int pixel_clock)
 {
-	intel_screen_private *intel = intel_get_screen_private(scrn);
+	intel_screen_private *intel = intel_get_screen_private(output->scrn);
 
-	if (is_edp(dev_priv))
+	if (is_edp(output))
 		return (pixel_clock * intel->edp.bpp + 7) / 8;
 	else
 		return pixel_clock * 3;
@@ -202,16 +195,16 @@ i830_dp_max_data_rate(int max_link_clock, int max_lanes)
 }
 
 static int
-i830_dp_mode_valid(struct drm_connector *connector,
+i830_dp_mode_valid(xf86OutputPtr output,
 		    DisplayModePtr mode)
 {
-	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
-	ScrnInfoPtr scrn = connector->dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int max_link_clock = i830_dp_link_clock(i830_dp_max_link_bw(dev_priv));
 	int max_lanes = i830_dp_max_lane_count(dev_priv);
 
-	if (is_edp(dev_priv) && intel->panel_fixed_mode) {
+	if (is_edp(output) && intel->panel_fixed_mode) {
 		if (mode->HDisplay > intel->panel_fixed_mode->HDisplay)
 			return MODE_PANEL;
 
@@ -221,8 +214,8 @@ i830_dp_mode_valid(struct drm_connector *connector,
 
 	/* only refuse the mode on non eDP since we have seen some wierd eDP panels
 	   which are outside spec tolerances but somehow work by magic */
-	if (!is_edp(dev_priv) &&
-	    (i830_dp_link_required(connector->dev, dev_priv, mode->Clock)
+	if (!is_edp(output) &&
+	    (i830_dp_link_required(output, dev_priv, mode->Clock)
 	     > i830_dp_max_data_rate(max_link_clock, max_lanes)))
 		return MODE_CLOCK_HIGH;
 
@@ -286,12 +279,13 @@ intel_hrawclk(ScrnInfoPtr scrn)
 }
 
 static int
-i830_dp_aux_ch(struct i830_dp_priv *dev_priv,
+i830_dp_aux_ch(xf86OutputPtr output,
 		uint8_t *send, int send_bytes,
 		uint8_t *recv, int recv_size)
 {
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	uint32_t output_reg = dev_priv->output_reg;
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	uint32_t ch_ctl = output_reg + 0x10;
 	uint32_t ch_data = ch_ctl + 4;
@@ -308,7 +302,7 @@ i830_dp_aux_ch(struct i830_dp_priv *dev_priv,
 	 * Note that PCH attached eDP panels should use a 125MHz input
 	 * clock divider.
 	 */
-	if (is_edp(dev_priv) && !is_pch_edp(dev_priv)) {
+	if (is_edp(output) && !is_pch_edp(dev_priv)) {
 		if (IS_GEN6(intel))
 			aux_clock_divider = 200; /* SNB eDP input clock at 400Mhz */
 		else
@@ -398,7 +392,7 @@ i830_dp_aux_ch(struct i830_dp_priv *dev_priv,
 
 /* Write data to the aux channel in native mode */
 static int
-i830_dp_aux_native_write(struct i830_dp_priv *dev_priv,
+i830_dp_aux_native_write(xf86OutputPtr output,
 			  uint16_t address, uint8_t *send, int send_bytes)
 {
 	int ret;
@@ -415,7 +409,7 @@ i830_dp_aux_native_write(struct i830_dp_priv *dev_priv,
 	memcpy(&msg[4], send, send_bytes);
 	msg_bytes = send_bytes + 4;
 	for (;;) {
-		ret = i830_dp_aux_ch(dev_priv, msg, msg_bytes, &ack, 1);
+		ret = i830_dp_aux_ch(output, msg, msg_bytes, &ack, 1);
 		if (ret < 0)
 			return ret;
 		if ((ack & AUX_NATIVE_REPLY_MASK) == AUX_NATIVE_REPLY_ACK)
@@ -430,15 +424,15 @@ i830_dp_aux_native_write(struct i830_dp_priv *dev_priv,
 
 /* Write a single byte to the aux channel in native mode */
 static int
-i830_dp_aux_native_write_1(struct i830_dp_priv *dev_priv,
+i830_dp_aux_native_write_1(xf86OutputPtr output,
 			    uint16_t address, uint8_t byte)
 {
-	return i830_dp_aux_native_write(dev_priv, address, &byte, 1);
+	return i830_dp_aux_native_write(output, address, &byte, 1);
 }
 
 /* read bytes from a native aux channel */
 static int
-i830_dp_aux_native_read(struct i830_dp_priv *dev_priv,
+i830_dp_aux_native_read(xf86OutputPtr output,
 			 uint16_t address, uint8_t *recv, int recv_bytes)
 {
 	uint8_t msg[4];
@@ -457,7 +451,7 @@ i830_dp_aux_native_read(struct i830_dp_priv *dev_priv,
 	reply_bytes = recv_bytes + 1;
 
 	for (;;) {
-		ret = i830_dp_aux_ch(dev_priv, msg, msg_bytes,
+		ret = i830_dp_aux_ch(output, msg, msg_bytes,
 				      reply, reply_bytes);
 		if (ret == 0)
 			return -EPROTO;
@@ -476,13 +470,11 @@ i830_dp_aux_native_read(struct i830_dp_priv *dev_priv,
 }
 
 static int
-i830_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
+i830_dp_i2c_aux_ch(xf86OutputPtr output, int mode,
 		    uint8_t write_byte, uint8_t *read_byte)
 {
 	struct i2c_algo_dp_aux_data *algo_data = adapter->algo_data;
-	struct i830_dp_priv *dev_priv = container_of(adapter,
-						struct i830_dp_priv,
-						adapter);
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	uint16_t address = algo_data->address;
 	uint8_t msg[5];
 	uint8_t reply[2];
@@ -522,7 +514,7 @@ i830_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 	}
 
 	for (retry = 0; retry < 5; retry++) {
-		ret = i830_dp_aux_ch(dev_priv,
+		ret = i830_dp_aux_ch(output,
 				      msg, msg_bytes,
 				      reply, reply_bytes);
 		if (ret < 0) {
@@ -623,7 +615,7 @@ i830_dp_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 	int max_clock = i830_dp_max_link_bw(dev_priv) == DP_LINK_BW_2_7 ? 1 : 0;
 	static int bws[2] = { DP_LINK_BW_1_62, DP_LINK_BW_2_7 };
 
-	if (is_edp(dev_priv) && intel->panel_fixed_mode) {
+	if (is_edp(output) && intel->panel_fixed_mode) {
 		intel_fixed_panel_mode(intel->panel_fixed_mode, adjusted_mode);
 #if 0	/* To properly support this, the LVDS driver would need some work. */
 		intel_pch_panel_fitting(scrn, DRM_MODE_SCALE_FULLSCREEN,
@@ -640,7 +632,7 @@ i830_dp_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 		for (clock = 0; clock <= max_clock; clock++) {
 			int link_avail = i830_dp_max_data_rate(i830_dp_link_clock(bws[clock]), lane_count);
 
-			if (i830_dp_link_required(output->dev, dev_priv, mode->Clock)
+			if (i830_dp_link_required(output, dev_priv, mode->Clock)
 					<= link_avail) {
 				dev_priv->link_bw = bws[clock];
 				dev_priv->lane_count = lane_count;
@@ -654,7 +646,7 @@ i830_dp_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
 		}
 	}
 
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		/* okay we failed just pick the highest */
 		dev_priv->lane_count = max_lane_count;
 		dev_priv->link_bw = bws[max_clock];
@@ -725,10 +717,10 @@ i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
 			continue;
 
 		dev_priv = output_to_i830_dp(output);
-		if (dev_priv->base.type == I830_OUTPUT_DISPLAYPORT) {
+		if (((I830OutputPrivatePtr)output->driver_private)->type == I830_OUTPUT_DISPLAYPORT) {
 			lane_count = dev_priv->lane_count;
 			break;
-		} else if (is_edp(dev_priv)) {
+		} else if (is_edp(output)) {
 			lane_count = intel->edp.lanes;
 			bpp = intel->edp.bpp;
 			break;
@@ -786,7 +778,7 @@ i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 {
 	ScrnInfoPtr scrn = output->scrn;
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
-	xf86CrtcPtr crtc = dev_priv->base.base.crtc;
+	xf86CrtcPtr crtc = output->crtc;
 	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;
 
 	dev_priv->DP = (DP_VOLTAGE_0_4 |
@@ -797,7 +789,7 @@ i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 	if (adjusted_mode->Flags & DRM_MODE_FLAG_PVSYNC)
 		dev_priv->DP |= DP_SYNC_VS_HIGH;
 
-	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+	if (HAS_PCH_CPT(intel) && !is_edp(output))
 		dev_priv->DP |= DP_LINK_TRAIN_OFF_CPT;
 	else
 		dev_priv->DP |= DP_LINK_TRAIN_OFF;
@@ -830,7 +822,7 @@ i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 	if (intel_crtc->pipe == 1 && !HAS_PCH_CPT(intel))
 		dev_priv->DP |= DP_PIPEB_SELECT;
 
-	if (is_edp(dev_priv) && !is_pch_edp(dev_priv)) {
+	if (is_edp(output) && !is_pch_edp(dev_priv)) {
 		/* don't miss out required setting for eDP */
 		dev_priv->DP |= DP_PLL_ENABLE;
 		if (adjusted_mode->Clock < 200000)
@@ -841,9 +833,8 @@ i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 }
 
 /* Returns true if the panel was already on when called */
-static Bool ironlake_edp_panel_on (struct i830_dp_priv *dev_priv)
+static Bool ironlake_edp_panel_on (ScrnInfoPtr scrn)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	uint32_t pp, idle_on_mask = PP_ON | PP_SEQUENCE_STATE_ON_IDLE;
 
@@ -970,15 +961,15 @@ static void i830_dp_prepare(xf86OutputPtr output)
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		ironlake_edp_backlight_off(scrn);
-		ironlake_edp_panel_on(dev_priv);
+		ironlake_edp_panel_on(scrn);
 		if (!is_pch_edp(dev_priv))
 			ironlake_edp_pll_on(output);
 		else
 			ironlake_edp_pll_off(output);
 	}
-	i830_dp_link_down(dev_priv);
+	i830_dp_link_down(output);
 }
 
 static void i830_dp_commit(xf86OutputPtr output)
@@ -986,14 +977,14 @@ static void i830_dp_commit(xf86OutputPtr output)
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 
-	i830_dp_start_link_train(dev_priv);
+	i830_dp_start_link_train(output);
 
-	if (is_edp(dev_priv))
-		ironlake_edp_panel_on(dev_priv);
+	if (is_edp(output))
+		ironlake_edp_panel_on(scrn);
 
-	i830_dp_complete_link_train(dev_priv);
+	i830_dp_complete_link_train(output);
 
-	if (is_edp(dev_priv))
+	if (is_edp(output))
 		ironlake_edp_backlight_on(scrn);
 }
 
@@ -1006,21 +997,21 @@ i830_dp_dpms(xf86OutputPtr output, int mode)
 	uint32_t dp_reg = I915_READ(dev_priv->output_reg);
 
 	if (mode != DRM_MODE_DPMS_ON) {
-		if (is_edp(dev_priv))
+		if (is_edp(output))
 			ironlake_edp_backlight_off(scrn);
-		i830_dp_link_down(dev_priv);
-		if (is_edp(dev_priv))
+		i830_dp_link_down(output);
+		if (is_edp(output))
 			ironlake_edp_panel_off(scrn);
-		if (is_edp(dev_priv) && !is_pch_edp(dev_priv))
+		if (is_edp(output) && !is_pch_edp(dev_priv))
 			ironlake_edp_pll_off(output);
 	} else {
-		if (is_edp(dev_priv))
-			ironlake_edp_panel_on(dev_priv);
+		if (is_edp(output))
+			ironlake_edp_panel_on(scrn);
 		if (!(dp_reg & DP_PORT_EN)) {
-			i830_dp_start_link_train(dev_priv);
-			i830_dp_complete_link_train(dev_priv);
+			i830_dp_start_link_train(output);
+			i830_dp_complete_link_train(output);
 		}
-		if (is_edp(dev_priv))
+		if (is_edp(output))
 			ironlake_edp_backlight_on(scrn);
 	}
 	dev_priv->dpms_mode = mode;
@@ -1031,11 +1022,12 @@ i830_dp_dpms(xf86OutputPtr output, int mode)
  * link status information
  */
 static Bool
-i830_dp_get_link_status(struct i830_dp_priv *dev_priv)
+i830_dp_get_link_status(xf86OutputPtr output)
 {
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	int ret;
 
-	ret = i830_dp_aux_native_read(dev_priv,
+	ret = i830_dp_aux_native_read(output,
 				       DP_LANE0_1_STATUS,
 				       dev_priv->link_status, DP_LINK_STATUS_SIZE);
 	if (ret != DP_LINK_STATUS_SIZE)
@@ -1245,22 +1237,23 @@ intel_channel_eq_ok(struct i830_dp_priv *dev_priv)
 }
 
 static Bool
-i830_dp_set_link_train(struct i830_dp_priv *dev_priv,
+i830_dp_set_link_train(xf86OutputPtr output,
 			uint32_t dp_reg_value,
 			uint8_t dp_train_pat)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int ret;
 
 	I915_WRITE(dev_priv->output_reg, dp_reg_value);
 	POSTING_READ(dev_priv->output_reg);
 
-	i830_dp_aux_native_write_1(dev_priv,
+	i830_dp_aux_native_write_1(output,
 				    DP_TRAINING_PATTERN_SET,
 				    dp_train_pat);
 
-	ret = i830_dp_aux_native_write(dev_priv,
+	ret = i830_dp_aux_native_write(output,
 					DP_TRAINING_LANE0_SET,
 					dev_priv->train_set, 4);
 	if (ret != 4)
@@ -1271,11 +1264,12 @@ i830_dp_set_link_train(struct i830_dp_priv *dev_priv,
 
 /* Enable corresponding port and start training pattern 1 */
 static void
-i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
+i830_dp_start_link_train(xf86OutputPtr output)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
-	I830CrtcPrivatePtr intel_crtc = dev_priv->base.base.crtc->driver_private;
+	I830CrtcPrivatePtr intel_crtc = output->crtc->driver_private;
 	int i;
 	uint8_t voltage;
 	Bool clock_recovery = FALSE;
@@ -1289,12 +1283,12 @@ i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
 	intel_wait_for_vblank(scrn, intel_crtc->pipe);
 
 	/* Write the link configuration data */
-	i830_dp_aux_native_write(dev_priv, DP_LINK_BW_SET,
+	i830_dp_aux_native_write(output, DP_LINK_BW_SET,
 				  dev_priv->link_configuration,
 				  DP_LINK_CONFIGURATION_SIZE);
 
 	DP |= DP_PORT_EN;
-	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+	if (HAS_PCH_CPT(intel) && !is_edp(output))
 		DP &= ~DP_LINK_TRAIN_MASK_CPT;
 	else
 		DP &= ~DP_LINK_TRAIN_MASK;
@@ -1305,7 +1299,7 @@ i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
 	for (;;) {
 		/* Use dev_priv->train_set[0] to set the voltage and pre emphasis values */
 		uint32_t    signal_levels;
-		if (IS_GEN6(intel) && is_edp(dev_priv)) {
+		if (IS_GEN6(intel) && is_edp(output)) {
 			signal_levels = intel_gen6_edp_signal_levels(dev_priv->train_set[0]);
 			DP = (DP & ~EDP_LINK_TRAIN_VOL_EMP_MASK_SNB) | signal_levels;
 		} else {
@@ -1313,18 +1307,18 @@ i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
 			DP = (DP & ~(DP_VOLTAGE_MASK|DP_PRE_EMPHASIS_MASK)) | signal_levels;
 		}
 
-		if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+		if (HAS_PCH_CPT(intel) && !is_edp(output))
 			reg = DP | DP_LINK_TRAIN_PAT_1_CPT;
 		else
 			reg = DP | DP_LINK_TRAIN_PAT_1;
 
-		if (!i830_dp_set_link_train(dev_priv, reg,
+		if (!i830_dp_set_link_train(output, reg,
 					     DP_TRAINING_PATTERN_1))
 			break;
 		/* Set training pattern 1 */
 
 		usleep(100);
-		if (!i830_dp_get_link_status(dev_priv))
+		if (!i830_dp_get_link_status(output))
 			break;
 
 		if (intel_clock_recovery_ok(dev_priv->link_status, dev_priv->lane_count)) {
@@ -1356,9 +1350,10 @@ i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
 }
 
 static void
-i830_dp_complete_link_train(struct i830_dp_priv *dev_priv)
+i830_dp_complete_link_train(xf86OutputPtr output)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	Bool channel_eq = FALSE;
 	int tries;
@@ -1372,7 +1367,7 @@ i830_dp_complete_link_train(struct i830_dp_priv *dev_priv)
 		/* Use dev_priv->train_set[0] to set the voltage and pre emphasis values */
 		uint32_t    signal_levels;
 
-		if (IS_GEN6(intel) && is_edp(dev_priv)) {
+		if (IS_GEN6(intel) && is_edp(output)) {
 			signal_levels = intel_gen6_edp_signal_levels(dev_priv->train_set[0]);
 			DP = (DP & ~EDP_LINK_TRAIN_VOL_EMP_MASK_SNB) | signal_levels;
 		} else {
@@ -1380,18 +1375,18 @@ i830_dp_complete_link_train(struct i830_dp_priv *dev_priv)
 			DP = (DP & ~(DP_VOLTAGE_MASK|DP_PRE_EMPHASIS_MASK)) | signal_levels;
 		}
 
-		if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+		if (HAS_PCH_CPT(intel) && !is_edp(output))
 			reg = DP | DP_LINK_TRAIN_PAT_2_CPT;
 		else
 			reg = DP | DP_LINK_TRAIN_PAT_2;
 
 		/* channel eq pattern */
-		if (!i830_dp_set_link_train(dev_priv, reg,
+		if (!i830_dp_set_link_train(output, reg,
 					     DP_TRAINING_PATTERN_2))
 			break;
 
 		usleep(400);
-		if (!i830_dp_get_link_status(dev_priv))
+		if (!i830_dp_get_link_status(output))
 			break;
 
 		if (intel_channel_eq_ok(dev_priv)) {
@@ -1408,21 +1403,22 @@ i830_dp_complete_link_train(struct i830_dp_priv *dev_priv)
 		++tries;
 	}
 
-	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+	if (HAS_PCH_CPT(intel) && !is_edp(output))
 		reg = DP | DP_LINK_TRAIN_OFF_CPT;
 	else
 		reg = DP | DP_LINK_TRAIN_OFF;
 
 	I915_WRITE(dev_priv->output_reg, reg);
 	POSTING_READ(dev_priv->output_reg);
-	i830_dp_aux_native_write_1(dev_priv,
+	i830_dp_aux_native_write_1(output,
 				    DP_TRAINING_PATTERN_SET, DP_TRAINING_PATTERN_DISABLE);
 }
 
 static void
-i830_dp_link_down(struct i830_dp_priv *dev_priv)
+i830_dp_link_down(xf86OutputPtr output)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	uint32_t DP = dev_priv->DP;
 
@@ -1431,14 +1427,14 @@ i830_dp_link_down(struct i830_dp_priv *dev_priv)
 
 	DRM_DEBUG_KMS("\n");
 
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		DP &= ~DP_PLL_ENABLE;
 		I915_WRITE(dev_priv->output_reg, DP);
 		POSTING_READ(dev_priv->output_reg);
 		usleep(100);
 	}
 
-	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv)) {
+	if (HAS_PCH_CPT(intel) && !is_edp(output)) {
 		DP &= ~DP_LINK_TRAIN_MASK_CPT;
 		I915_WRITE(dev_priv->output_reg, DP | DP_LINK_TRAIN_PAT_IDLE_CPT);
 	} else {
@@ -1449,12 +1445,12 @@ i830_dp_link_down(struct i830_dp_priv *dev_priv)
 
 	msleep(17);
 
-	if (is_edp(dev_priv))
+	if (is_edp(output))
 		DP |= DP_LINK_TRAIN_OFF;
 
 	if (!HAS_PCH_CPT(intel) &&
 	    I915_READ(dev_priv->output_reg) & DP_PIPEB_SELECT) {
-		I830CrtcPrivatePtr intel_crtc = dev_priv->base.base.crtc->driver_private;
+		I830CrtcPrivatePtr intel_crtc = output->crtc->driver_private;
 		/* Hardware workaround: leaving our transcoder select
 		 * set to transcoder B while it's off will prevent the
 		 * corresponding HDMI output on transcoder A.
@@ -1469,7 +1465,7 @@ i830_dp_link_down(struct i830_dp_priv *dev_priv)
 		/* Changes to enable or select take place the vblank
 		 * after being written.
 		 */
-		intel_wait_for_vblank(dev_priv->base.base.dev,
+		intel_wait_for_vblank(output->scrn,
 				      intel_crtc->pipe);
 	}
 
@@ -1487,33 +1483,36 @@ i830_dp_link_down(struct i830_dp_priv *dev_priv)
  */
 
 static void
-i830_dp_check_link_status(struct i830_dp_priv *dev_priv)
+i830_dp_check_link_status(xf86OutputPtr output)
 {
-	if (!dev_priv->base.base.crtc)
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+
+	if (!output->crtc)
 		return;
 
-	if (!i830_dp_get_link_status(dev_priv)) {
-		i830_dp_link_down(dev_priv);
+	if (!i830_dp_get_link_status(output)) {
+		i830_dp_link_down(output);
 		return;
 	}
 
 	if (!intel_channel_eq_ok(dev_priv)) {
-		i830_dp_start_link_train(dev_priv);
-		i830_dp_complete_link_train(dev_priv);
+		i830_dp_start_link_train(output);
+		i830_dp_complete_link_train(output);
 	}
 }
 
 static xf86OutputStatus
-ironlake_dp_detect(struct i830_dp_priv *dev_priv)
+ironlake_dp_detect(xf86OutputPtr output)
 {
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	xf86OutputStatus status;
 
 	/* Can't disconnect eDP */
-	if (is_edp(dev_priv))
+	if (is_edp(output))
 		return XF86OutputStatusConnected;
 
 	status = XF86OutputStatusDisconnected;
-	if (i830_dp_aux_native_read(dev_priv,
+	if (i830_dp_aux_native_read(output,
 				     0x000, dev_priv->dpcd,
 				     sizeof (dev_priv->dpcd))
 	    == sizeof(dev_priv->dpcd)) {
@@ -1526,9 +1525,10 @@ ironlake_dp_detect(struct i830_dp_priv *dev_priv)
 }
 
 static xf86OutputStatus
-g4x_dp_detect(struct i830_dp_priv *dev_priv)
+g4x_dp_detect(xf86OutputPtr output)
 {
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	xf86OutputStatus status;
 	uint32_t temp, bit;
@@ -1553,7 +1553,7 @@ g4x_dp_detect(struct i830_dp_priv *dev_priv)
 		return XF86OutputStatusDisconnected;
 
 	status = XF86OutputStatusDisconnected;
-	if (i830_dp_aux_native_read(dev_priv, 0x000, dev_priv->dpcd,
+	if (i830_dp_aux_native_read(output, 0x000, dev_priv->dpcd,
 				     sizeof (dev_priv->dpcd)) == sizeof (dev_priv->dpcd))
 	{
 		if (dev_priv->dpcd[0] != 0)
@@ -1570,33 +1570,34 @@ g4x_dp_detect(struct i830_dp_priv *dev_priv)
  * \return false if DP port is disconnected.
  */
 static xf86OutputStatus
-i830_dp_detect(struct drm_connector *connector, Bool force)
+i830_dp_detect(xf86OutputPtr output, Bool force)
 {
-	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	xf86OutputStatus status;
 	struct edid *edid = NULL;
 
 	if (HAS_PCH_SPLIT(intel))
-		status = ironlake_dp_detect(dev_priv);
+		status = ironlake_dp_detect(output);
 	else
-		status = g4x_dp_detect(dev_priv);
+		status = g4x_dp_detect(output);
 	if (status != XF86OutputStatusConnected)
 		return status;
 
 	return XF86OutputStatusConnected;
 }
 
-static int i830_dp_get_modes(struct drm_connector *connector)
+static int i830_dp_get_modes(xf86OutputPtr output)
 {
-	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
-	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int ret;
 
 	ret = intel_ddc_get_modes(connector, &dev_priv->adapter);
 	if (ret) {
-		if (is_edp(dev_priv) && !intel->panel_fixed_mode) {
+		if (is_edp(output) && !intel->panel_fixed_mode) {
 			DisplayModePtr newmode;
 			list_for_each_entry(newmode, &connector->probed_modes,
 					    head) {
@@ -1612,7 +1613,7 @@ static int i830_dp_get_modes(struct drm_connector *connector)
 	}
 
 	/* if eDP has no EDID, try to use fixed panel mode from VBT */
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		if (intel->panel_fixed_mode != NULL) {
 			DisplayModePtr mode;
 			mode = xf86DuplicateModes(scrn, intel->panel_fixed_mode);
@@ -1681,7 +1682,7 @@ i830_trans_dp_port_sel (xf86CrtcPtr crtc)
 			continue;
 
 		dev_priv = output_to_i830_dp(output);
-		if (dev_priv->base.type == I830_OUTPUT_DISPLAYPORT)
+		if (((I830OutputPrivatePtr)output->driver_private)->type == I830_OUTPUT_DISPLAYPORT)
 			return dev_priv->output_reg;
 	}
 
@@ -1755,7 +1756,7 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 	else if (output_reg == DP_D || output_reg == PCH_DP_D)
 		intel_output->clone_mask = (1 << INTEL_DP_D_CLONE_BIT);
 
-	if (is_edp(dev_priv))
+	if (is_edp(output))
 		intel_output->clone_mask = (1 << INTEL_EDP_CLONE_BIT);
 
 	intel_output->crtc_mask = (1 << 0) | (1 << 1);
@@ -1794,12 +1795,12 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 	i830_dp_i2c_init(dev_priv, intel_connector, name);
 
 	/* Cache some DPCD data in the eDP case */
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		int ret;
 		Bool was_on;
 
-		was_on = ironlake_edp_panel_on(dev_priv);
-		ret = i830_dp_aux_native_read(dev_priv, DP_DPCD_REV,
+		was_on = ironlake_edp_panel_on(scrn);
+		ret = i830_dp_aux_native_read(output, DP_DPCD_REV,
 					       dev_priv->dpcd,
 					       sizeof(dev_priv->dpcd));
 		if (ret == sizeof(dev_priv->dpcd)) {
@@ -1813,7 +1814,7 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 			ironlake_edp_panel_off(scrn);
 	}
 
-	if (is_edp(dev_priv)) {
+	if (is_edp(output)) {
 		/* initialize panel mode from VBT if available for eDP */
 		if (intel->lfp_lvds_vbt_mode) {
 			intel->panel_fixed_mode =
