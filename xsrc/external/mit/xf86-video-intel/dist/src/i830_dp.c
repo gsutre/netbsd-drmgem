@@ -33,16 +33,19 @@
  * - Disabled PCH panel fitting.
  */
 
-#include <linux/i2c.h>
-#include <linux/slab.h>
-#include "drmP.h"
-#include "drm.h"
-#include "drm_crtc.h"
-#include "drm_crtc_helper.h"
-#include "intel_drv.h"
-#include "i915_drm.h"
-#include "i915_drv.h"
-#include "drm_dp_helper.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <errno.h>
+#include <unistd.h>
+
+#include "xf86.h"
+#include "i830.h"
+#include "xf86Modes.h"
+#include "i830_display.h"
+
+#include "i830_dp.h"
 
 
 #define DP_LINK_STATUS_SIZE	6
