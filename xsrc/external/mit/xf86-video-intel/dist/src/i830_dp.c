@@ -50,8 +50,8 @@
 
 #define DP_LINK_CONFIGURATION_SIZE	9
 
-struct intel_dp {
-	struct intel_encoder base;
+struct i830_dp_priv {
+	struct intel_output base;
 	uint32_t output_reg;
 	uint32_t DP;
 	uint8_t  link_configuration[DP_LINK_CONFIGURATION_SIZE];
@@ -61,90 +61,90 @@ struct intel_dp {
 	uint8_t dpcd[4];
 	struct i2c_adapter adapter;
 	struct i2c_algo_dp_aux_data algo;
-	bool is_pch_edp;
+	Bool is_pch_edp;
 	uint8_t	train_set[4];
 	uint8_t link_status[DP_LINK_STATUS_SIZE];
 };
 
 /**
  * is_edp - is the given port attached to an eDP panel (either CPU or PCH)
- * @intel_dp: DP struct
+ * @dev_priv: DP struct
  *
  * If a CPU or PCH DP output is attached to an eDP panel, this function
  * will return true, and false otherwise.
  */
-static bool is_edp(struct intel_dp *intel_dp)
+static Bool is_edp(struct i830_dp_priv *dev_priv)
 {
-	return intel_dp->base.type == INTEL_OUTPUT_EDP;
+	return dev_priv->base.type == I830_OUTPUT_EDP;
 }
 
 /**
  * is_pch_edp - is the port on the PCH and attached to an eDP panel?
- * @intel_dp: DP struct
+ * @dev_priv: DP struct
  *
  * Returns true if the given DP struct corresponds to a PCH DP port attached
  * to an eDP panel, false otherwise.  Helpful for determining whether we
  * may need FDI resources for a given DP output or not.
  */
-static bool is_pch_edp(struct intel_dp *intel_dp)
+static Bool is_pch_edp(struct i830_dp_priv *dev_priv)
 {
-	return intel_dp->is_pch_edp;
+	return dev_priv->is_pch_edp;
 }
 
-static struct intel_dp *enc_to_intel_dp(struct drm_encoder *encoder)
+static struct i830_dp_priv *output_to_i830_dp(xf86OutputPtr output)
 {
-	return container_of(encoder, struct intel_dp, base.base);
+	return container_of(output, struct i830_dp_priv, base.base);
 }
 
-static struct intel_dp *intel_attached_dp(struct drm_connector *connector)
+static struct i830_dp_priv *intel_attached_dp(struct drm_connector *connector)
 {
 	return container_of(intel_attached_encoder(connector),
-			    struct intel_dp, base);
+			    struct i830_dp_priv, base);
 }
 
 /**
- * intel_encoder_is_pch_edp - is the given encoder a PCH attached eDP?
- * @encoder: DRM encoder
+ * i830_encoder_is_pch_edp - is the given output a PCH attached eDP?
+ * @output: DRM encoder
  *
- * Return true if @encoder corresponds to a PCH attached eDP panel.  Needed
+ * Return true if @output corresponds to a PCH attached eDP panel.  Needed
  * by intel_display.c.
  */
-bool intel_encoder_is_pch_edp(struct drm_encoder *encoder)
+Bool i830_encoder_is_pch_edp(xf86OutputPtr output)
 {
-	struct intel_dp *intel_dp;
+	struct i830_dp_priv *dev_priv;
 
-	if (!encoder)
-		return false;
+	if (!output)
+		return FALSE;
 
-	intel_dp = enc_to_intel_dp(encoder);
+	dev_priv = output_to_i830_dp(output);
 
-	return is_pch_edp(intel_dp);
+	return is_pch_edp(dev_priv);
 }
 
-static void intel_dp_start_link_train(struct intel_dp *intel_dp);
-static void intel_dp_complete_link_train(struct intel_dp *intel_dp);
-static void intel_dp_link_down(struct intel_dp *intel_dp);
+static void i830_dp_start_link_train(struct i830_dp_priv *dev_priv);
+static void i830_dp_complete_link_train(struct i830_dp_priv *dev_priv);
+static void i830_dp_link_down(struct i830_dp_priv *dev_priv);
 
 void
-intel_edp_link_config (struct intel_encoder *intel_encoder,
+i830_edp_link_config (I830OutputPrivatePtr intel_output,
 		       int *lane_num, int *link_bw)
 {
-	struct intel_dp *intel_dp = container_of(intel_encoder, struct intel_dp, base);
+	struct i830_dp_priv *dev_priv = container_of(intel_output, struct i830_dp_priv, base);
 
-	*lane_num = intel_dp->lane_count;
-	if (intel_dp->link_bw == DP_LINK_BW_1_62)
+	*lane_num = dev_priv->lane_count;
+	if (dev_priv->link_bw == DP_LINK_BW_1_62)
 		*link_bw = 162000;
-	else if (intel_dp->link_bw == DP_LINK_BW_2_7)
+	else if (dev_priv->link_bw == DP_LINK_BW_2_7)
 		*link_bw = 270000;
 }
 
 static int
-intel_dp_max_lane_count(struct intel_dp *intel_dp)
+i830_dp_max_lane_count(struct i830_dp_priv *dev_priv)
 {
 	int max_lane_count = 4;
 
-	if (intel_dp->dpcd[0] >= 0x11) {
-		max_lane_count = intel_dp->dpcd[2] & 0x1f;
+	if (dev_priv->dpcd[0] >= 0x11) {
+		max_lane_count = dev_priv->dpcd[2] & 0x1f;
 		switch (max_lane_count) {
 		case 1: case 2: case 4:
 			break;
@@ -156,9 +156,9 @@ intel_dp_max_lane_count(struct intel_dp *intel_dp)
 }
 
 static int
-intel_dp_max_link_bw(struct intel_dp *intel_dp)
+i830_dp_max_link_bw(struct i830_dp_priv *dev_priv)
 {
-	int max_link_bw = intel_dp->dpcd[1];
+	int max_link_bw = dev_priv->dpcd[1];
 
 	switch (max_link_bw) {
 	case DP_LINK_BW_1_62:
@@ -172,7 +172,7 @@ intel_dp_max_link_bw(struct intel_dp *intel_dp)
 }
 
 static int
-intel_dp_link_clock(uint8_t link_bw)
+i830_dp_link_clock(uint8_t link_bw)
 {
 	if (link_bw == DP_LINK_BW_2_7)
 		return 270000;
@@ -182,48 +182,48 @@ intel_dp_link_clock(uint8_t link_bw)
 
 /* I think this is a fiction */
 static int
-intel_dp_link_required(struct drm_device *dev, struct intel_dp *intel_dp, int pixel_clock)
+i830_dp_link_required(ScrnInfoPtr scrn, struct i830_dp_priv *dev_priv, int pixel_clock)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 
-	if (is_edp(intel_dp))
-		return (pixel_clock * dev_priv->edp.bpp + 7) / 8;
+	if (is_edp(dev_priv))
+		return (pixel_clock * intel->edp.bpp + 7) / 8;
 	else
 		return pixel_clock * 3;
 }
 
 static int
-intel_dp_max_data_rate(int max_link_clock, int max_lanes)
+i830_dp_max_data_rate(int max_link_clock, int max_lanes)
 {
 	return (max_link_clock * max_lanes * 8) / 10;
 }
 
 static int
-intel_dp_mode_valid(struct drm_connector *connector,
-		    struct drm_display_mode *mode)
+i830_dp_mode_valid(struct drm_connector *connector,
+		    DisplayModePtr mode)
 {
-	struct intel_dp *intel_dp = intel_attached_dp(connector);
-	struct drm_device *dev = connector->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	int max_link_clock = intel_dp_link_clock(intel_dp_max_link_bw(intel_dp));
-	int max_lanes = intel_dp_max_lane_count(intel_dp);
+	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
+	ScrnInfoPtr scrn = connector->dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	int max_link_clock = i830_dp_link_clock(i830_dp_max_link_bw(dev_priv));
+	int max_lanes = i830_dp_max_lane_count(dev_priv);
 
-	if (is_edp(intel_dp) && dev_priv->panel_fixed_mode) {
-		if (mode->hdisplay > dev_priv->panel_fixed_mode->hdisplay)
+	if (is_edp(dev_priv) && intel->panel_fixed_mode) {
+		if (mode->HDisplay > intel->panel_fixed_mode->HDisplay)
 			return MODE_PANEL;
 
-		if (mode->vdisplay > dev_priv->panel_fixed_mode->vdisplay)
+		if (mode->VDisplay > intel->panel_fixed_mode->VDisplay)
 			return MODE_PANEL;
 	}
 
 	/* only refuse the mode on non eDP since we have seen some wierd eDP panels
 	   which are outside spec tolerances but somehow work by magic */
-	if (!is_edp(intel_dp) &&
-	    (intel_dp_link_required(connector->dev, intel_dp, mode->clock)
-	     > intel_dp_max_data_rate(max_link_clock, max_lanes)))
+	if (!is_edp(dev_priv) &&
+	    (i830_dp_link_required(connector->dev, dev_priv, mode->Clock)
+	     > i830_dp_max_data_rate(max_link_clock, max_lanes)))
 		return MODE_CLOCK_HIGH;
 
-	if (mode->clock < 10000)
+	if (mode->Clock < 10000)
 		return MODE_CLOCK_LOW;
 
 	return MODE_OK;
@@ -254,9 +254,9 @@ unpack_aux(uint32_t src, uint8_t *dst, int dst_bytes)
 
 /* hrawclock is 1/4 the FSB frequency */
 static int
-intel_hrawclk(struct drm_device *dev)
+intel_hrawclk(ScrnInfoPtr scrn)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	uint32_t clkcfg;
 
 	clkcfg = I915_READ(CLKCFG);
@@ -283,13 +283,13 @@ intel_hrawclk(struct drm_device *dev)
 }
 
 static int
-intel_dp_aux_ch(struct intel_dp *intel_dp,
+i830_dp_aux_ch(struct i830_dp_priv *dev_priv,
 		uint8_t *send, int send_bytes,
 		uint8_t *recv, int recv_size)
 {
-	uint32_t output_reg = intel_dp->output_reg;
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	uint32_t output_reg = dev_priv->output_reg;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	uint32_t ch_ctl = output_reg + 0x10;
 	uint32_t ch_data = ch_ctl + 4;
 	int i;
@@ -305,17 +305,17 @@ intel_dp_aux_ch(struct intel_dp *intel_dp,
 	 * Note that PCH attached eDP panels should use a 125MHz input
 	 * clock divider.
 	 */
-	if (is_edp(intel_dp) && !is_pch_edp(intel_dp)) {
-		if (IS_GEN6(dev))
+	if (is_edp(dev_priv) && !is_pch_edp(dev_priv)) {
+		if (IS_GEN6(intel))
 			aux_clock_divider = 200; /* SNB eDP input clock at 400Mhz */
 		else
 			aux_clock_divider = 225; /* eDP input clock at 450Mhz */
-	} else if (HAS_PCH_SPLIT(dev))
+	} else if (HAS_PCH_SPLIT(intel))
 		aux_clock_divider = 62; /* IRL input clock fixed at 125Mhz */
 	else
-		aux_clock_divider = intel_hrawclk(dev) / 2;
+		aux_clock_divider = intel_hrawclk(scrn) / 2;
 
-	if (IS_GEN6(dev))
+	if (IS_GEN6(intel))
 		precharge = 3;
 	else
 		precharge = 5;
@@ -347,7 +347,7 @@ intel_dp_aux_ch(struct intel_dp *intel_dp,
 			status = I915_READ(ch_ctl);
 			if ((status & DP_AUX_CH_CTL_SEND_BUSY) == 0)
 				break;
-			udelay(100);
+			usleep(100);
 		}
 	
 		/* Clear done status and any errors */
@@ -395,7 +395,7 @@ intel_dp_aux_ch(struct intel_dp *intel_dp,
 
 /* Write data to the aux channel in native mode */
 static int
-intel_dp_aux_native_write(struct intel_dp *intel_dp,
+i830_dp_aux_native_write(struct i830_dp_priv *dev_priv,
 			  uint16_t address, uint8_t *send, int send_bytes)
 {
 	int ret;
@@ -412,13 +412,13 @@ intel_dp_aux_native_write(struct intel_dp *intel_dp,
 	memcpy(&msg[4], send, send_bytes);
 	msg_bytes = send_bytes + 4;
 	for (;;) {
-		ret = intel_dp_aux_ch(intel_dp, msg, msg_bytes, &ack, 1);
+		ret = i830_dp_aux_ch(dev_priv, msg, msg_bytes, &ack, 1);
 		if (ret < 0)
 			return ret;
 		if ((ack & AUX_NATIVE_REPLY_MASK) == AUX_NATIVE_REPLY_ACK)
 			break;
 		else if ((ack & AUX_NATIVE_REPLY_MASK) == AUX_NATIVE_REPLY_DEFER)
-			udelay(100);
+			usleep(100);
 		else
 			return -EIO;
 	}
@@ -427,15 +427,15 @@ intel_dp_aux_native_write(struct intel_dp *intel_dp,
 
 /* Write a single byte to the aux channel in native mode */
 static int
-intel_dp_aux_native_write_1(struct intel_dp *intel_dp,
+i830_dp_aux_native_write_1(struct i830_dp_priv *dev_priv,
 			    uint16_t address, uint8_t byte)
 {
-	return intel_dp_aux_native_write(intel_dp, address, &byte, 1);
+	return i830_dp_aux_native_write(dev_priv, address, &byte, 1);
 }
 
 /* read bytes from a native aux channel */
 static int
-intel_dp_aux_native_read(struct intel_dp *intel_dp,
+i830_dp_aux_native_read(struct i830_dp_priv *dev_priv,
 			 uint16_t address, uint8_t *recv, int recv_bytes)
 {
 	uint8_t msg[4];
@@ -454,7 +454,7 @@ intel_dp_aux_native_read(struct intel_dp *intel_dp,
 	reply_bytes = recv_bytes + 1;
 
 	for (;;) {
-		ret = intel_dp_aux_ch(intel_dp, msg, msg_bytes,
+		ret = i830_dp_aux_ch(dev_priv, msg, msg_bytes,
 				      reply, reply_bytes);
 		if (ret == 0)
 			return -EPROTO;
@@ -466,19 +466,19 @@ intel_dp_aux_native_read(struct intel_dp *intel_dp,
 			return ret - 1;
 		}
 		else if ((ack & AUX_NATIVE_REPLY_MASK) == AUX_NATIVE_REPLY_DEFER)
-			udelay(100);
+			usleep(100);
 		else
 			return -EIO;
 	}
 }
 
 static int
-intel_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
+i830_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 		    uint8_t write_byte, uint8_t *read_byte)
 {
 	struct i2c_algo_dp_aux_data *algo_data = adapter->algo_data;
-	struct intel_dp *intel_dp = container_of(adapter,
-						struct intel_dp,
+	struct i830_dp_priv *dev_priv = container_of(adapter,
+						struct i830_dp_priv,
 						adapter);
 	uint16_t address = algo_data->address;
 	uint8_t msg[5];
@@ -519,7 +519,7 @@ intel_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 	}
 
 	for (retry = 0; retry < 5; retry++) {
-		ret = intel_dp_aux_ch(intel_dp,
+		ret = i830_dp_aux_ch(dev_priv,
 				      msg, msg_bytes,
 				      reply, reply_bytes);
 		if (ret < 0) {
@@ -537,7 +537,7 @@ intel_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 			DRM_DEBUG_KMS("aux_ch native nack\n");
 			return -EREMOTEIO;
 		case AUX_NATIVE_REPLY_DEFER:
-			udelay(100);
+			usleep(100);
 			continue;
 		default:
 			DRM_ERROR("aux_ch invalid native reply 0x%02x\n",
@@ -556,7 +556,7 @@ intel_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 			return -EREMOTEIO;
 		case AUX_I2C_REPLY_DEFER:
 			DRM_DEBUG_KMS("aux_i2c defer\n");
-			udelay(100);
+			usleep(100);
 			break;
 		default:
 			DRM_ERROR("aux_i2c invalid reply 0x%02x\n", reply[0]);
@@ -569,105 +569,105 @@ intel_dp_i2c_aux_ch(struct i2c_adapter *adapter, int mode,
 }
 
 static int
-intel_dp_i2c_init(struct intel_dp *intel_dp,
+i830_dp_i2c_init(struct i830_dp_priv *dev_priv,
 		  struct intel_connector *intel_connector, const char *name)
 {
 	DRM_DEBUG_KMS("i2c_init %s\n", name);
-	intel_dp->algo.running = false;
-	intel_dp->algo.address = 0;
-	intel_dp->algo.aux_ch = intel_dp_i2c_aux_ch;
+	dev_priv->algo.running = FALSE;
+	dev_priv->algo.address = 0;
+	dev_priv->algo.aux_ch = i830_dp_i2c_aux_ch;
 
-	memset(&intel_dp->adapter, '\0', sizeof (intel_dp->adapter));
-	intel_dp->adapter.owner = THIS_MODULE;
-	intel_dp->adapter.class = I2C_CLASS_DDC;
-	strncpy (intel_dp->adapter.name, name, sizeof(intel_dp->adapter.name) - 1);
-	intel_dp->adapter.name[sizeof(intel_dp->adapter.name) - 1] = '\0';
-	intel_dp->adapter.algo_data = &intel_dp->algo;
-	intel_dp->adapter.dev.parent = &intel_connector->base.kdev;
+	memset(&dev_priv->adapter, '\0', sizeof (dev_priv->adapter));
+	dev_priv->adapter.owner = THIS_MODULE;
+	dev_priv->adapter.class = I2C_CLASS_DDC;
+	strncpy (dev_priv->adapter.name, name, sizeof(dev_priv->adapter.name) - 1);
+	dev_priv->adapter.name[sizeof(dev_priv->adapter.name) - 1] = '\0';
+	dev_priv->adapter.algo_data = &dev_priv->algo;
+	dev_priv->adapter.dev.parent = &intel_connector->base.kdev;
 
-	return i2c_dp_aux_add_bus(&intel_dp->adapter);
+	return i2c_dp_aux_add_bus(&dev_priv->adapter);
 }
 
 /* Taken from Linux intel_panel.c. */
 static void
-intel_fixed_panel_mode(struct drm_display_mode *fixed_mode,
-		       struct drm_display_mode *adjusted_mode)
+intel_fixed_panel_mode(DisplayModePtr fixed_mode,
+		       DisplayModePtr adjusted_mode)
 {
-	adjusted_mode->hdisplay = fixed_mode->hdisplay;
-	adjusted_mode->hsync_start = fixed_mode->hsync_start;
-	adjusted_mode->hsync_end = fixed_mode->hsync_end;
-	adjusted_mode->htotal = fixed_mode->htotal;
+	adjusted_mode->HDisplay = fixed_mode->HDisplay;
+	adjusted_mode->HSyncStart = fixed_mode->HSyncStart;
+	adjusted_mode->HSyncEnd = fixed_mode->HSyncEnd;
+	adjusted_mode->HTotal = fixed_mode->HTotal;
 
-	adjusted_mode->vdisplay = fixed_mode->vdisplay;
-	adjusted_mode->vsync_start = fixed_mode->vsync_start;
-	adjusted_mode->vsync_end = fixed_mode->vsync_end;
-	adjusted_mode->vtotal = fixed_mode->vtotal;
+	adjusted_mode->VDisplay = fixed_mode->VDisplay;
+	adjusted_mode->VSyncStart = fixed_mode->VSyncStart;
+	adjusted_mode->VSyncEnd = fixed_mode->VSyncEnd;
+	adjusted_mode->VTotal = fixed_mode->VTotal;
 
-	adjusted_mode->clock = fixed_mode->clock;
+	adjusted_mode->Clock = fixed_mode->Clock;
 
-	drm_mode_set_crtcinfo(adjusted_mode, CRTC_INTERLACE_HALVE_V);
+	xf86SetModeCrtc(adjusted_mode, INTERLACE_HALVE_V);
 }
 
-static bool
-intel_dp_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
-		    struct drm_display_mode *adjusted_mode)
+static Bool
+i830_dp_mode_fixup(xf86OutputPtr output, DisplayModePtr mode,
+		    DisplayModePtr adjusted_mode)
 {
-	struct drm_device *dev = encoder->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	int lane_count, clock;
-	int max_lane_count = intel_dp_max_lane_count(intel_dp);
-	int max_clock = intel_dp_max_link_bw(intel_dp) == DP_LINK_BW_2_7 ? 1 : 0;
+	int max_lane_count = i830_dp_max_lane_count(dev_priv);
+	int max_clock = i830_dp_max_link_bw(dev_priv) == DP_LINK_BW_2_7 ? 1 : 0;
 	static int bws[2] = { DP_LINK_BW_1_62, DP_LINK_BW_2_7 };
 
-	if (is_edp(intel_dp) && dev_priv->panel_fixed_mode) {
-		intel_fixed_panel_mode(dev_priv->panel_fixed_mode, adjusted_mode);
+	if (is_edp(dev_priv) && intel->panel_fixed_mode) {
+		intel_fixed_panel_mode(intel->panel_fixed_mode, adjusted_mode);
 #if 0	/* To properly support this, the LVDS driver would need some work. */
-		intel_pch_panel_fitting(dev, DRM_MODE_SCALE_FULLSCREEN,
+		intel_pch_panel_fitting(scrn, DRM_MODE_SCALE_FULLSCREEN,
 					mode, adjusted_mode);
 #endif
 		/*
-		 * the mode->clock is used to calculate the Data&Link M/N
+		 * the mode->Clock is used to calculate the Data&Link M/N
 		 * of the pipe. For the eDP the fixed clock should be used.
 		 */
-		mode->clock = dev_priv->panel_fixed_mode->clock;
+		mode->Clock = intel->panel_fixed_mode->Clock;
 	}
 
 	for (lane_count = 1; lane_count <= max_lane_count; lane_count <<= 1) {
 		for (clock = 0; clock <= max_clock; clock++) {
-			int link_avail = intel_dp_max_data_rate(intel_dp_link_clock(bws[clock]), lane_count);
+			int link_avail = i830_dp_max_data_rate(i830_dp_link_clock(bws[clock]), lane_count);
 
-			if (intel_dp_link_required(encoder->dev, intel_dp, mode->clock)
+			if (i830_dp_link_required(output->dev, dev_priv, mode->Clock)
 					<= link_avail) {
-				intel_dp->link_bw = bws[clock];
-				intel_dp->lane_count = lane_count;
-				adjusted_mode->clock = intel_dp_link_clock(intel_dp->link_bw);
+				dev_priv->link_bw = bws[clock];
+				dev_priv->lane_count = lane_count;
+				adjusted_mode->Clock = i830_dp_link_clock(dev_priv->link_bw);
 				DRM_DEBUG_KMS("Display port link bw %02x lane "
 						"count %d clock %d\n",
-				       intel_dp->link_bw, intel_dp->lane_count,
-				       adjusted_mode->clock);
-				return true;
+				       dev_priv->link_bw, dev_priv->lane_count,
+				       adjusted_mode->Clock);
+				return TRUE;
 			}
 		}
 	}
 
-	if (is_edp(intel_dp)) {
+	if (is_edp(dev_priv)) {
 		/* okay we failed just pick the highest */
-		intel_dp->lane_count = max_lane_count;
-		intel_dp->link_bw = bws[max_clock];
-		adjusted_mode->clock = intel_dp_link_clock(intel_dp->link_bw);
+		dev_priv->lane_count = max_lane_count;
+		dev_priv->link_bw = bws[max_clock];
+		adjusted_mode->Clock = i830_dp_link_clock(dev_priv->link_bw);
 		DRM_DEBUG_KMS("Force picking display port link bw %02x lane "
 			      "count %d clock %d\n",
-			      intel_dp->link_bw, intel_dp->lane_count,
-			      adjusted_mode->clock);
+			      dev_priv->link_bw, dev_priv->lane_count,
+			      adjusted_mode->Clock);
 
-		return true;
+		return TRUE;
 	}
 
-	return false;
+	return FALSE;
 }
 
-struct intel_dp_m_n {
+struct i830_dp_priv_m_n {
 	uint32_t	tu;
 	uint32_t	gmch_m;
 	uint32_t	gmch_n;
@@ -685,11 +685,11 @@ intel_reduce_ratio(uint32_t *num, uint32_t *den)
 }
 
 static void
-intel_dp_compute_m_n(int bpp,
+i830_dp_compute_m_n(int bpp,
 		     int nlanes,
 		     int pixel_clock,
 		     int link_clock,
-		     struct intel_dp_m_n *m_n)
+		     struct i830_dp_priv_m_n *m_n)
 {
 	m_n->tu = 64;
 	m_n->gmch_m = (pixel_clock * bpp) >> 3;
@@ -701,33 +701,33 @@ intel_dp_compute_m_n(int bpp,
 }
 
 void
-intel_dp_set_m_n(struct drm_crtc *crtc, struct drm_display_mode *mode,
-		 struct drm_display_mode *adjusted_mode)
+i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
+		 DisplayModePtr adjusted_mode)
 {
-	struct drm_device *dev = crtc->dev;
-	struct drm_mode_config *mode_config = &dev->mode_config;
-	struct drm_encoder *encoder;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	struct intel_crtc *intel_crtc = to_intel_crtc(crtc);
+	ScrnInfoPtr scrn = crtc->scrn;
+	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
+	xf86OutputPtr output;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;
 	int lane_count = 4, bpp = 24;
-	struct intel_dp_m_n m_n;
+	struct i830_dp_priv_m_n m_n;
 
 	/*
-	 * Find the lane count in the intel_encoder private
+	 * Find the lane count in the intel_output private
 	 */
-	list_for_each_entry(encoder, &mode_config->encoder_list, head) {
-		struct intel_dp *intel_dp;
+	list_for_each_entry(output, &xf86_config->encoder_list, head) {
+		struct i830_dp_priv *dev_priv;
 
-		if (encoder->crtc != crtc)
+		if (output->crtc != crtc)
 			continue;
 
-		intel_dp = enc_to_intel_dp(encoder);
-		if (intel_dp->base.type == INTEL_OUTPUT_DISPLAYPORT) {
-			lane_count = intel_dp->lane_count;
+		dev_priv = output_to_i830_dp(output);
+		if (dev_priv->base.type == I830_OUTPUT_DISPLAYPORT) {
+			lane_count = dev_priv->lane_count;
 			break;
-		} else if (is_edp(intel_dp)) {
-			lane_count = dev_priv->edp.lanes;
-			bpp = dev_priv->edp.bpp;
+		} else if (is_edp(dev_priv)) {
+			lane_count = intel->edp.lanes;
+			bpp = intel->edp.bpp;
 			break;
 		}
 	}
@@ -737,10 +737,10 @@ intel_dp_set_m_n(struct drm_crtc *crtc, struct drm_display_mode *mode,
 	 * the number of bytes_per_pixel post-LUT, which we always
 	 * set up for 8-bits of R/G/B, or 3 bytes total.
 	 */
-	intel_dp_compute_m_n(bpp, lane_count,
-			     mode->clock, adjusted_mode->clock, &m_n);
+	i830_dp_compute_m_n(bpp, lane_count,
+			     mode->Clock, adjusted_mode->Clock, &m_n);
 
-	if (HAS_PCH_SPLIT(dev)) {
+	if (HAS_PCH_SPLIT(intel)) {
 		if (intel_crtc->pipe == 0) {
 			I915_WRITE(TRANSA_DATA_M1,
 				   ((m_n.tu - 1) << PIPE_GMCH_DATA_M_TU_SIZE_SHIFT) |
@@ -778,74 +778,74 @@ intel_dp_set_m_n(struct drm_crtc *crtc, struct drm_display_mode *mode,
 }
 
 static void
-intel_dp_mode_set(struct drm_encoder *encoder, struct drm_display_mode *mode,
-		  struct drm_display_mode *adjusted_mode)
+i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
+		  DisplayModePtr adjusted_mode)
 {
-	struct drm_device *dev = encoder->dev;
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
-	struct drm_crtc *crtc = intel_dp->base.base.crtc;
-	struct intel_crtc *intel_crtc = to_intel_crtc(crtc);
+	ScrnInfoPtr scrn = output->scrn;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	xf86CrtcPtr crtc = dev_priv->base.base.crtc;
+	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;
 
-	intel_dp->DP = (DP_VOLTAGE_0_4 |
+	dev_priv->DP = (DP_VOLTAGE_0_4 |
 		       DP_PRE_EMPHASIS_0);
 
-	if (adjusted_mode->flags & DRM_MODE_FLAG_PHSYNC)
-		intel_dp->DP |= DP_SYNC_HS_HIGH;
-	if (adjusted_mode->flags & DRM_MODE_FLAG_PVSYNC)
-		intel_dp->DP |= DP_SYNC_VS_HIGH;
+	if (adjusted_mode->Flags & DRM_MODE_FLAG_PHSYNC)
+		dev_priv->DP |= DP_SYNC_HS_HIGH;
+	if (adjusted_mode->Flags & DRM_MODE_FLAG_PVSYNC)
+		dev_priv->DP |= DP_SYNC_VS_HIGH;
 
-	if (HAS_PCH_CPT(dev) && !is_edp(intel_dp))
-		intel_dp->DP |= DP_LINK_TRAIN_OFF_CPT;
+	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
+		dev_priv->DP |= DP_LINK_TRAIN_OFF_CPT;
 	else
-		intel_dp->DP |= DP_LINK_TRAIN_OFF;
+		dev_priv->DP |= DP_LINK_TRAIN_OFF;
 
-	switch (intel_dp->lane_count) {
+	switch (dev_priv->lane_count) {
 	case 1:
-		intel_dp->DP |= DP_PORT_WIDTH_1;
+		dev_priv->DP |= DP_PORT_WIDTH_1;
 		break;
 	case 2:
-		intel_dp->DP |= DP_PORT_WIDTH_2;
+		dev_priv->DP |= DP_PORT_WIDTH_2;
 		break;
 	case 4:
-		intel_dp->DP |= DP_PORT_WIDTH_4;
+		dev_priv->DP |= DP_PORT_WIDTH_4;
 		break;
 	}
 
-	memset(intel_dp->link_configuration, 0, DP_LINK_CONFIGURATION_SIZE);
-	intel_dp->link_configuration[0] = intel_dp->link_bw;
-	intel_dp->link_configuration[1] = intel_dp->lane_count;
+	memset(dev_priv->link_configuration, 0, DP_LINK_CONFIGURATION_SIZE);
+	dev_priv->link_configuration[0] = dev_priv->link_bw;
+	dev_priv->link_configuration[1] = dev_priv->lane_count;
 
 	/*
 	 * Check for DPCD version > 1.1 and enhanced framing support
 	 */
-	if (intel_dp->dpcd[0] >= 0x11 && (intel_dp->dpcd[2] & DP_ENHANCED_FRAME_CAP)) {
-		intel_dp->link_configuration[1] |= DP_LANE_COUNT_ENHANCED_FRAME_EN;
-		intel_dp->DP |= DP_ENHANCED_FRAMING;
+	if (dev_priv->dpcd[0] >= 0x11 && (dev_priv->dpcd[2] & DP_ENHANCED_FRAME_CAP)) {
+		dev_priv->link_configuration[1] |= DP_LANE_COUNT_ENHANCED_FRAME_EN;
+		dev_priv->DP |= DP_ENHANCED_FRAMING;
 	}
 
 	/* CPT DP's pipe select is decided in TRANS_DP_CTL */
-	if (intel_crtc->pipe == 1 && !HAS_PCH_CPT(dev))
-		intel_dp->DP |= DP_PIPEB_SELECT;
+	if (intel_crtc->pipe == 1 && !HAS_PCH_CPT(intel))
+		dev_priv->DP |= DP_PIPEB_SELECT;
 
-	if (is_edp(intel_dp) && !is_pch_edp(intel_dp)) {
+	if (is_edp(dev_priv) && !is_pch_edp(dev_priv)) {
 		/* don't miss out required setting for eDP */
-		intel_dp->DP |= DP_PLL_ENABLE;
-		if (adjusted_mode->clock < 200000)
-			intel_dp->DP |= DP_PLL_FREQ_160MHZ;
+		dev_priv->DP |= DP_PLL_ENABLE;
+		if (adjusted_mode->Clock < 200000)
+			dev_priv->DP |= DP_PLL_FREQ_160MHZ;
 		else
-			intel_dp->DP |= DP_PLL_FREQ_270MHZ;
+			dev_priv->DP |= DP_PLL_FREQ_270MHZ;
 	}
 }
 
 /* Returns true if the panel was already on when called */
-static bool ironlake_edp_panel_on (struct intel_dp *intel_dp)
+static Bool ironlake_edp_panel_on (struct i830_dp_priv *dev_priv)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 pp, idle_on_mask = PP_ON | PP_SEQUENCE_STATE_ON_IDLE;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t pp, idle_on_mask = PP_ON | PP_SEQUENCE_STATE_ON_IDLE;
 
 	if (I915_READ(PCH_PP_STATUS) & PP_ON)
-		return true;
+		return TRUE;
 
 	pp = I915_READ(PCH_PP_CONTROL);
 
@@ -872,13 +872,13 @@ static bool ironlake_edp_panel_on (struct intel_dp *intel_dp)
 	I915_WRITE(PCH_PP_CONTROL, pp);
 	POSTING_READ(PCH_PP_CONTROL);
 
-	return false;
+	return FALSE;
 }
 
-static void ironlake_edp_panel_off (struct drm_device *dev)
+static void ironlake_edp_panel_off (ScrnInfoPtr scrn)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 pp, idle_off_mask = PP_ON | PP_SEQUENCE_MASK |
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t pp, idle_off_mask = PP_ON | PP_SEQUENCE_MASK |
 		PP_CYCLE_DELAY_ACTIVE | PP_SEQUENCE_STATE_MASK;
 
 	pp = I915_READ(PCH_PP_CONTROL);
@@ -906,10 +906,10 @@ static void ironlake_edp_panel_off (struct drm_device *dev)
 	msleep(300);
 }
 
-static void ironlake_edp_backlight_on (struct drm_device *dev)
+static void ironlake_edp_backlight_on (ScrnInfoPtr scrn)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 pp;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t pp;
 
 	DRM_DEBUG_KMS("\n");
 	/*
@@ -924,10 +924,10 @@ static void ironlake_edp_backlight_on (struct drm_device *dev)
 	I915_WRITE(PCH_PP_CONTROL, pp);
 }
 
-static void ironlake_edp_backlight_off (struct drm_device *dev)
+static void ironlake_edp_backlight_off (ScrnInfoPtr scrn)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 pp;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t pp;
 
 	DRM_DEBUG_KMS("\n");
 	pp = I915_READ(PCH_PP_CONTROL);
@@ -935,113 +935,113 @@ static void ironlake_edp_backlight_off (struct drm_device *dev)
 	I915_WRITE(PCH_PP_CONTROL, pp);
 }
 
-static void ironlake_edp_pll_on(struct drm_encoder *encoder)
+static void ironlake_edp_pll_on(xf86OutputPtr output)
 {
-	struct drm_device *dev = encoder->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 dpa_ctl;
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t dpa_ctl;
 
 	DRM_DEBUG_KMS("\n");
 	dpa_ctl = I915_READ(DP_A);
 	dpa_ctl |= DP_PLL_ENABLE;
 	I915_WRITE(DP_A, dpa_ctl);
 	POSTING_READ(DP_A);
-	udelay(200);
+	usleep(200);
 }
 
-static void ironlake_edp_pll_off(struct drm_encoder *encoder)
+static void ironlake_edp_pll_off(xf86OutputPtr output)
 {
-	struct drm_device *dev = encoder->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	u32 dpa_ctl;
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t dpa_ctl;
 
 	dpa_ctl = I915_READ(DP_A);
 	dpa_ctl &= ~DP_PLL_ENABLE;
 	I915_WRITE(DP_A, dpa_ctl);
 	POSTING_READ(DP_A);
-	udelay(200);
+	usleep(200);
 }
 
-static void intel_dp_prepare(struct drm_encoder *encoder)
+static void i830_dp_prepare(xf86OutputPtr output)
 {
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
-	struct drm_device *dev = encoder->dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 
-	if (is_edp(intel_dp)) {
-		ironlake_edp_backlight_off(dev);
-		ironlake_edp_panel_on(intel_dp);
-		if (!is_pch_edp(intel_dp))
-			ironlake_edp_pll_on(encoder);
+	if (is_edp(dev_priv)) {
+		ironlake_edp_backlight_off(scrn);
+		ironlake_edp_panel_on(dev_priv);
+		if (!is_pch_edp(dev_priv))
+			ironlake_edp_pll_on(output);
 		else
-			ironlake_edp_pll_off(encoder);
+			ironlake_edp_pll_off(output);
 	}
-	intel_dp_link_down(intel_dp);
+	i830_dp_link_down(dev_priv);
 }
 
-static void intel_dp_commit(struct drm_encoder *encoder)
+static void i830_dp_commit(xf86OutputPtr output)
 {
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
-	struct drm_device *dev = encoder->dev;
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
 
-	intel_dp_start_link_train(intel_dp);
+	i830_dp_start_link_train(dev_priv);
 
-	if (is_edp(intel_dp))
-		ironlake_edp_panel_on(intel_dp);
+	if (is_edp(dev_priv))
+		ironlake_edp_panel_on(dev_priv);
 
-	intel_dp_complete_link_train(intel_dp);
+	i830_dp_complete_link_train(dev_priv);
 
-	if (is_edp(intel_dp))
-		ironlake_edp_backlight_on(dev);
+	if (is_edp(dev_priv))
+		ironlake_edp_backlight_on(scrn);
 }
 
 static void
-intel_dp_dpms(struct drm_encoder *encoder, int mode)
+i830_dp_dpms(xf86OutputPtr output, int mode)
 {
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
-	struct drm_device *dev = encoder->dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	uint32_t dp_reg = I915_READ(intel_dp->output_reg);
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t dp_reg = I915_READ(dev_priv->output_reg);
 
 	if (mode != DRM_MODE_DPMS_ON) {
-		if (is_edp(intel_dp))
-			ironlake_edp_backlight_off(dev);
-		intel_dp_link_down(intel_dp);
-		if (is_edp(intel_dp))
-			ironlake_edp_panel_off(dev);
-		if (is_edp(intel_dp) && !is_pch_edp(intel_dp))
-			ironlake_edp_pll_off(encoder);
+		if (is_edp(dev_priv))
+			ironlake_edp_backlight_off(scrn);
+		i830_dp_link_down(dev_priv);
+		if (is_edp(dev_priv))
+			ironlake_edp_panel_off(scrn);
+		if (is_edp(dev_priv) && !is_pch_edp(dev_priv))
+			ironlake_edp_pll_off(output);
 	} else {
-		if (is_edp(intel_dp))
-			ironlake_edp_panel_on(intel_dp);
+		if (is_edp(dev_priv))
+			ironlake_edp_panel_on(dev_priv);
 		if (!(dp_reg & DP_PORT_EN)) {
-			intel_dp_start_link_train(intel_dp);
-			intel_dp_complete_link_train(intel_dp);
+			i830_dp_start_link_train(dev_priv);
+			i830_dp_complete_link_train(dev_priv);
 		}
-		if (is_edp(intel_dp))
-			ironlake_edp_backlight_on(dev);
+		if (is_edp(dev_priv))
+			ironlake_edp_backlight_on(scrn);
 	}
-	intel_dp->dpms_mode = mode;
+	dev_priv->dpms_mode = mode;
 }
 
 /*
  * Fetch AUX CH registers 0x202 - 0x207 which contain
  * link status information
  */
-static bool
-intel_dp_get_link_status(struct intel_dp *intel_dp)
+static Bool
+i830_dp_get_link_status(struct i830_dp_priv *dev_priv)
 {
 	int ret;
 
-	ret = intel_dp_aux_native_read(intel_dp,
+	ret = i830_dp_aux_native_read(dev_priv,
 				       DP_LANE0_1_STATUS,
-				       intel_dp->link_status, DP_LINK_STATUS_SIZE);
+				       dev_priv->link_status, DP_LINK_STATUS_SIZE);
 	if (ret != DP_LINK_STATUS_SIZE)
-		return false;
-	return true;
+		return FALSE;
+	return TRUE;
 }
 
 static uint8_t
-intel_dp_link_status(uint8_t link_status[DP_LINK_STATUS_SIZE],
+i830_dp_link_status(uint8_t link_status[DP_LINK_STATUS_SIZE],
 		     int r)
 {
 	return link_status[r - DP_LANE0_1_STATUS];
@@ -1055,7 +1055,7 @@ intel_get_adjust_request_voltage(uint8_t link_status[DP_LINK_STATUS_SIZE],
 	int	    s = ((lane & 1) ?
 			 DP_ADJUST_VOLTAGE_SWING_LANE1_SHIFT :
 			 DP_ADJUST_VOLTAGE_SWING_LANE0_SHIFT);
-	uint8_t l = intel_dp_link_status(link_status, i);
+	uint8_t l = i830_dp_link_status(link_status, i);
 
 	return ((l >> s) & 3) << DP_TRAIN_VOLTAGE_SWING_SHIFT;
 }
@@ -1068,7 +1068,7 @@ intel_get_adjust_request_pre_emphasis(uint8_t link_status[DP_LINK_STATUS_SIZE],
 	int	    s = ((lane & 1) ?
 			 DP_ADJUST_PRE_EMPHASIS_LANE1_SHIFT :
 			 DP_ADJUST_PRE_EMPHASIS_LANE0_SHIFT);
-	uint8_t l = intel_dp_link_status(link_status, i);
+	uint8_t l = i830_dp_link_status(link_status, i);
 
 	return ((l >> s) & 3) << DP_TRAIN_PRE_EMPHASIS_SHIFT;
 }
@@ -1093,7 +1093,7 @@ static char	*link_train_names[] = {
 #define I830_DP_VOLTAGE_MAX	    DP_TRAIN_VOLTAGE_SWING_800
 
 static uint8_t
-intel_dp_pre_emphasis_max(uint8_t voltage_swing)
+i830_dp_pre_emphasis_max(uint8_t voltage_swing)
 {
 	switch (voltage_swing & DP_TRAIN_VOLTAGE_SWING_MASK) {
 	case DP_TRAIN_VOLTAGE_SWING_400:
@@ -1109,15 +1109,15 @@ intel_dp_pre_emphasis_max(uint8_t voltage_swing)
 }
 
 static void
-intel_get_adjust_train(struct intel_dp *intel_dp)
+intel_get_adjust_train(struct i830_dp_priv *dev_priv)
 {
 	uint8_t v = 0;
 	uint8_t p = 0;
 	int lane;
 
-	for (lane = 0; lane < intel_dp->lane_count; lane++) {
-		uint8_t this_v = intel_get_adjust_request_voltage(intel_dp->link_status, lane);
-		uint8_t this_p = intel_get_adjust_request_pre_emphasis(intel_dp->link_status, lane);
+	for (lane = 0; lane < dev_priv->lane_count; lane++) {
+		uint8_t this_v = intel_get_adjust_request_voltage(dev_priv->link_status, lane);
+		uint8_t this_p = intel_get_adjust_request_pre_emphasis(dev_priv->link_status, lane);
 
 		if (this_v > v)
 			v = this_v;
@@ -1128,15 +1128,15 @@ intel_get_adjust_train(struct intel_dp *intel_dp)
 	if (v >= I830_DP_VOLTAGE_MAX)
 		v = I830_DP_VOLTAGE_MAX | DP_TRAIN_MAX_SWING_REACHED;
 
-	if (p >= intel_dp_pre_emphasis_max(v))
-		p = intel_dp_pre_emphasis_max(v) | DP_TRAIN_MAX_PRE_EMPHASIS_REACHED;
+	if (p >= i830_dp_pre_emphasis_max(v))
+		p = i830_dp_pre_emphasis_max(v) | DP_TRAIN_MAX_PRE_EMPHASIS_REACHED;
 
 	for (lane = 0; lane < 4; lane++)
-		intel_dp->train_set[lane] = v | p;
+		dev_priv->train_set[lane] = v | p;
 }
 
 static uint32_t
-intel_dp_signal_levels(uint8_t train_set, int lane_count)
+i830_dp_signal_levels(uint8_t train_set, int lane_count)
 {
 	uint32_t	signal_levels = 0;
 
@@ -1198,13 +1198,13 @@ intel_get_lane_status(uint8_t link_status[DP_LINK_STATUS_SIZE],
 {
 	int i = DP_LANE0_1_STATUS + (lane >> 1);
 	int s = (lane & 1) * 4;
-	uint8_t l = intel_dp_link_status(link_status, i);
+	uint8_t l = i830_dp_link_status(link_status, i);
 
 	return (l >> s) & 0xf;
 }
 
 /* Check for clock recovery is done on all channels */
-static bool
+static Bool
 intel_clock_recovery_ok(uint8_t link_status[DP_LINK_STATUS_SIZE], int lane_count)
 {
 	int lane;
@@ -1213,186 +1213,186 @@ intel_clock_recovery_ok(uint8_t link_status[DP_LINK_STATUS_SIZE], int lane_count
 	for (lane = 0; lane < lane_count; lane++) {
 		lane_status = intel_get_lane_status(link_status, lane);
 		if ((lane_status & DP_LANE_CR_DONE) == 0)
-			return false;
+			return FALSE;
 	}
-	return true;
+	return TRUE;
 }
 
 /* Check to see if channel eq is done on all channels */
 #define CHANNEL_EQ_BITS (DP_LANE_CR_DONE|\
 			 DP_LANE_CHANNEL_EQ_DONE|\
 			 DP_LANE_SYMBOL_LOCKED)
-static bool
-intel_channel_eq_ok(struct intel_dp *intel_dp)
+static Bool
+intel_channel_eq_ok(struct i830_dp_priv *dev_priv)
 {
 	uint8_t lane_align;
 	uint8_t lane_status;
 	int lane;
 
-	lane_align = intel_dp_link_status(intel_dp->link_status,
+	lane_align = i830_dp_link_status(dev_priv->link_status,
 					  DP_LANE_ALIGN_STATUS_UPDATED);
 	if ((lane_align & DP_INTERLANE_ALIGN_DONE) == 0)
-		return false;
-	for (lane = 0; lane < intel_dp->lane_count; lane++) {
-		lane_status = intel_get_lane_status(intel_dp->link_status, lane);
+		return FALSE;
+	for (lane = 0; lane < dev_priv->lane_count; lane++) {
+		lane_status = intel_get_lane_status(dev_priv->link_status, lane);
 		if ((lane_status & CHANNEL_EQ_BITS) != CHANNEL_EQ_BITS)
-			return false;
+			return FALSE;
 	}
-	return true;
+	return TRUE;
 }
 
-static bool
-intel_dp_set_link_train(struct intel_dp *intel_dp,
+static Bool
+i830_dp_set_link_train(struct i830_dp_priv *dev_priv,
 			uint32_t dp_reg_value,
 			uint8_t dp_train_pat)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int ret;
 
-	I915_WRITE(intel_dp->output_reg, dp_reg_value);
-	POSTING_READ(intel_dp->output_reg);
+	I915_WRITE(dev_priv->output_reg, dp_reg_value);
+	POSTING_READ(dev_priv->output_reg);
 
-	intel_dp_aux_native_write_1(intel_dp,
+	i830_dp_aux_native_write_1(dev_priv,
 				    DP_TRAINING_PATTERN_SET,
 				    dp_train_pat);
 
-	ret = intel_dp_aux_native_write(intel_dp,
+	ret = i830_dp_aux_native_write(dev_priv,
 					DP_TRAINING_LANE0_SET,
-					intel_dp->train_set, 4);
+					dev_priv->train_set, 4);
 	if (ret != 4)
-		return false;
+		return FALSE;
 
-	return true;
+	return TRUE;
 }
 
 /* Enable corresponding port and start training pattern 1 */
 static void
-intel_dp_start_link_train(struct intel_dp *intel_dp)
+i830_dp_start_link_train(struct i830_dp_priv *dev_priv)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	struct intel_crtc *intel_crtc = to_intel_crtc(intel_dp->base.base.crtc);
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	I830CrtcPrivatePtr intel_crtc = dev_priv->base.base.crtc->driver_private;
 	int i;
 	uint8_t voltage;
-	bool clock_recovery = false;
+	Bool clock_recovery = FALSE;
 	int tries;
-	u32 reg;
-	uint32_t DP = intel_dp->DP;
+	uint32_t reg;
+	uint32_t DP = dev_priv->DP;
 
 	/* Enable output, wait for it to become active */
-	I915_WRITE(intel_dp->output_reg, intel_dp->DP);
-	POSTING_READ(intel_dp->output_reg);
-	intel_wait_for_vblank(dev, intel_crtc->pipe);
+	I915_WRITE(dev_priv->output_reg, dev_priv->DP);
+	POSTING_READ(dev_priv->output_reg);
+	intel_wait_for_vblank(scrn, intel_crtc->pipe);
 
 	/* Write the link configuration data */
-	intel_dp_aux_native_write(intel_dp, DP_LINK_BW_SET,
-				  intel_dp->link_configuration,
+	i830_dp_aux_native_write(dev_priv, DP_LINK_BW_SET,
+				  dev_priv->link_configuration,
 				  DP_LINK_CONFIGURATION_SIZE);
 
 	DP |= DP_PORT_EN;
-	if (HAS_PCH_CPT(dev) && !is_edp(intel_dp))
+	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
 		DP &= ~DP_LINK_TRAIN_MASK_CPT;
 	else
 		DP &= ~DP_LINK_TRAIN_MASK;
-	memset(intel_dp->train_set, 0, 4);
+	memset(dev_priv->train_set, 0, 4);
 	voltage = 0xff;
 	tries = 0;
-	clock_recovery = false;
+	clock_recovery = FALSE;
 	for (;;) {
-		/* Use intel_dp->train_set[0] to set the voltage and pre emphasis values */
+		/* Use dev_priv->train_set[0] to set the voltage and pre emphasis values */
 		uint32_t    signal_levels;
-		if (IS_GEN6(dev) && is_edp(intel_dp)) {
-			signal_levels = intel_gen6_edp_signal_levels(intel_dp->train_set[0]);
+		if (IS_GEN6(intel) && is_edp(dev_priv)) {
+			signal_levels = intel_gen6_edp_signal_levels(dev_priv->train_set[0]);
 			DP = (DP & ~EDP_LINK_TRAIN_VOL_EMP_MASK_SNB) | signal_levels;
 		} else {
-			signal_levels = intel_dp_signal_levels(intel_dp->train_set[0], intel_dp->lane_count);
+			signal_levels = i830_dp_signal_levels(dev_priv->train_set[0], dev_priv->lane_count);
 			DP = (DP & ~(DP_VOLTAGE_MASK|DP_PRE_EMPHASIS_MASK)) | signal_levels;
 		}
 
-		if (HAS_PCH_CPT(dev) && !is_edp(intel_dp))
+		if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
 			reg = DP | DP_LINK_TRAIN_PAT_1_CPT;
 		else
 			reg = DP | DP_LINK_TRAIN_PAT_1;
 
-		if (!intel_dp_set_link_train(intel_dp, reg,
+		if (!i830_dp_set_link_train(dev_priv, reg,
 					     DP_TRAINING_PATTERN_1))
 			break;
 		/* Set training pattern 1 */
 
-		udelay(100);
-		if (!intel_dp_get_link_status(intel_dp))
+		usleep(100);
+		if (!i830_dp_get_link_status(dev_priv))
 			break;
 
-		if (intel_clock_recovery_ok(intel_dp->link_status, intel_dp->lane_count)) {
-			clock_recovery = true;
+		if (intel_clock_recovery_ok(dev_priv->link_status, dev_priv->lane_count)) {
+			clock_recovery = TRUE;
 			break;
 		}
 
 		/* Check to see if we've tried the max voltage */
-		for (i = 0; i < intel_dp->lane_count; i++)
-			if ((intel_dp->train_set[i] & DP_TRAIN_MAX_SWING_REACHED) == 0)
+		for (i = 0; i < dev_priv->lane_count; i++)
+			if ((dev_priv->train_set[i] & DP_TRAIN_MAX_SWING_REACHED) == 0)
 				break;
-		if (i == intel_dp->lane_count)
+		if (i == dev_priv->lane_count)
 			break;
 
 		/* Check to see if we've tried the same voltage 5 times */
-		if ((intel_dp->train_set[0] & DP_TRAIN_VOLTAGE_SWING_MASK) == voltage) {
+		if ((dev_priv->train_set[0] & DP_TRAIN_VOLTAGE_SWING_MASK) == voltage) {
 			++tries;
 			if (tries == 5)
 				break;
 		} else
 			tries = 0;
-		voltage = intel_dp->train_set[0] & DP_TRAIN_VOLTAGE_SWING_MASK;
+		voltage = dev_priv->train_set[0] & DP_TRAIN_VOLTAGE_SWING_MASK;
 
-		/* Compute new intel_dp->train_set as requested by target */
-		intel_get_adjust_train(intel_dp);
+		/* Compute new dev_priv->train_set as requested by target */
+		intel_get_adjust_train(dev_priv);
 	}
 
-	intel_dp->DP = DP;
+	dev_priv->DP = DP;
 }
 
 static void
-intel_dp_complete_link_train(struct intel_dp *intel_dp)
+i830_dp_complete_link_train(struct i830_dp_priv *dev_priv)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	bool channel_eq = false;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	Bool channel_eq = FALSE;
 	int tries;
-	u32 reg;
-	uint32_t DP = intel_dp->DP;
+	uint32_t reg;
+	uint32_t DP = dev_priv->DP;
 
 	/* channel equalization */
 	tries = 0;
-	channel_eq = false;
+	channel_eq = FALSE;
 	for (;;) {
-		/* Use intel_dp->train_set[0] to set the voltage and pre emphasis values */
+		/* Use dev_priv->train_set[0] to set the voltage and pre emphasis values */
 		uint32_t    signal_levels;
 
-		if (IS_GEN6(dev) && is_edp(intel_dp)) {
-			signal_levels = intel_gen6_edp_signal_levels(intel_dp->train_set[0]);
+		if (IS_GEN6(intel) && is_edp(dev_priv)) {
+			signal_levels = intel_gen6_edp_signal_levels(dev_priv->train_set[0]);
 			DP = (DP & ~EDP_LINK_TRAIN_VOL_EMP_MASK_SNB) | signal_levels;
 		} else {
-			signal_levels = intel_dp_signal_levels(intel_dp->train_set[0], intel_dp->lane_count);
+			signal_levels = i830_dp_signal_levels(dev_priv->train_set[0], dev_priv->lane_count);
 			DP = (DP & ~(DP_VOLTAGE_MASK|DP_PRE_EMPHASIS_MASK)) | signal_levels;
 		}
 
-		if (HAS_PCH_CPT(dev) && !is_edp(intel_dp))
+		if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
 			reg = DP | DP_LINK_TRAIN_PAT_2_CPT;
 		else
 			reg = DP | DP_LINK_TRAIN_PAT_2;
 
 		/* channel eq pattern */
-		if (!intel_dp_set_link_train(intel_dp, reg,
+		if (!i830_dp_set_link_train(dev_priv, reg,
 					     DP_TRAINING_PATTERN_2))
 			break;
 
-		udelay(400);
-		if (!intel_dp_get_link_status(intel_dp))
+		usleep(400);
+		if (!i830_dp_get_link_status(dev_priv))
 			break;
 
-		if (intel_channel_eq_ok(intel_dp)) {
-			channel_eq = true;
+		if (intel_channel_eq_ok(dev_priv)) {
+			channel_eq = TRUE;
 			break;
 		}
 
@@ -1400,58 +1400,58 @@ intel_dp_complete_link_train(struct intel_dp *intel_dp)
 		if (tries > 5)
 			break;
 
-		/* Compute new intel_dp->train_set as requested by target */
-		intel_get_adjust_train(intel_dp);
+		/* Compute new dev_priv->train_set as requested by target */
+		intel_get_adjust_train(dev_priv);
 		++tries;
 	}
 
-	if (HAS_PCH_CPT(dev) && !is_edp(intel_dp))
+	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv))
 		reg = DP | DP_LINK_TRAIN_OFF_CPT;
 	else
 		reg = DP | DP_LINK_TRAIN_OFF;
 
-	I915_WRITE(intel_dp->output_reg, reg);
-	POSTING_READ(intel_dp->output_reg);
-	intel_dp_aux_native_write_1(intel_dp,
+	I915_WRITE(dev_priv->output_reg, reg);
+	POSTING_READ(dev_priv->output_reg);
+	i830_dp_aux_native_write_1(dev_priv,
 				    DP_TRAINING_PATTERN_SET, DP_TRAINING_PATTERN_DISABLE);
 }
 
 static void
-intel_dp_link_down(struct intel_dp *intel_dp)
+i830_dp_link_down(struct i830_dp_priv *dev_priv)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	uint32_t DP = intel_dp->DP;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	uint32_t DP = dev_priv->DP;
 
-	if ((I915_READ(intel_dp->output_reg) & DP_PORT_EN) == 0)
+	if ((I915_READ(dev_priv->output_reg) & DP_PORT_EN) == 0)
 		return;
 
 	DRM_DEBUG_KMS("\n");
 
-	if (is_edp(intel_dp)) {
+	if (is_edp(dev_priv)) {
 		DP &= ~DP_PLL_ENABLE;
-		I915_WRITE(intel_dp->output_reg, DP);
-		POSTING_READ(intel_dp->output_reg);
-		udelay(100);
+		I915_WRITE(dev_priv->output_reg, DP);
+		POSTING_READ(dev_priv->output_reg);
+		usleep(100);
 	}
 
-	if (HAS_PCH_CPT(dev) && !is_edp(intel_dp)) {
+	if (HAS_PCH_CPT(intel) && !is_edp(dev_priv)) {
 		DP &= ~DP_LINK_TRAIN_MASK_CPT;
-		I915_WRITE(intel_dp->output_reg, DP | DP_LINK_TRAIN_PAT_IDLE_CPT);
+		I915_WRITE(dev_priv->output_reg, DP | DP_LINK_TRAIN_PAT_IDLE_CPT);
 	} else {
 		DP &= ~DP_LINK_TRAIN_MASK;
-		I915_WRITE(intel_dp->output_reg, DP | DP_LINK_TRAIN_PAT_IDLE);
+		I915_WRITE(dev_priv->output_reg, DP | DP_LINK_TRAIN_PAT_IDLE);
 	}
-	POSTING_READ(intel_dp->output_reg);
+	POSTING_READ(dev_priv->output_reg);
 
 	msleep(17);
 
-	if (is_edp(intel_dp))
+	if (is_edp(dev_priv))
 		DP |= DP_LINK_TRAIN_OFF;
 
-	if (!HAS_PCH_CPT(dev) &&
-	    I915_READ(intel_dp->output_reg) & DP_PIPEB_SELECT) {
-		struct intel_crtc *intel_crtc = to_intel_crtc(intel_dp->base.base.crtc);
+	if (!HAS_PCH_CPT(intel) &&
+	    I915_READ(dev_priv->output_reg) & DP_PIPEB_SELECT) {
+		I830CrtcPrivatePtr intel_crtc = dev_priv->base.base.crtc->driver_private;
 		/* Hardware workaround: leaving our transcoder select
 		 * set to transcoder B while it's off will prevent the
 		 * corresponding HDMI output on transcoder A.
@@ -1461,17 +1461,17 @@ intel_dp_link_down(struct intel_dp *intel_dp)
 		 * port is enabled.
 		 */
 		DP &= ~DP_PIPEB_SELECT;
-		I915_WRITE(intel_dp->output_reg, DP);
+		I915_WRITE(dev_priv->output_reg, DP);
 
 		/* Changes to enable or select take place the vblank
 		 * after being written.
 		 */
-		intel_wait_for_vblank(intel_dp->base.base.dev,
+		intel_wait_for_vblank(dev_priv->base.base.dev,
 				      intel_crtc->pipe);
 	}
 
-	I915_WRITE(intel_dp->output_reg, DP & ~DP_PORT_EN);
-	POSTING_READ(intel_dp->output_reg);
+	I915_WRITE(dev_priv->output_reg, DP & ~DP_PORT_EN);
+	POSTING_READ(dev_priv->output_reg);
 }
 
 /*
@@ -1484,53 +1484,53 @@ intel_dp_link_down(struct intel_dp *intel_dp)
  */
 
 static void
-intel_dp_check_link_status(struct intel_dp *intel_dp)
+i830_dp_check_link_status(struct i830_dp_priv *dev_priv)
 {
-	if (!intel_dp->base.base.crtc)
+	if (!dev_priv->base.base.crtc)
 		return;
 
-	if (!intel_dp_get_link_status(intel_dp)) {
-		intel_dp_link_down(intel_dp);
+	if (!i830_dp_get_link_status(dev_priv)) {
+		i830_dp_link_down(dev_priv);
 		return;
 	}
 
-	if (!intel_channel_eq_ok(intel_dp)) {
-		intel_dp_start_link_train(intel_dp);
-		intel_dp_complete_link_train(intel_dp);
+	if (!intel_channel_eq_ok(dev_priv)) {
+		i830_dp_start_link_train(dev_priv);
+		i830_dp_complete_link_train(dev_priv);
 	}
 }
 
-static enum drm_connector_status
-ironlake_dp_detect(struct intel_dp *intel_dp)
+static xf86OutputStatus
+ironlake_dp_detect(struct i830_dp_priv *dev_priv)
 {
-	enum drm_connector_status status;
+	xf86OutputStatus status;
 
 	/* Can't disconnect eDP */
-	if (is_edp(intel_dp))
-		return connector_status_connected;
+	if (is_edp(dev_priv))
+		return XF86OutputStatusConnected;
 
-	status = connector_status_disconnected;
-	if (intel_dp_aux_native_read(intel_dp,
-				     0x000, intel_dp->dpcd,
-				     sizeof (intel_dp->dpcd))
-	    == sizeof(intel_dp->dpcd)) {
-		if (intel_dp->dpcd[0] != 0)
-			status = connector_status_connected;
+	status = XF86OutputStatusDisconnected;
+	if (i830_dp_aux_native_read(dev_priv,
+				     0x000, dev_priv->dpcd,
+				     sizeof (dev_priv->dpcd))
+	    == sizeof(dev_priv->dpcd)) {
+		if (dev_priv->dpcd[0] != 0)
+			status = XF86OutputStatusConnected;
 	}
-	DRM_DEBUG_KMS("DPCD: %hx%hx%hx%hx\n", intel_dp->dpcd[0],
-		      intel_dp->dpcd[1], intel_dp->dpcd[2], intel_dp->dpcd[3]);
+	DRM_DEBUG_KMS("DPCD: %hx%hx%hx%hx\n", dev_priv->dpcd[0],
+		      dev_priv->dpcd[1], dev_priv->dpcd[2], dev_priv->dpcd[3]);
 	return status;
 }
 
-static enum drm_connector_status
-g4x_dp_detect(struct intel_dp *intel_dp)
+static xf86OutputStatus
+g4x_dp_detect(struct i830_dp_priv *dev_priv)
 {
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
-	enum drm_connector_status status;
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	xf86OutputStatus status;
 	uint32_t temp, bit;
 
-	switch (intel_dp->output_reg) {
+	switch (dev_priv->output_reg) {
 	case DP_B:
 		bit = DPB_HOTPLUG_INT_STATUS;
 		break;
@@ -1541,20 +1541,20 @@ g4x_dp_detect(struct intel_dp *intel_dp)
 		bit = DPD_HOTPLUG_INT_STATUS;
 		break;
 	default:
-		return connector_status_unknown;
+		return XF86OutputStatusUnknown;
 	}
 
 	temp = I915_READ(PORT_HOTPLUG_STAT);
 
 	if ((temp & bit) == 0)
-		return connector_status_disconnected;
+		return XF86OutputStatusDisconnected;
 
-	status = connector_status_disconnected;
-	if (intel_dp_aux_native_read(intel_dp, 0x000, intel_dp->dpcd,
-				     sizeof (intel_dp->dpcd)) == sizeof (intel_dp->dpcd))
+	status = XF86OutputStatusDisconnected;
+	if (i830_dp_aux_native_read(dev_priv, 0x000, dev_priv->dpcd,
+				     sizeof (dev_priv->dpcd)) == sizeof (dev_priv->dpcd))
 	{
-		if (intel_dp->dpcd[0] != 0)
-			status = connector_status_connected;
+		if (dev_priv->dpcd[0] != 0)
+			status = XF86OutputStatusConnected;
 	}
 
 	return status;
@@ -1566,40 +1566,40 @@ g4x_dp_detect(struct intel_dp *intel_dp)
  * \return true if DP port is connected.
  * \return false if DP port is disconnected.
  */
-static enum drm_connector_status
-intel_dp_detect(struct drm_connector *connector, bool force)
+static xf86OutputStatus
+i830_dp_detect(struct drm_connector *connector, Bool force)
 {
-	struct intel_dp *intel_dp = intel_attached_dp(connector);
-	struct drm_device *dev = intel_dp->base.base.dev;
-	enum drm_connector_status status;
+	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	xf86OutputStatus status;
 	struct edid *edid = NULL;
 
-	if (HAS_PCH_SPLIT(dev))
-		status = ironlake_dp_detect(intel_dp);
+	if (HAS_PCH_SPLIT(intel))
+		status = ironlake_dp_detect(dev_priv);
 	else
-		status = g4x_dp_detect(intel_dp);
-	if (status != connector_status_connected)
+		status = g4x_dp_detect(dev_priv);
+	if (status != XF86OutputStatusConnected)
 		return status;
 
-	return connector_status_connected;
+	return XF86OutputStatusConnected;
 }
 
-static int intel_dp_get_modes(struct drm_connector *connector)
+static int i830_dp_get_modes(struct drm_connector *connector)
 {
-	struct intel_dp *intel_dp = intel_attached_dp(connector);
-	struct drm_device *dev = intel_dp->base.base.dev;
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	struct i830_dp_priv *dev_priv = intel_attached_dp(connector);
+	ScrnInfoPtr scrn = dev_priv->base.base.dev;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int ret;
 
-	ret = intel_ddc_get_modes(connector, &intel_dp->adapter);
+	ret = intel_ddc_get_modes(connector, &dev_priv->adapter);
 	if (ret) {
-		if (is_edp(intel_dp) && !dev_priv->panel_fixed_mode) {
-			struct drm_display_mode *newmode;
+		if (is_edp(dev_priv) && !intel->panel_fixed_mode) {
+			DisplayModePtr newmode;
 			list_for_each_entry(newmode, &connector->probed_modes,
 					    head) {
-				if (newmode->type & DRM_MODE_TYPE_PREFERRED) {
-					dev_priv->panel_fixed_mode =
-						drm_mode_duplicate(dev, newmode);
+				if (newmode->type & M_T_PREFERRED) {
+					intel->panel_fixed_mode =
+						xf86DuplicateModes(scrn, newmode);
 					break;
 				}
 			}
@@ -1609,10 +1609,10 @@ static int intel_dp_get_modes(struct drm_connector *connector)
 	}
 
 	/* if eDP has no EDID, try to use fixed panel mode from VBT */
-	if (is_edp(intel_dp)) {
-		if (dev_priv->panel_fixed_mode != NULL) {
-			struct drm_display_mode *mode;
-			mode = drm_mode_duplicate(dev, dev_priv->panel_fixed_mode);
+	if (is_edp(dev_priv)) {
+		if (intel->panel_fixed_mode != NULL) {
+			DisplayModePtr mode;
+			mode = xf86DuplicateModes(scrn, intel->panel_fixed_mode);
 			drm_mode_probed_add(connector, mode);
 			return 1;
 		}
@@ -1621,152 +1621,152 @@ static int intel_dp_get_modes(struct drm_connector *connector)
 }
 
 static void
-intel_dp_destroy (struct drm_connector *connector)
+i830_dp_destroy (struct drm_connector *connector)
 {
 	drm_sysfs_connector_remove(connector);
 	drm_connector_cleanup(connector);
 	kfree(connector);
 }
 
-static void intel_dp_encoder_destroy(struct drm_encoder *encoder)
+static void i830_dp_encoder_destroy(xf86OutputPtr output)
 {
-	struct intel_dp *intel_dp = enc_to_intel_dp(encoder);
+	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 
-	i2c_del_adapter(&intel_dp->adapter);
-	drm_encoder_cleanup(encoder);
-	kfree(intel_dp);
+	i2c_del_adapter(&dev_priv->adapter);
+	drm_encoder_cleanup(output);
+	kfree(dev_priv);
 }
 
-static const struct drm_encoder_helper_funcs intel_dp_helper_funcs = {
-	.dpms = intel_dp_dpms,
-	.mode_fixup = intel_dp_mode_fixup,
-	.prepare = intel_dp_prepare,
-	.mode_set = intel_dp_mode_set,
-	.commit = intel_dp_commit,
+static const struct drm_encoder_helper_funcs i830_dp_helper_funcs = {
+	.dpms = i830_dp_dpms,
+	.mode_fixup = i830_dp_mode_fixup,
+	.prepare = i830_dp_prepare,
+	.mode_set = i830_dp_mode_set,
+	.commit = i830_dp_commit,
 };
 
-static const struct drm_connector_funcs intel_dp_connector_funcs = {
+static const struct drm_connector_funcs i830_dp_connector_funcs = {
 	.dpms = drm_helper_connector_dpms,
-	.detect = intel_dp_detect,
+	.detect = i830_dp_detect,
 	.fill_modes = drm_helper_probe_single_connector_modes,
-	.set_property = intel_dp_set_property,
-	.destroy = intel_dp_destroy,
+	.set_property = i830_dp_set_property,
+	.destroy = i830_dp_destroy,
 };
 
-static const struct drm_connector_helper_funcs intel_dp_connector_helper_funcs = {
-	.get_modes = intel_dp_get_modes,
-	.mode_valid = intel_dp_mode_valid,
+static const struct drm_connector_helper_funcs i830_dp_connector_helper_funcs = {
+	.get_modes = i830_dp_get_modes,
+	.mode_valid = i830_dp_mode_valid,
 	.best_encoder = intel_best_encoder,
 };
 
-static const struct drm_encoder_funcs intel_dp_enc_funcs = {
-	.destroy = intel_dp_encoder_destroy,
+static const struct drm_encoder_funcs i830_dp_enc_funcs = {
+	.destroy = i830_dp_encoder_destroy,
 };
 
 /* Return which DP Port should be selected for Transcoder DP control */
 int
-intel_trans_dp_port_sel (struct drm_crtc *crtc)
+i830_trans_dp_port_sel (xf86CrtcPtr crtc)
 {
-	struct drm_device *dev = crtc->dev;
-	struct drm_mode_config *mode_config = &dev->mode_config;
-	struct drm_encoder *encoder;
+	ScrnInfoPtr scrn = crtc->scrn;
+	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
+	xf86OutputPtr output;
 
-	list_for_each_entry(encoder, &mode_config->encoder_list, head) {
-		struct intel_dp *intel_dp;
+	list_for_each_entry(output, &xf86_config->encoder_list, head) {
+		struct i830_dp_priv *dev_priv;
 
-		if (encoder->crtc != crtc)
+		if (output->crtc != crtc)
 			continue;
 
-		intel_dp = enc_to_intel_dp(encoder);
-		if (intel_dp->base.type == INTEL_OUTPUT_DISPLAYPORT)
-			return intel_dp->output_reg;
+		dev_priv = output_to_i830_dp(output);
+		if (dev_priv->base.type == I830_OUTPUT_DISPLAYPORT)
+			return dev_priv->output_reg;
 	}
 
 	return -1;
 }
 
 /* check the VBT to see whether the eDP is on DP-D port */
-bool intel_dpd_is_edp(struct drm_device *dev)
+Bool i830_dpd_is_edp(ScrnInfoPtr scrn)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	struct child_device_config *p_child;
 	int i;
 
-	if (!dev_priv->child_dev_num)
-		return false;
+	if (!intel->child_dev_num)
+		return FALSE;
 
-	for (i = 0; i < dev_priv->child_dev_num; i++) {
-		p_child = dev_priv->child_dev + i;
+	for (i = 0; i < intel->child_dev_num; i++) {
+		p_child = intel->child_dev + i;
 
 		if (p_child->dvo_port == PORT_IDPD &&
 		    p_child->device_type == DEVICE_TYPE_eDP)
-			return true;
+			return TRUE;
 	}
-	return false;
+	return FALSE;
 }
 
 void
-intel_dp_init(struct drm_device *dev, int output_reg)
+i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 {
-	struct drm_i915_private *dev_priv = dev->dev_private;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	struct drm_connector *connector;
-	struct intel_dp *intel_dp;
-	struct intel_encoder *intel_encoder;
+	struct i830_dp_priv *dev_priv;
+	I830OutputPrivatePtr intel_output;
 	struct intel_connector *intel_connector;
 	const char *name = NULL;
 	int type;
 
-	intel_dp = kzalloc(sizeof(struct intel_dp), GFP_KERNEL);
-	if (!intel_dp)
+	dev_priv = kzalloc(sizeof(struct i830_dp_priv), GFP_KERNEL);
+	if (!dev_priv)
 		return;
 
 	intel_connector = kzalloc(sizeof(struct intel_connector), GFP_KERNEL);
 	if (!intel_connector) {
-		kfree(intel_dp);
+		kfree(dev_priv);
 		return;
 	}
-	intel_encoder = &intel_dp->base;
+	intel_output = &dev_priv->base;
 
-	if (HAS_PCH_SPLIT(dev) && output_reg == PCH_DP_D)
-		if (intel_dpd_is_edp(dev))
-			intel_dp->is_pch_edp = true;
+	if (HAS_PCH_SPLIT(intel) && output_reg == PCH_DP_D)
+		if (i830_dpd_is_edp(scrn))
+			dev_priv->is_pch_edp = TRUE;
 
-	if (output_reg == DP_A || is_pch_edp(intel_dp)) {
+	if (output_reg == DP_A || is_pch_edp(dev_priv)) {
 		type = DRM_MODE_CONNECTOR_eDP;
-		intel_encoder->type = INTEL_OUTPUT_EDP;
+		intel_output->type = I830_OUTPUT_EDP;
 	} else {
 		type = DRM_MODE_CONNECTOR_DisplayPort;
-		intel_encoder->type = INTEL_OUTPUT_DISPLAYPORT;
+		intel_output->type = I830_OUTPUT_DISPLAYPORT;
 	}
 
 	connector = &intel_connector->base;
-	drm_connector_init(dev, connector, &intel_dp_connector_funcs, type);
-	drm_connector_helper_add(connector, &intel_dp_connector_helper_funcs);
+	drm_connector_init(scrn, connector, &i830_dp_connector_funcs, type);
+	drm_connector_helper_add(connector, &i830_dp_connector_helper_funcs);
 
 	connector->polled = DRM_CONNECTOR_POLL_HPD;
 
 	if (output_reg == DP_B || output_reg == PCH_DP_B)
-		intel_encoder->clone_mask = (1 << INTEL_DP_B_CLONE_BIT);
+		intel_output->clone_mask = (1 << INTEL_DP_B_CLONE_BIT);
 	else if (output_reg == DP_C || output_reg == PCH_DP_C)
-		intel_encoder->clone_mask = (1 << INTEL_DP_C_CLONE_BIT);
+		intel_output->clone_mask = (1 << INTEL_DP_C_CLONE_BIT);
 	else if (output_reg == DP_D || output_reg == PCH_DP_D)
-		intel_encoder->clone_mask = (1 << INTEL_DP_D_CLONE_BIT);
+		intel_output->clone_mask = (1 << INTEL_DP_D_CLONE_BIT);
 
-	if (is_edp(intel_dp))
-		intel_encoder->clone_mask = (1 << INTEL_EDP_CLONE_BIT);
+	if (is_edp(dev_priv))
+		intel_output->clone_mask = (1 << INTEL_EDP_CLONE_BIT);
 
-	intel_encoder->crtc_mask = (1 << 0) | (1 << 1);
-	connector->interlace_allowed = true;
+	intel_output->crtc_mask = (1 << 0) | (1 << 1);
+	connector->interlace_allowed = TRUE;
 	connector->doublescan_allowed = 0;
 
-	intel_dp->output_reg = output_reg;
-	intel_dp->dpms_mode = DRM_MODE_DPMS_ON;
+	dev_priv->output_reg = output_reg;
+	dev_priv->dpms_mode = DRM_MODE_DPMS_ON;
 
-	drm_encoder_init(dev, &intel_encoder->base, &intel_dp_enc_funcs,
+	drm_encoder_init(scrn, &intel_output->base, &i830_dp_enc_funcs,
 			 DRM_MODE_ENCODER_TMDS);
-	drm_encoder_helper_add(&intel_encoder->base, &intel_dp_helper_funcs);
+	drm_encoder_helper_add(&intel_output->base, &i830_dp_helper_funcs);
 
-	intel_connector_attach_encoder(intel_connector, intel_encoder);
+	intel_connector_attach_encoder(intel_connector, intel_output);
 	drm_sysfs_connector_add(connector);
 
 	/* Set up the DDC bus. */
@@ -1788,48 +1788,48 @@ intel_dp_init(struct drm_device *dev, int output_reg)
 			break;
 	}
 
-	intel_dp_i2c_init(intel_dp, intel_connector, name);
+	i830_dp_i2c_init(dev_priv, intel_connector, name);
 
 	/* Cache some DPCD data in the eDP case */
-	if (is_edp(intel_dp)) {
+	if (is_edp(dev_priv)) {
 		int ret;
-		bool was_on;
+		Bool was_on;
 
-		was_on = ironlake_edp_panel_on(intel_dp);
-		ret = intel_dp_aux_native_read(intel_dp, DP_DPCD_REV,
-					       intel_dp->dpcd,
-					       sizeof(intel_dp->dpcd));
-		if (ret == sizeof(intel_dp->dpcd)) {
-			if (intel_dp->dpcd[0] >= 0x11)
-				dev_priv->no_aux_handshake = intel_dp->dpcd[3] &
+		was_on = ironlake_edp_panel_on(dev_priv);
+		ret = i830_dp_aux_native_read(dev_priv, DP_DPCD_REV,
+					       dev_priv->dpcd,
+					       sizeof(dev_priv->dpcd));
+		if (ret == sizeof(dev_priv->dpcd)) {
+			if (dev_priv->dpcd[0] >= 0x11)
+				intel->no_aux_handshake = dev_priv->dpcd[3] &
 					DP_NO_AUX_HANDSHAKE_LINK_TRAINING;
 		} else {
 			DRM_ERROR("failed to retrieve link info\n");
 		}
 		if (!was_on)
-			ironlake_edp_panel_off(dev);
+			ironlake_edp_panel_off(scrn);
 	}
 
-	if (is_edp(intel_dp)) {
+	if (is_edp(dev_priv)) {
 		/* initialize panel mode from VBT if available for eDP */
-		if (dev_priv->lfp_lvds_vbt_mode) {
-			dev_priv->panel_fixed_mode =
-				drm_mode_duplicate(dev, dev_priv->lfp_lvds_vbt_mode);
-			if (dev_priv->panel_fixed_mode) {
-				dev_priv->panel_fixed_mode->type |=
-					DRM_MODE_TYPE_PREFERRED;
+		if (intel->lfp_lvds_vbt_mode) {
+			intel->panel_fixed_mode =
+				xf86DuplicateModes(scrn, intel->lfp_lvds_vbt_mode);
+			if (intel->panel_fixed_mode) {
+				intel->panel_fixed_mode->type |=
+					M_T_PREFERRED;
 			}
 		}
 	}
 
-	intel_dp_add_properties(intel_dp, connector);
+	i830_dp_add_properties(dev_priv, connector);
 
 	/* For G4X desktop chip, PEG_BAND_GAP_DATA 3:0 must first be written
 	 * 0xd.  Failure to do so will result in spurious interrupts being
 	 * generated on the port when a cable is not attached.
 	 */
-	if (IS_G4X(dev) && !IS_GM45(dev)) {
-		u32 temp = I915_READ(PEG_BAND_GAP_DATA);
+	if (IS_G4X(intel) && !IS_GM45(intel)) {
+		uint32_t temp = I915_READ(PEG_BAND_GAP_DATA);
 		I915_WRITE(PEG_BAND_GAP_DATA, (temp & ~0xf) | 0xd);
 	}
 }
