@@ -1659,39 +1659,16 @@ i830_dp_destroy (xf86OutputPtr output)
 	}
 }
 
-static void i830_dp_encoder_destroy(xf86OutputPtr output)
-{
-	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
-
-	i2c_del_adapter(&dev_priv->adapter);
-	drm_encoder_cleanup(output);
-	kfree(dev_priv);
-}
-
-static const struct drm_encoder_helper_funcs i830_dp_helper_funcs = {
+static const xf86OutputFuncsRec i830_dp_output_funcs = {
 	.dpms = i830_dp_dpms,
+	.mode_valid = i830_dp_mode_valid,
 	.mode_fixup = i830_dp_mode_fixup,
 	.prepare = i830_dp_prepare,
 	.mode_set = i830_dp_mode_set,
 	.commit = i830_dp_commit,
-};
-
-static const struct drm_connector_funcs i830_dp_connector_funcs = {
-	.dpms = drm_helper_connector_dpms,
 	.detect = i830_dp_detect,
-	.fill_modes = drm_helper_probe_single_connector_modes,
-	.set_property = i830_dp_set_property,
-	.destroy = i830_dp_destroy,
-};
-
-static const struct drm_connector_helper_funcs i830_dp_connector_helper_funcs = {
 	.get_modes = i830_dp_get_modes,
-	.mode_valid = i830_dp_mode_valid,
-	.best_encoder = intel_best_encoder,
-};
-
-static const struct drm_encoder_funcs i830_dp_enc_funcs = {
-	.destroy = i830_dp_encoder_destroy,
+	.destroy = i830_dp_destroy,
 };
 
 /* Return which DP Port should be selected for Transcoder DP control */
@@ -1742,86 +1719,67 @@ void
 i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 {
 	intel_screen_private *intel = intel_get_screen_private(scrn);
-	struct drm_connector *connector;
+	xf86OutputPtr output;
 	struct i830_dp_priv *dev_priv;
 	I830OutputPrivatePtr intel_output;
-	struct intel_connector *intel_connector;
-	const char *name = NULL;
+	const char *name = NULL, *ddc_name = NULL;
 	int type;
 
-	dev_priv = kzalloc(sizeof(struct i830_dp_priv), GFP_KERNEL);
-	if (!dev_priv)
-		return;
-
-	intel_connector = kzalloc(sizeof(struct intel_connector), GFP_KERNEL);
-	if (!intel_connector) {
-		kfree(dev_priv);
-		return;
-	}
-	intel_output = &dev_priv->base;
-
-	if (HAS_PCH_SPLIT(intel) && output_reg == PCH_DP_D)
-		if (i830_dpd_is_edp(scrn))
-			dev_priv->is_pch_edp = TRUE;
-
-	if (output_reg == DP_A || is_pch_edp(dev_priv)) {
-		type = DRM_MODE_CONNECTOR_eDP;
-		intel_output->type = I830_OUTPUT_EDP;
-	} else {
-		type = DRM_MODE_CONNECTOR_DisplayPort;
-		intel_output->type = I830_OUTPUT_DISPLAYPORT;
-	}
-
-	connector = &intel_connector->base;
-	drm_connector_init(scrn, connector, &i830_dp_connector_funcs, type);
-	drm_connector_helper_add(connector, &i830_dp_connector_helper_funcs);
-
-	connector->polled = DRM_CONNECTOR_POLL_HPD;
-
-	if (output_reg == DP_B || output_reg == PCH_DP_B)
-		intel_output->clone_mask = (1 << INTEL_DP_B_CLONE_BIT);
-	else if (output_reg == DP_C || output_reg == PCH_DP_C)
-		intel_output->clone_mask = (1 << INTEL_DP_C_CLONE_BIT);
-	else if (output_reg == DP_D || output_reg == PCH_DP_D)
-		intel_output->clone_mask = (1 << INTEL_DP_D_CLONE_BIT);
-
-	if (is_edp(output))
-		intel_output->clone_mask = (1 << INTEL_EDP_CLONE_BIT);
-
-	intel_output->crtc_mask = (1 << 0) | (1 << 1);
-	connector->interlace_allowed = TRUE;
-	connector->doublescan_allowed = 0;
-
-	dev_priv->output_reg = output_reg;
-	dev_priv->dpms_mode = DRM_MODE_DPMS_ON;
-
-	drm_encoder_init(scrn, &intel_output->base, &i830_dp_enc_funcs,
-			 DRM_MODE_ENCODER_TMDS);
-	drm_encoder_helper_add(&intel_output->base, &i830_dp_helper_funcs);
-
-	intel_connector_attach_encoder(intel_connector, intel_output);
-	drm_sysfs_connector_add(connector);
-
-	/* Set up the DDC bus. */
 	switch (output_reg) {
 		case DP_A:
-			name = "DPDDC-A";
+			name = "eDP";
+			ddc_name = "DPDDC-A";
 			break;
 		case DP_B:
 		case PCH_DP_B:
-			name = "DPDDC-B";
+			name = "DP-B";
+			ddc_name = "DPDDC-B";
 			break;
 		case DP_C:
 		case PCH_DP_C:
-			name = "DPDDC-C";
+			name = "DP-C";
+			ddc_name = "DPDDC-C";
 			break;
 		case DP_D:
 		case PCH_DP_D:
-			name = "DPDDC-D";
+			name = "DP-D";
+			ddc_name = "DPDDC-D";
 			break;
 	}
 
-	intel_output->pDDCBus = i830_dp_i2c_init(output, dev_priv, name);
+	output = xf86OutputCreate(scrn, &i830_dp_output_funcs, name);
+	if (!output)
+		return;
+	intel_output = xnfcalloc(sizeof (I830OutputPrivateRec) +
+				 sizeof (struct i830_dp_priv), 1);
+	if (intel_output == NULL) {
+		xf86OutputDestroy(output);
+		return;
+	}
+	output->driver_private = intel_output;
+	output->interlaceAllowed = TRUE;
+	output->doubleScanAllowed = FALSE;
+
+	dev_priv = (struct i830_dp_priv *)(intel_output + 1);
+	dev_priv->output_reg = output_reg;
+	dev_priv->dpms_mode = DRM_MODE_DPMS_ON;
+
+	intel_output->dev_priv = dev_priv;
+	intel_output->pipe_mask = (1 << 0) | (1 << 1);
+
+	if (HAS_PCH_SPLIT(intel) && output_reg == PCH_DP_D &&
+	    i830_dpd_is_edp(scrn))
+		dev_priv->is_pch_edp = TRUE;
+
+	if (output_reg == DP_A || is_pch_edp(dev_priv))
+		intel_output->type = I830_OUTPUT_EDP;
+	else
+		intel_output->type = I830_OUTPUT_DISPLAYPORT;
+
+	intel_output->clone_mask = (1 << intel_output->type);
+
+	/* Set up the DDC bus. */
+	intel_output->pDDCBus = i830_dp_i2c_init(output, dev_priv, ddc_name);
 
 	/* Cache some DPCD data in the eDP case */
 	if (is_edp(output)) {
@@ -1845,17 +1803,15 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 
 	if (is_edp(output)) {
 		/* initialize panel mode from VBT if available for eDP */
-		if (intel->lfp_lvds_vbt_mode) {
+		if (intel->lvds_fixed_mode) {
 			intel->panel_fixed_mode =
-				xf86DuplicateMode(intel->lfp_lvds_vbt_mode);
+				xf86DuplicateMode(intel->lvds_fixed_mode);
 			if (intel->panel_fixed_mode) {
 				intel->panel_fixed_mode->type |=
 					M_T_PREFERRED;
 			}
 		}
 	}
-
-	i830_dp_add_properties(dev_priv, connector);
 
 	/* For G4X desktop chip, PEG_BAND_GAP_DATA 3:0 must first be written
 	 * 0xd.  Failure to do so will result in spurious interrupts being
@@ -1865,6 +1821,8 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 		uint32_t temp = I915_READ(PEG_BAND_GAP_DATA);
 		I915_WRITE(PEG_BAND_GAP_DATA, (temp & ~0xf) | 0xd);
 	}
+
+	xf86DrvMsg(scrn->scrnIndex, X_INFO, "%s output detected\n", output->name);
 }
 
 /*
