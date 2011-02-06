@@ -30,6 +30,7 @@
  *
  * - Removed audio support.
  * - Removed hotplug event support.
+ * - Disabled PCH panel fitting.
  */
 
 #include <linux/i2c.h>
@@ -587,6 +588,26 @@ intel_dp_i2c_init(struct intel_dp *intel_dp,
 	return i2c_dp_aux_add_bus(&intel_dp->adapter);
 }
 
+/* Taken from Linux intel_panel.c. */
+static void
+intel_fixed_panel_mode(struct drm_display_mode *fixed_mode,
+		       struct drm_display_mode *adjusted_mode)
+{
+	adjusted_mode->hdisplay = fixed_mode->hdisplay;
+	adjusted_mode->hsync_start = fixed_mode->hsync_start;
+	adjusted_mode->hsync_end = fixed_mode->hsync_end;
+	adjusted_mode->htotal = fixed_mode->htotal;
+
+	adjusted_mode->vdisplay = fixed_mode->vdisplay;
+	adjusted_mode->vsync_start = fixed_mode->vsync_start;
+	adjusted_mode->vsync_end = fixed_mode->vsync_end;
+	adjusted_mode->vtotal = fixed_mode->vtotal;
+
+	adjusted_mode->clock = fixed_mode->clock;
+
+	drm_mode_set_crtcinfo(adjusted_mode, CRTC_INTERLACE_HALVE_V);
+}
+
 static bool
 intel_dp_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
 		    struct drm_display_mode *adjusted_mode)
@@ -601,8 +622,10 @@ intel_dp_mode_fixup(struct drm_encoder *encoder, struct drm_display_mode *mode,
 
 	if (is_edp(intel_dp) && dev_priv->panel_fixed_mode) {
 		intel_fixed_panel_mode(dev_priv->panel_fixed_mode, adjusted_mode);
+#if 0	/* To properly support this, the LVDS driver would need some work. */
 		intel_pch_panel_fitting(dev, DRM_MODE_SCALE_FULLSCREEN,
 					mode, adjusted_mode);
+#endif
 		/*
 		 * the mode->clock is used to calculate the Data&Link M/N
 		 * of the pipe. For the eDP the fixed clock should be used.
