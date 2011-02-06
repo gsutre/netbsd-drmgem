@@ -1699,20 +1699,8 @@ i830_trans_dp_port_sel (xf86CrtcPtr crtc)
 Bool i830_dpd_is_edp(ScrnInfoPtr scrn)
 {
 	intel_screen_private *intel = intel_get_screen_private(scrn);
-	struct child_device_config *p_child;
-	int i;
 
-	if (!intel->child_dev_num)
-		return FALSE;
-
-	for (i = 0; i < intel->child_dev_num; i++) {
-		p_child = intel->child_dev + i;
-
-		if (p_child->dvo_port == PORT_IDPD &&
-		    p_child->device_type == DEVICE_TYPE_eDP)
-			return TRUE;
-	}
-	return FALSE;
+	return intel->is_vbt_dvo_dpd_edp;
 }
 
 void

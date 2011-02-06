@@ -211,6 +211,7 @@ static void parse_general_features(intel_screen_private *intel, struct bdb_heade
 
 	/* eDP data */
 	intel->edp.bpp = 18;
+	intel->is_vbt_dvo_dpd_edp = FALSE;
 
 	general = find_section(bdb, BDB_GENERAL_FEATURES);
 	if (!general)
@@ -366,6 +367,11 @@ void parse_sdvo_mapping(ScrnInfoPtr scrn, struct bdb_header *bdb)
 			/* skip invalid child device type */
 			continue;
 		}
+
+		if (child->dvo_port == PORT_IDPD &&
+		    child->device_type == DEVICE_TYPE_eDP)
+			intel->is_vbt_dvo_dpd_edp = TRUE;
+
 		if (child->slave_addr == SLAVE_ADDR1 ||
 		    child->slave_addr == SLAVE_ADDR2) {
 			if (child->dvo_port != DEVICE_PORT_DVOB &&

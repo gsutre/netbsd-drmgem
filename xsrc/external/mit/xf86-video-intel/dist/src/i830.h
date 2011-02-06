@@ -666,6 +666,8 @@ typedef struct intel_screen_private {
 
 	Bool tv_present; /* TV connector present (from VBIOS) */
 
+	Bool is_vbt_dvo_dpd_edp;
+
 	struct {
 		int rate;
 		int lanes;
