@@ -29,6 +29,7 @@
  * Notes regarding the adaptation to OpenBSD Xenocara's Intel Xorg driver:
  *
  * - Removed audio support.
+ * - Removed hotplug event support.
  */
 
 #include <linux/i2c.h>
@@ -1639,15 +1640,6 @@ static const struct drm_encoder_funcs intel_dp_enc_funcs = {
 	.destroy = intel_dp_encoder_destroy,
 };
 
-static void
-intel_dp_hot_plug(struct intel_encoder *intel_encoder)
-{
-	struct intel_dp *intel_dp = container_of(intel_encoder, struct intel_dp, base);
-
-	if (intel_dp->dpms_mode == DRM_MODE_DPMS_ON)
-		intel_dp_check_link_status(intel_dp);
-}
-
 /* Return which DP Port should be selected for Transcoder DP control */
 int
 intel_trans_dp_port_sel (struct drm_crtc *crtc)
@@ -1761,20 +1753,14 @@ intel_dp_init(struct drm_device *dev, int output_reg)
 			break;
 		case DP_B:
 		case PCH_DP_B:
-			dev_priv->hotplug_supported_mask |=
-				HDMIB_HOTPLUG_INT_STATUS;
 			name = "DPDDC-B";
 			break;
 		case DP_C:
 		case PCH_DP_C:
-			dev_priv->hotplug_supported_mask |=
-				HDMIC_HOTPLUG_INT_STATUS;
 			name = "DPDDC-C";
 			break;
 		case DP_D:
 		case PCH_DP_D:
-			dev_priv->hotplug_supported_mask |=
-				HDMID_HOTPLUG_INT_STATUS;
 			name = "DPDDC-D";
 			break;
 	}
@@ -1800,8 +1786,6 @@ intel_dp_init(struct drm_device *dev, int output_reg)
 		if (!was_on)
 			ironlake_edp_panel_off(dev);
 	}
-
-	intel_encoder->hot_plug = intel_dp_hot_plug;
 
 	if (is_edp(intel_dp)) {
 		/* initialize panel mode from VBT if available for eDP */
