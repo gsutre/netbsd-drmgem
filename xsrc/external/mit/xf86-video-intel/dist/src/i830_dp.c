@@ -1621,7 +1621,7 @@ i830_dp_get_modes(xf86OutputPtr output)
 			for (newmode = modes; newmode != NULL; newmode = newmode->next) {
 				if (newmode->type & M_T_PREFERRED) {
 					intel->panel_fixed_mode =
-						xf86DuplicateModes(scrn, newmode);
+						xf86DuplicateMode(newmode);
 					break;
 				}
 			}
@@ -1633,7 +1633,7 @@ i830_dp_get_modes(xf86OutputPtr output)
 	/* if eDP has no EDID, try to use fixed panel mode from VBT */
 	if (is_edp(output)) {
 		if (intel->panel_fixed_mode != NULL) {
-			modes = xf86DuplicateModes(scrn, intel->panel_fixed_mode);
+			modes = xf86DuplicateMode(intel->panel_fixed_mode);
 			return modes;
 		}
 	}
@@ -1641,11 +1641,22 @@ i830_dp_get_modes(xf86OutputPtr output)
 }
 
 static void
-i830_dp_destroy (struct drm_connector *connector)
+i830_dp_destroy (xf86OutputPtr output)
 {
-	drm_sysfs_connector_remove(connector);
-	drm_connector_cleanup(connector);
-	kfree(connector);
+	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+	I830OutputPrivatePtr intel_output = output->driver_private;
+
+	if (intel_output) {
+		if (intel_output->pDDCBus)
+			xf86DestroyI2CBusRec(intel_output->pDDCBus, FALSE, FALSE);
+
+		if (intel->panel_fixed_mode)
+			xf86DeleteMode(&intel->panel_fixed_mode,
+			    intel->panel_fixed_mode);
+
+		free (intel_output);
+	}
 }
 
 static void i830_dp_encoder_destroy(xf86OutputPtr output)
@@ -1836,7 +1847,7 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 		/* initialize panel mode from VBT if available for eDP */
 		if (intel->lfp_lvds_vbt_mode) {
 			intel->panel_fixed_mode =
-				xf86DuplicateModes(scrn, intel->lfp_lvds_vbt_mode);
+				xf86DuplicateMode(intel->lfp_lvds_vbt_mode);
 			if (intel->panel_fixed_mode) {
 				intel->panel_fixed_mode->type |=
 					M_T_PREFERRED;
