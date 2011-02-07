@@ -875,6 +875,27 @@ i830PipeHasType (xf86CrtcPtr crtc, int type)
     return FALSE;
 }
 
+static Bool
+i830PipeIsPCH (xf86CrtcPtr crtc)
+{
+    ScrnInfoPtr	scrn = crtc->scrn;
+    xf86CrtcConfigPtr   xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
+    int		i;
+
+    for (i = 0; i < xf86_config->num_output; i++)
+    {
+	xf86OutputPtr  output = xf86_config->output[i];
+	if (output->crtc == crtc)
+	{
+	    I830OutputPrivatePtr    intel_output = output->driver_private;
+	    if (intel_output->type == I830_OUTPUT_EDP &&
+		!i830_output_is_pch_edp(output))
+		return FALSE;
+	}
+    }
+    return TRUE;
+}
+
 #if 1
 #define i830PllInvalid(s)   { /* ErrorF (s) */; return FALSE; }
 #else
@@ -1882,6 +1903,8 @@ ironlake_crtc_enable(xf86CrtcPtr crtc)
 	/* twice, like the BIOS */
 	OUTREG(dspcntr_reg, temp | DISPLAY_PLANE_ENABLE);
 
+	if (i830PipeIsPCH(crtc)) {
+
 	/* Train FDI. */
 	ironlake_fdi_link_train(crtc);
 
@@ -1930,6 +1953,8 @@ ironlake_crtc_enable(xf86CrtcPtr crtc)
 
 	while ((INREG(transconf_reg) & TRANS_STATE_ENABLE) == 0)
 	    ;
+
+	}
 
 	ErrorF("LUT load\n");
 	i830_crtc_load_lut(crtc);
