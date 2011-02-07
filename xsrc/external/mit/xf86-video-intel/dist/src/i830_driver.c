@@ -75,6 +75,8 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/mman.h>
 #endif
 
+#include "i830_wraplinux.h"
+
 #ifdef INTEL_XVMC
 #define _INTEL_XVMC_SERVER_
 #include "i830_hwmc.h"
@@ -632,6 +634,23 @@ static int i830_output_clones (ScrnInfoPtr scrn, int type_mask)
 	return index_mask;
 }
 
+static Bool has_edp_a(ScrnInfoPtr scrn)
+{
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+
+	if (!IS_MOBILE(intel))
+		return FALSE;
+
+	if ((I915_READ(DP_A) & DP_DETECTED) == 0)
+		return FALSE;
+
+	if (IS_GEN5(intel) &&
+	    (I915_READ(ILK_DISPLAY_CHICKEN_FUSES) & ILK_eDP_A_DISABLE))
+		return FALSE;
+
+	return TRUE;
+}
+
 /**
  * Set up the outputs according to what type of chip we are.
  *
@@ -644,13 +663,24 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int	    o, c;
 	Bool	    lvds_detected = FALSE;
+	Bool	    dpd_is_edp = FALSE;
 
 	/* everyone has at least a single analog output */
 	i830_crt_init(scrn);
 
 	/* Set up integrated LVDS */
 	if (IS_MOBILE(intel) && !IS_I830(intel))
-	i830_lvds_init(scrn);
+		i830_lvds_init(scrn);
+
+	if (HAS_PCH_SPLIT(intel)) {
+		dpd_is_edp = i830_dpd_is_edp(scrn);
+
+		if (has_edp_a(scrn))
+			i830_dp_init(scrn, DP_A);
+
+		if (dpd_is_edp && (I915_READ(PCH_DP_D) & DP_DETECTED))
+			i830_dp_init(scrn, PCH_DP_D);
+	}
 
 	if (IS_IGDNG(intel)) {
 		int found;
@@ -661,6 +691,8 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 			found = 0;
 			if (!found)
 				i830_hdmi_init(scrn, HDMIB);
+			if (!found && (I915_READ(PCH_DP_B) & DP_DETECTED))
+				i830_dp_init(scrn, PCH_DP_B);
 		}
 
 		if (INREG(HDMIC) & PORT_DETECTED)
@@ -669,10 +701,11 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 		if (INREG(HDMID) & PORT_DETECTED)
 			i830_hdmi_init(scrn, HDMID);
 
-		/* Disable DP by force */
-		OUTREG(PCH_DP_B, INREG(PCH_DP_B) & ~PORT_ENABLE);
-		OUTREG(PCH_DP_C, INREG(PCH_DP_C) & ~PORT_ENABLE);
-		OUTREG(PCH_DP_D, INREG(PCH_DP_D) & ~PORT_ENABLE);
+		if (I915_READ(PCH_DP_C) & DP_DETECTED)
+			i830_dp_init(scrn, PCH_DP_C);
+
+		if (!dpd_is_edp && (I915_READ(PCH_DP_D) & DP_DETECTED))
+			i830_dp_init(scrn, PCH_DP_D);
 
 	} else if (IS_I9XX(intel)) {
 		Bool found = FALSE;
@@ -680,15 +713,31 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 			found = i830_sdvo_init(scrn, SDVOB);
 
 			if (!found && SUPPORTS_INTEGRATED_HDMI(intel))
-			i830_hdmi_init(scrn, SDVOB);
+				i830_hdmi_init(scrn, SDVOB);
+
+			if (!found && SUPPORTS_INTEGRATED_DP(intel)) {
+				DRM_DEBUG_KMS("probing DP_B\n");
+				i830_dp_init(scrn, DP_B);
+			}
 		}
 
 		if ((INREG(SDVOB) & SDVO_DETECTED))
 			found = i830_sdvo_init(scrn, SDVOC);
 
-		if ((INREG(SDVOC) & SDVO_DETECTED) &&
-		    !found && SUPPORTS_INTEGRATED_HDMI(intel))
-			i830_hdmi_init(scrn, SDVOC);
+		if (!found && (INREG(SDVOC) & SDVO_DETECTED)) {
+			if (SUPPORTS_INTEGRATED_HDMI(intel))
+				i830_hdmi_init(scrn, SDVOC);
+			if (SUPPORTS_INTEGRATED_DP(intel)) {
+				DRM_DEBUG_KMS("probing DP_C\n");
+				i830_dp_init(scrn, DP_C);
+			}
+		}
+
+		if (SUPPORTS_INTEGRATED_DP(intel) &&
+		    (I915_READ(DP_D) & DP_DETECTED)) {
+			DRM_DEBUG_KMS("probing DP_D\n");
+			i830_dp_init(scrn, DP_D);
+		}
 
 	} else {
 		i830_dvo_init(scrn);

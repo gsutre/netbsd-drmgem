@@ -3268,6 +3268,22 @@ typedef enum {
 #define GTIIR	0x44018
 #define GTIER	0x4401c
 
+#define ILK_DISPLAY_CHICKEN2	0x42004
+#define  ILK_DPARB_GATE	(1<<22)
+#define  ILK_VSDPFD_FULL	(1<<21)
+#define ILK_DISPLAY_CHICKEN_FUSES	0x42014
+#define  ILK_INTERNAL_GRAPHICS_DISABLE	(1<<31)
+#define  ILK_INTERNAL_DISPLAY_DISABLE	(1<<30)
+#define  ILK_DISPLAY_DEBUG_DISABLE	(1<<29)
+#define  ILK_HDCP_DISABLE		(1<<25)
+#define  ILK_eDP_A_DISABLE		(1<<24)
+#define  ILK_DESKTOP			(1<<23)
+#define ILK_DSPCLK_GATE		0x42020
+#define  ILK_DPARB_CLK_GATE	(1<<5)
+/* According to spec this bit 7/8/9 of 0x42020 should be set to enable FBC */
+#define   ILK_CLK_FBC		(1<<7)
+#define   ILK_DPFC_DIS1		(1<<8)
+#define   ILK_DPFC_DIS2		(1<<9)
 
 #define DISP_ARB_CTL	0x45000
 #define DISP_TILE_SURFACE_SWIZZLING	(1<<13)
