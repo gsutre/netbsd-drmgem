@@ -1546,6 +1546,11 @@ i830_lvds_init(ScrnInfoPtr scrn)
     if (IS_IGDNG(intel)) {
       if ((INREG(PCH_LVDS) & LVDS_DETECTED) == 0)
 	return;
+      if (intel->edp.support) {
+	xf86DrvMsg(scrn->scrnIndex, X_INFO,
+		   "disable LVDS for eDP support\n");
+	return;
+      }
       gpio = PCH_GPIOC;
     }
 
