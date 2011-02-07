@@ -114,9 +114,8 @@ agp_sg_bind_page(void *dev, bus_addr_t address, paddr_t physical, int flags)
 	struct agp_softc *sc = dev;
 	int error;
 
-	/* XXX flags */
 	error = AGP_BIND_PAGE(sc, address - sc->as_apaddr,
-	    _BUS_PHYS_TO_BUS(physical));
+	    _BUS_PHYS_TO_BUS(physical), flags);
 	if (error)
 		aprint_error_dev(sc->as_dev,
 		    "%s: failed: ba %#"PRIxPADDR", pa %#"PRIxPADDR"\n",

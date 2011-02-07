@@ -103,7 +103,7 @@ struct agp_softc;
 struct agp_methods {
 	u_int32_t (*get_aperture)(struct agp_softc *);
 	int (*set_aperture)(struct agp_softc *, u_int32_t);
-	int (*bind_page)(struct agp_softc *, off_t, bus_addr_t);
+	int (*bind_page)(struct agp_softc *, off_t, bus_addr_t, int);
 	int (*unbind_page)(struct agp_softc *, off_t);
 	void (*flush_tlb)(struct agp_softc *);
 	void (*dma_sync)(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
@@ -117,7 +117,7 @@ struct agp_methods {
 
 #define AGP_GET_APERTURE(sc)	 ((sc)->as_methods->get_aperture(sc))
 #define AGP_SET_APERTURE(sc,a)	 ((sc)->as_methods->set_aperture((sc),(a)))
-#define AGP_BIND_PAGE(sc,o,p)	 ((sc)->as_methods->bind_page((sc),(o),(p)))
+#define AGP_BIND_PAGE(sc,o,p,f)	 ((sc)->as_methods->bind_page((sc),(o),(p),(f)))
 #define AGP_UNBIND_PAGE(sc,o)	 ((sc)->as_methods->unbind_page((sc), (o)))
 #define AGP_FLUSH_TLB(sc)	 ((sc)->as_methods->flush_tlb(sc))
 #define AGP_ENABLE(sc,m)	 ((sc)->as_methods->enable((sc),(m)))

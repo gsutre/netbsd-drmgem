@@ -48,6 +48,8 @@ See for instance http://www.netbsd.org/docs/guide/en/part-compile.html.
 
 Refer to the above link for details.  In most cases, the following should work:
 
+$ export USETOOLS=no
+
 $ cd /usr/src/external/mit/xorg/lib/libdrm
 $ su root -c "make includes"
 $ make

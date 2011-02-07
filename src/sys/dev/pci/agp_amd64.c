@@ -56,7 +56,7 @@ __KERNEL_RCSID(0, "$NetBSD: agp_amd64.c,v 1.6 2010/11/13 13:52:04 uebayasi Exp $
 
 static uint32_t agp_amd64_get_aperture(struct agp_softc *);
 static int agp_amd64_set_aperture(struct agp_softc *, uint32_t);
-static int agp_amd64_bind_page(struct agp_softc *, off_t, bus_addr_t);
+static int agp_amd64_bind_page(struct agp_softc *, off_t, bus_addr_t, int);
 static int agp_amd64_unbind_page(struct agp_softc *, off_t);
 static void agp_amd64_flush_tlb(struct agp_softc *);
 
@@ -374,7 +374,8 @@ agp_amd64_set_aperture(struct agp_softc *sc, uint32_t aperture)
 }
 
 static int
-agp_amd64_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
+agp_amd64_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
+    int flags)
 {
 	struct agp_amd64_softc *asc = sc->as_chipc;
 

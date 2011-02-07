@@ -1,0 +1,9 @@
+master:			main development trunk
+
+device-softc-split:	with split device_t/softc
+
+display-port:		adds (e)DP support to Xenocara's Intel Xorg driver
+
+netbsd-current:		vanilla NetBSD -current relevant source files
+
+openbsd-current:	vanilla OpenBSD -current relevant source files

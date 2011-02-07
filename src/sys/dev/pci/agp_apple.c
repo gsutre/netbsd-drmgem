@@ -46,7 +46,7 @@ __KERNEL_RCSID(0, "$NetBSD: agp_apple.c,v 1.6 2010/11/13 13:52:04 uebayasi Exp $
 
 static u_int32_t agp_apple_get_aperture(struct agp_softc *);
 static int agp_apple_set_aperture(struct agp_softc *, u_int32_t);
-static int agp_apple_bind_page(struct agp_softc *, off_t, bus_addr_t);
+static int agp_apple_bind_page(struct agp_softc *, off_t, bus_addr_t, int);
 static int agp_apple_unbind_page(struct agp_softc *, off_t);
 static void agp_apple_flush_tlb(struct agp_softc *);
 
@@ -155,7 +155,8 @@ agp_apple_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 }
 
 static int
-agp_apple_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical)
+agp_apple_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
+    int flags)
 {
 	struct agp_apple_softc *asc = sc->as_chipc;
 
