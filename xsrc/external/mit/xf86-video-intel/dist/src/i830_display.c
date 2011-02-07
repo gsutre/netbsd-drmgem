@@ -43,19 +43,10 @@
 #include "i830_display.h"
 #include "xf86Modes.h"
 #include "i810_reg.h"
+#include "i830_wraplinux.h"
 
 #define KHz(x) (1000*x)
 #define MHz(x) KHz(1000*x)
-
-#define HAS_PCH_SPLIT(x)	IS_IGDNG(x)
-#define HAS_PCH_CPT(x)		FALSE
-#define IS_GEN5(x)		IS_IGDNG(x)
-#define IS_GEN6(x)		FALSE
-
-#define I915_WRITE(reg, val)	OUTREG(reg, val)
-#define I915_READ(reg)		INREG(reg)
-#define DRM_ERROR(fmt, arg...)		ErrorF(fmt, ## arg)
-#define DRM_DEBUG_KMS(fmt, arg...)	DPRINTF(PFX, fmt, ## arg)
 
 #define HAS_eDP (i830PipeHasType(crtc, I830_OUTPUT_EDP))
 
