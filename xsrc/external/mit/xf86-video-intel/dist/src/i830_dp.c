@@ -137,13 +137,13 @@ static struct i830_dp_priv *output_to_i830_dp(xf86OutputPtr output)
 }
 
 /**
- * i830_encoder_is_pch_edp - is the given output a PCH attached eDP?
+ * i830_output_is_pch_edp - is the given output a PCH attached eDP?
  * @output: DRM encoder
  *
  * Return true if @output corresponds to a PCH attached eDP panel.  Needed
  * by intel_display.c.
  */
-Bool i830_encoder_is_pch_edp(xf86OutputPtr output)
+Bool i830_output_is_pch_edp(xf86OutputPtr output)
 {
 	struct i830_dp_priv *dev_priv;
 
@@ -796,6 +796,7 @@ i830_dp_mode_set(xf86OutputPtr output, DisplayModePtr mode,
 		  DisplayModePtr adjusted_mode)
 {
 	ScrnInfoPtr scrn = output->scrn;
+	intel_screen_private *intel = intel_get_screen_private(scrn);
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	xf86CrtcPtr crtc = output->crtc;
 	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;

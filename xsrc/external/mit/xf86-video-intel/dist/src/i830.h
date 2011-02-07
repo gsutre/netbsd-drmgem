@@ -936,6 +936,15 @@ void i830_crt_init(ScrnInfoPtr scrn);
 /* i830_dvo.c */
 void i830_dvo_init(ScrnInfoPtr scrn);
 
+/* i830_dp.c */
+void i830_dp_init(ScrnInfoPtr scrn, int output_reg);
+void i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
+		     DisplayModePtr adjusted_mode);
+extern Bool i830_dpd_is_edp(ScrnInfoPtr scrn);
+extern void i830_edp_link_config(I830OutputPrivatePtr intel_output,
+				 int *lane_num, int *link_bw);
+extern Bool i830_output_is_pch_edp(xf86OutputPtr output);
+
 /* i830_hdmi.c */
 void i830_hdmi_init(ScrnInfoPtr scrn, int output_reg);
 
