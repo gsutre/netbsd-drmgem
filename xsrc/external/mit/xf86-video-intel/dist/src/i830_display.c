@@ -1844,6 +1844,8 @@ ironlake_crtc_enable(xf86CrtcPtr crtc)
 	    }
 	}
 
+	if (i830PipeIsPCH(crtc)) {
+
 	ErrorF("PCH FDI RX PLL enable\n");
 	temp = INREG(fdi_rx_reg);
 	temp &= ~(0x7 << 16);
@@ -1866,6 +1868,8 @@ ironlake_crtc_enable(xf86CrtcPtr crtc)
 	    OUTREG(fdi_tx_reg, temp | FDI_TX_PLL_ENABLE);
 	    INREG(fdi_tx_reg);
 	    usleep(100);
+	}
+
 	}
 
 
