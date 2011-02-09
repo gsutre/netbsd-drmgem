@@ -80,6 +80,7 @@ intel_drv_la_SOURCES = \
          i830_quirks.c \
          i830_driver.c \
 	 i830_dvo.c \
+	 i830_dp.c \
          i830.h \
 	 i830_hdmi.c \
          i830_i2c.c \

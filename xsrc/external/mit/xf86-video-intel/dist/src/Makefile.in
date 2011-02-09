@@ -92,7 +92,7 @@ am__intel_drv_la_SOURCES_DIST = brw_defines.h brw_structs.h common.h \
 	i810_ring.h i810_video.c i810_wmark.c i830_3d.c i830_accel.c \
 	i830_bios.c i830_bios.h i830_batchbuffer.c i830_batchbuffer.h \
 	i830_common.h i830_crt.c i830_cursor.c i830_display.c \
-	i830_display.h i830_quirks.c i830_driver.c i830_dvo.c i830.h \
+	i830_display.h i830_quirks.c i830_driver.c i830_dvo.c i830_dp.c i830.h \
 	i830_hdmi.c i830_i2c.c i830_io.c i830_lvds.c i830_memory.c \
 	i830_modes.c i830_video.c i830_video.h i830_reg.h i830_ring.h \
 	i830_sdvo.c i830_sdvo.h i830_sdvo_regs.h i830_tv.c i915_3d.c \
@@ -108,7 +108,7 @@ am_intel_drv_la_OBJECTS = i810_accel.lo i810_cursor.lo i810_dga.lo \
 	i810_driver.lo i810_io.lo i810_memory.lo i810_video.lo \
 	i810_wmark.lo i830_3d.lo i830_accel.lo i830_bios.lo \
 	i830_batchbuffer.lo i830_crt.lo i830_cursor.lo i830_display.lo \
-	i830_quirks.lo i830_driver.lo i830_dvo.lo i830_hdmi.lo \
+	i830_quirks.lo i830_driver.lo i830_dvo.lo i830_dp.lo i830_hdmi.lo \
 	i830_i2c.lo i830_io.lo i830_lvds.lo i830_memory.lo \
 	i830_modes.lo i830_video.lo i830_sdvo.lo i830_tv.lo i915_3d.lo \
 	i915_video.lo i965_video.lo i830_uxa.lo i830_render.lo \
@@ -334,7 +334,7 @@ intel_drv_la_SOURCES = brw_defines.h brw_structs.h common.h i2c_vid.h \
 	i810_ring.h i810_video.c i810_wmark.c i830_3d.c i830_accel.c \
 	i830_bios.c i830_bios.h i830_batchbuffer.c i830_batchbuffer.h \
 	i830_common.h i830_crt.c i830_cursor.c i830_display.c \
-	i830_display.h i830_quirks.c i830_driver.c i830_dvo.c i830.h \
+	i830_display.h i830_quirks.c i830_driver.c i830_dvo.c i830_dp.c i830.h \
 	i830_hdmi.c i830_i2c.c i830_io.c i830_lvds.c i830_memory.c \
 	i830_modes.c i830_video.c i830_video.h i830_reg.h i830_ring.h \
 	i830_sdvo.c i830_sdvo.h i830_sdvo_regs.h i830_tv.c i915_3d.c \
@@ -436,6 +436,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_dri.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_driver.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_dvo.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_dp.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_hdmi.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_hwmc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/i830_i2c.Plo@am__quote@
