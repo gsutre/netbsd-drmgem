@@ -45,9 +45,6 @@
 #include "i810_reg.h"
 #include "i830_wraplinux.h"
 
-#define KHz(x) (1000*x)
-#define MHz(x) KHz(1000*x)
-
 #define HAS_eDP (i830PipeHasType(crtc, I830_OUTPUT_EDP))
 
 typedef struct {
@@ -363,17 +360,6 @@ intel_find_pll_g4x_dp(const intel_limit_t *, xf86CrtcPtr crtc,
 static Bool
 intel_find_pll_ironlake_dp(const intel_limit_t *, xf86CrtcPtr crtc,
 			   int target, int refclk, intel_clock_t *best_clock);
-
-static inline uint32_t /* units of 100MHz */
-intel_fdi_link_freq(ScrnInfoPtr scrn)
-{
-	intel_screen_private *intel = intel_get_screen_private(scrn);
-
-	if (IS_GEN5(intel)) {
-		return (I915_READ(FDI_PLL_BIOS_0) & FDI_PLL_FB_CLOCK_MASK) + 2;
-	} else
-		return 27;
-}
 
 static void
 i830_crtc_load_lut(xf86CrtcPtr crtc);
@@ -2624,7 +2610,7 @@ i830_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
     }
 
     if (IS_IGDNG(intel)) {
-	int lane = 0, link_bw, bpp;
+	int lane, link_bw, bpp;
 	/* CPU eDP doesn't require FDI link, so just set DP M/N
 	   according to current link config */
 	if (has_edp_output && !i830_output_is_pch_edp(has_edp_output)) {
@@ -2639,14 +2625,8 @@ i830_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 	    else
 		target_clock = adjusted_mode->Clock;
 
-	    /* FDI is a binary signal running at ~2.7GHz, encoding
-	     * each output octet as 10 bits. The actual frequency
-	     * is stored as a divider into a 100MHz clock, and the
-	     * mode pixel clock is stored in units of 1KHz.
-	     * Hence the bw of each lane in terms of the mode signal
-	     * is:
-	     */
-	    link_bw = intel_fdi_link_freq(scrn) * MHz(100)/KHz(1)/10;
+	    lane = 4;
+	    link_bw = 270000;
 	}
 
 	/* determine panel color depth */
@@ -2694,20 +2674,6 @@ i830_crtc_mode_set(xf86CrtcPtr crtc, DisplayModePtr mode,
 	    DRM_ERROR("unknown pipe bpc value\n");
 	    bpp = 24;
 	}
-
-	if (!lane) {
-	    /*
-	     * Account for spread spectrum to avoid
-	     * oversubscribing the link. Max center spread
-	     * is 2.5%; use 5% for safety's sake.
-	     */
-	    uint32_t bps = target_clock * bpp * 21 / 20;
-	    lane = bps / (link_bw * 8) + 1;
-	}
-
-#if 0	/* Replaced by a constant in ironlake_fdi_link_train(). */
-	intel_crtc->fdi_lanes = lane;
-#endif
 
 	igdng_compute_m_n(bpp, lane, target_clock, link_bw, &m_n);
 
