@@ -685,7 +685,6 @@ i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
 {
 	ScrnInfoPtr scrn = crtc->scrn;
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
-	xf86OutputPtr output;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	I830CrtcPrivatePtr intel_crtc = crtc->driver_private;
 	int lane_count = 4, bpp = 24;
@@ -961,7 +960,6 @@ static void i830_dp_prepare(xf86OutputPtr output)
 
 static void i830_dp_commit(xf86OutputPtr output)
 {
-	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 
 	i830_dp_start_link_train(output);
@@ -1256,7 +1254,6 @@ i830_dp_start_link_train(xf86OutputPtr output)
 	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
-	I830CrtcPrivatePtr intel_crtc = output->crtc->driver_private;
 	int i;
 	uint8_t voltage;
 	Bool clock_recovery = FALSE;
@@ -1437,7 +1434,6 @@ i830_dp_link_down(xf86OutputPtr output)
 
 	if (!HAS_PCH_CPT(intel) &&
 	    I915_READ(dev_priv->output_reg) & DP_PIPEB_SELECT) {
-		I830CrtcPrivatePtr intel_crtc = output->crtc->driver_private;
 		/* Hardware workaround: leaving our transcoder select
 		 * set to transcoder B while it's off will prevent the
 		 * corresponding HDMI output on transcoder A.
@@ -1558,11 +1554,9 @@ g4x_dp_detect(xf86OutputPtr output)
 static xf86OutputStatus
 i830_dp_detect(xf86OutputPtr output)
 {
-	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	xf86OutputStatus status;
-	struct edid *edid = NULL;
 
 	if (HAS_PCH_SPLIT(intel))
 		status = ironlake_dp_detect(output);
@@ -1577,7 +1571,6 @@ i830_dp_detect(xf86OutputPtr output)
 static DisplayModePtr
 i830_dp_get_modes(xf86OutputPtr output)
 {
-	struct i830_dp_priv *dev_priv = output_to_i830_dp(output);
 	ScrnInfoPtr scrn = output->scrn;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	DisplayModePtr modes;
@@ -1645,7 +1638,6 @@ i830_trans_dp_port_sel (xf86CrtcPtr crtc)
 {
 	ScrnInfoPtr scrn = crtc->scrn;
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
-	xf86OutputPtr output;
 	int i;
 
 	for (i = 0; i < xf86_config->num_output; i++) {
@@ -1679,7 +1671,6 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 	struct i830_dp_priv *dev_priv;
 	I830OutputPrivatePtr intel_output;
 	const char *name = NULL, *ddc_name = NULL;
-	int type;
 
 	switch (output_reg) {
 		case DP_A:
