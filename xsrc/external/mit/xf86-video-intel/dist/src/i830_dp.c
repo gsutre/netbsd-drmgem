@@ -1843,7 +1843,7 @@ i830_dp_i2c_address(I2CDevPtr d, I2CSlaveAddr address)
 	else
 		mode |= MODE_I2C_WRITE;
 
-	dev_priv->i2c_state.address = address;
+	dev_priv->i2c_state.address = address >> 1;
 	dev_priv->i2c_state.running = TRUE;
 
 	return i830_dp_i2c_aux_ch(output, mode, 0, NULL);
