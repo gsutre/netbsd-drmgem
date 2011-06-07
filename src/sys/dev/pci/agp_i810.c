@@ -1,4 +1,4 @@
-/*	$NetBSD: agp_i810.c,v 1.71 2011/01/30 23:43:08 gsutre Exp $	*/
+/*	$NetBSD: agp_i810.c,v 1.73 2011/04/04 20:37:56 dyoung Exp $	*/
 
 /*-
  * Copyright (c) 2000 Doug Rabson
@@ -30,7 +30,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: agp_i810.c,v 1.71 2011/01/30 23:43:08 gsutre Exp $");
+__KERNEL_RCSID(0, "$NetBSD: agp_i810.c,v 1.73 2011/04/04 20:37:56 dyoung Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -184,7 +184,7 @@ agp_i810_write_gtt_entry(struct agp_i810_softc *isc, off_t off, bus_addr_t v)
 
 /* XXXthorpej -- duplicated code (see arch/x86/pci/pchb.c) */
 static int
-agp_i810_vgamatch(struct pci_attach_args *pa)
+agp_i810_vgamatch(const struct pci_attach_args *pa)
 {
 
 	if (PCI_CLASS(pa->pa_class) != PCI_CLASS_DISPLAY ||
@@ -232,6 +232,8 @@ agp_i810_vgamatch(struct pci_attach_args *pa)
 	case PCI_PRODUCT_INTEL_82B43_IGD:
 	case PCI_PRODUCT_INTEL_IRONLAKE_D_IGD:
 	case PCI_PRODUCT_INTEL_IRONLAKE_M_IGD:
+	case PCI_PRODUCT_INTEL_PINEVIEW_IGD:
+	case PCI_PRODUCT_INTEL_PINEVIEW_M_IGD:
 		return (1);
 	}
 
@@ -316,6 +318,8 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 	case PCI_PRODUCT_INTEL_82945GM_IGD_1:
 	case PCI_PRODUCT_INTEL_82945GME_IGD:
 	case PCI_PRODUCT_INTEL_E7221_IGD:
+	case PCI_PRODUCT_INTEL_PINEVIEW_IGD:
+	case PCI_PRODUCT_INTEL_PINEVIEW_M_IGD:
 		isc->chiptype = CHIP_I915;
 		break;
 	case PCI_PRODUCT_INTEL_82965Q_IGD:

@@ -90,7 +90,7 @@ int	inteldrm_ironlake_intr(void *);
 void	inteldrm_lastclose(struct drm_device *);
 
 void	inteldrm_wrap_ring(struct inteldrm_softc *);
-int	inteldrm_gmch_match(struct pci_attach_args *);
+int	inteldrm_gmch_match(const struct pci_attach_args *);
 void	inteldrm_chipset_flush(struct inteldrm_softc *);
 void	inteldrm_timeout(void *);
 void	inteldrm_hangcheck(void *);
@@ -343,7 +343,7 @@ inteldrm_probe(struct device *parent, struct cfdata *match, void *aux)
  * be Intel
  */
 int
-inteldrm_gmch_match(struct pci_attach_args *pa)
+inteldrm_gmch_match(const struct pci_attach_args *pa)
 {
 	if (pa->pa_bus == 0 && pa->pa_device == 0 && pa->pa_function == 0 &&
 	    PCI_VENDOR(pa->pa_id) == PCI_VENDOR_INTEL &&
