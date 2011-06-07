@@ -55,6 +55,9 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define MARKER() ErrorF("\n### %s:%d: >>> %s <<< ###\n\n", \
 			 __FILE__, __LINE__,__FUNCTION__)
 #define DPRINTF I830DPRINTF
+void
+I830DPRINTF(const char *filename, int line, const char *function,
+	    const char *fmt, ...);
 #else /* #ifdef I830DEBUG */
 #define MARKER()
 #define DPRINTF I830DPRINTF_stub
