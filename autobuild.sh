@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Automatic build script for netbsd-drmgem.  Needs a NetBSD-daily/HEAD time
+# Automated build script for netbsd-drmgem.  Needs a NetBSD-daily/HEAD time
 # stamp, for instance:
 #
 # autobuild.sh 201106060220Z
@@ -83,6 +83,11 @@ if ! which sudo >/dev/null; then
 	exit 1
 fi
 
+# Create distribution directory and time stamp for build start
+DISTDIR=dist.$(uname -m)
+mkdir -p $DISTDIR
+touch .startbuild
+
 # Download and extract netbsd-drmgem
 wget --no-check-certificate -O - ${GITHUB_TARBALL_URL}/$BRANCH | tar -zxf -
 mv gsutre-netbsd-drmgem-* netbsd-drmgem
@@ -101,10 +106,6 @@ done
 # Overwrite source files with netbsd-drmgem ones
 cp -av netbsd-drmgem/src netbsd-drmgem/xsrc usr
 
-# Create distribution directory
-DISTDIR=dist.$(uname -m)
-mkdir -p $DISTDIR
-
 # Build and install new kernel
 cd usr/src/sys/arch/$(uname -m)/conf
 config GENERIC
@@ -115,7 +116,6 @@ mv netbsd ../../../../../../../$DISTDIR/netbsd-GENERIC-drmgem
 cd ../../../../../../..
 
 # Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
-touch start-X-build
 export USETOOLS=no
 cd usr/src/external/mit/xorg/lib/libdrm
 (sudo -E make includes) && make && (sudo -E make install)
@@ -138,4 +138,4 @@ cd ../../../../../../../..
 
 # Create tar archive for X11R7 new files
 tar -zcf $DISTDIR/usr-X11R7-drmgem.tgz \
-    $(find /usr/X11R7 -newer start-X-build ! -type d)
+    $(find /usr/X11R7 -newer .startbuild ! -type d)
