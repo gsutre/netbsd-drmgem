@@ -1,4 +1,4 @@
-/*	$NetBSD: agp.c,v 1.77 2011/02/15 08:57:01 jmcneill Exp $	*/
+/*	$NetBSD: agp.c,v 1.79 2011/04/04 20:37:56 dyoung Exp $	*/
 
 /*-
  * Copyright (c) 2000 Doug Rabson
@@ -65,7 +65,7 @@
 
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: agp.c,v 1.77 2011/02/15 08:57:01 jmcneill Exp $");
+__KERNEL_RCSID(0, "$NetBSD: agp.c,v 1.79 2011/04/04 20:37:56 dyoung Exp $");
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -100,11 +100,11 @@ static int agp_allocate_user(struct agp_softc *, agp_allocate *);
 static int agp_deallocate_user(struct agp_softc *, int);
 static int agp_bind_user(struct agp_softc *, agp_bind *);
 static int agp_unbind_user(struct agp_softc *, agp_unbind *);
-static int agp_generic_enable_v2(struct agp_softc *, struct pci_attach_args *,
-				 int, u_int32_t);
-static int agp_generic_enable_v3(struct agp_softc *, struct pci_attach_args *,
-				 int, u_int32_t);
-static int agpdev_match(struct pci_attach_args *);
+static int agp_generic_enable_v2(struct agp_softc *,
+    const struct pci_attach_args *, int, u_int32_t);
+static int agp_generic_enable_v3(struct agp_softc *,
+    const struct pci_attach_args *, int, u_int32_t);
+static int agpdev_match(const struct pci_attach_args *);
 static bool agp_resume(device_t, const pmf_qual_t *);
 
 #include "agp_ali.h"
@@ -209,6 +209,10 @@ const struct agp_product {
 	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_IRONLAKE_MA_HB,
 	  NULL, 		agp_i810_attach },
 	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_IRONLAKE_MC2_HB,
+	  NULL, 		agp_i810_attach },
+	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_PINEVIEW_HB,
+	  NULL, 		agp_i810_attach },
+	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_PINEVIEW_M_HB,
 	  NULL, 		agp_i810_attach },
 #endif
 
@@ -444,7 +448,7 @@ agp_generic_detach(struct agp_softc *sc)
 }
 
 static int
-agpdev_match(struct pci_attach_args *pa)
+agpdev_match(const struct pci_attach_args *pa)
 {
 	if (PCI_CLASS(pa->pa_class) == PCI_CLASS_DISPLAY &&
 	    PCI_SUBCLASS(pa->pa_class) == PCI_SUBCLASS_DISPLAY_VGA)
@@ -483,7 +487,7 @@ agp_generic_enable(struct agp_softc *sc, u_int32_t mode)
 }
 
 static int
-agp_generic_enable_v2(struct agp_softc *sc, struct pci_attach_args *pa,
+agp_generic_enable_v2(struct agp_softc *sc, const struct pci_attach_args *pa,
     int capoff, u_int32_t mode)
 {
 	pcireg_t tstatus, mstatus;
@@ -537,7 +541,7 @@ agp_generic_enable_v2(struct agp_softc *sc, struct pci_attach_args *pa,
 }
 
 static int
-agp_generic_enable_v3(struct agp_softc *sc, struct pci_attach_args *pa,
+agp_generic_enable_v3(struct agp_softc *sc, const struct pci_attach_args *pa,
     int capoff, u_int32_t mode)
 {
 	pcireg_t tstatus, mstatus;
