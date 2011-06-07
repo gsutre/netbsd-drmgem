@@ -40,6 +40,7 @@
 #include <stdint.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "xf86drmMode.h"
 #include "xf86drm.h"
