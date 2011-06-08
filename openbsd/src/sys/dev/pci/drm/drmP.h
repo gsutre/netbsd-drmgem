@@ -1,3 +1,4 @@
+/* $OpenBSD: drmP.h,v 1.128 2011/06/02 18:22:00 weerd Exp $ */
 /* drmP.h -- Private header for Direct Rendering Manager -*- linux-c -*-
  * Created: Mon Jan  4 10:05:05 1999 by faith@precisioninsight.com
  */
@@ -324,7 +325,7 @@ struct drm_vblank_info {
 	u_int32_t		 vb_max;		/* counter reg size */
 	struct drm_vblank {
 		struct drmevlist vbl_events;		/* vblank events */
-		u_int32_t	 vbl_last;		/* Last recieved */
+		u_int32_t	 vbl_last;		/* Last received */
 		u_int32_t	 vbl_count;		/* interrupt no. */
 		int		 vbl_refs;		/* Number of users */
 		int		 vbl_enabled;		/* Enabled? */

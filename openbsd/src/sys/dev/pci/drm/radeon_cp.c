@@ -1,3 +1,4 @@
+/* $OpenBSD: radeon_cp.c,v 1.48 2011/06/02 18:22:00 weerd Exp $ */
 /* radeon_cp.c -- CP support for Radeon -*- linux-c -*- */
 /*
  * Copyright 2000 Precision Insight, Inc., Cedar Park, Texas.
@@ -110,6 +111,24 @@ int	radeon_setup_pcigart_surface(drm_radeon_private_t *dev_priv);
 #define R7XX_MAX_PIPES             8
 #define R7XX_MAX_PIPES_MASK        0xff
 
+
+u32
+RADEON_READ_MM(drm_radeon_private_t *dev_priv, int addr)
+{
+	u32 ret;
+
+	if (addr < 0x10000)
+		ret = bus_space_read_4(dev_priv->regs->bst,
+		    dev_priv->regs->bsh, addr);
+	else {
+		bus_space_write_4(dev_priv->regs->bst, dev_priv->regs->bsh,
+		    RADEON_MM_INDEX, addr);
+		ret = bus_space_read_4(dev_priv->regs->bst,
+		    dev_priv->regs->bsh, RADEON_MM_DATA);
+	}
+
+	return ret;
+}
 
 u32
 R500_READ_MCIND(drm_radeon_private_t *dev_priv, int addr)
@@ -3239,6 +3258,9 @@ radeon_do_init_cp(struct drm_device *dev, drm_radeon_init_t *init)
 
 	radeon_do_engine_reset(dev);
 	radeon_test_writeback(dev_priv);
+
+	if ((dev_priv->flags & RADEON_FAMILY_MASK) >= CHIP_R600)
+		r600_cs_init(dev);
 
 	return 0;
 }
