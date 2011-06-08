@@ -1,3 +1,4 @@
+/* $OpenBSD: drm_drv.c,v 1.93 2011/06/02 18:22:00 weerd Exp $ */
 /*-
  * Copyright 2007-2009 Owain G. Ainsworth <oga@openbsd.org>
  * Copyright © 2008 Intel Corporation
@@ -279,6 +280,7 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 
 error:
 	drm_lastclose(dev);
+	dev->dev_private = NULL;
 }
 
 int
@@ -483,7 +485,7 @@ drmopen(dev_t kdev, int flags, int fmt, struct lwp *p)
 	int			 ret = 0;
 
 	dev = drm_get_device_from_kdev(kdev);
-	if (dev == NULL)
+	if (dev == NULL || dev->dev_private == NULL)
 		return (ENXIO);
 
 	DRM_DEBUG("open_count = %d\n", dev->open_count);

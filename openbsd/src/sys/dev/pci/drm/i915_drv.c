@@ -1,3 +1,4 @@
+/* $OpenBSD: i915_drv.c,v 1.111 2011/06/06 17:10:23 ariane Exp $ */
 /*
  * Copyright (c) 2008-2009 Owain G. Ainsworth <oga@openbsd.org>
  *
@@ -359,7 +360,15 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		return;
 	}
 
-	if (pci_intr_map(pa, &dev_priv->ih) != 0) {
+	/*
+	 * i945G/GM report MSI capability despite not actually supporting it.
+	 * so explicitly disable it.
+	 */
+	if (IS_I945G(dev_priv) || IS_I945GM(dev_priv))
+		pa->pa_flags &= ~PCI_FLAGS_MSI_ENABLED;
+
+	if (pci_intr_map_msi(pa, &dev_priv->ih) != 0 &&
+	    pci_intr_map(pa, &dev_priv->ih) != 0) {
 		printf(": couldn't map interrupt\n");
 		return;
 	}
@@ -489,9 +498,9 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	dev = (struct drm_device *)dev_priv->drmdev;
 
 	/* XXX would be a lot nicer to get agp info before now */
-	uvm_page_physload_flags(atop(dev->agp->base), atop(dev->agp->base +
+	uvm_page_physload(atop(dev->agp->base), atop(dev->agp->base +
 	    dev->agp->info.ai_aperture_size), atop(dev->agp->base),
-	    atop(dev->agp->base + dev->agp->info.ai_aperture_size), 0,
+	    atop(dev->agp->base + dev->agp->info.ai_aperture_size),
 	    PHYSLOAD_DEVICE);
 	/* array of vm pages that physload introduced. */
 	dev_priv->pgs = PHYS_TO_VM_PAGE(dev->agp->base);
@@ -528,7 +537,7 @@ inteldrm_detach(struct device *self, int flags)
 		dev_priv->hw_status_page = NULL;
 	}
 
-	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.bsh != NULL) {
+	if (IS_I9XX(dev_priv) && dev_priv->ifp.i9xx.bsh != 0) {
 		bus_space_unmap(dev_priv->ifp.i9xx.bst, dev_priv->ifp.i9xx.bsh,
 		    PAGE_SIZE);
 	} else if (dev_priv->flags & (CHIP_I830 | CHIP_I845G | CHIP_I85X |
@@ -711,19 +720,21 @@ inteldrm_intr(void *arg)
 	struct drm_device	*dev = (struct drm_device *)dev_priv->drmdev;
 	u_int32_t		 iir, pipea_stats = 0, pipeb_stats = 0;
 
-	/* we're not set up, don't poke the hw */
-	if (dev_priv->hw_status_page == NULL)
+	/*
+	 * we're not set up, don't poke the hw  and if we're vt switched
+	 * then nothing will be enabled
+	 */
+	if (dev_priv->hw_status_page == NULL || dev_priv->mm.suspended)
 		return (0);
+
+	iir = I915_READ(IIR);
+	if (iir == 0)
+		return (0);
+
 	/*
 	 * lock is to protect from writes to PIPESTAT and IMR from other cores.
 	 */
 	mtx_enter(&dev_priv->user_irq_lock);
-	iir = I915_READ(IIR);
-	if (iir == 0) {
-		mtx_leave(&dev_priv->user_irq_lock);
-		return (0);
-	}
-
 	/*
 	 * Clear the PIPE(A|B)STAT regs before the IIR
 	 */
@@ -944,7 +955,7 @@ i915_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	return;
 
 nope:
-	dev_priv->ifp.i9xx.bsh = NULL;
+	dev_priv->ifp.i9xx.bsh = 0;
 	printf(": no ifp ");
 }
 
@@ -979,7 +990,7 @@ i965_alloc_ifp(struct inteldrm_softc *dev_priv, struct pci_attach_args *bpa)
 	return;
 
 nope:
-	dev_priv->ifp.i9xx.bsh = NULL;
+	dev_priv->ifp.i9xx.bsh = 0;
 	printf(": no ifp ");
 }
 
@@ -991,7 +1002,7 @@ inteldrm_chipset_flush(struct inteldrm_softc *dev_priv)
 	 * The write will return when it is done.
 	 */
 	if (IS_I9XX(dev_priv)) {
-	    if (dev_priv->ifp.i9xx.bsh != NULL)
+	    if (dev_priv->ifp.i9xx.bsh != 0)
 		bus_space_write_4(dev_priv->ifp.i9xx.bst,
 		    dev_priv->ifp.i9xx.bsh, 0, 1);
 	} else {
@@ -3922,6 +3933,10 @@ i915_gem_idle(struct inteldrm_softc *dev_priv)
 	struct drm_device	*dev = (struct drm_device *)dev_priv->drmdev;
 	int			 ret;
 
+	/* If drm attach failed */
+	if (dev == NULL)
+		return (0);
+
 	DRM_LOCK();
 	if (dev_priv->mm.suspended || dev_priv->ring.ring_obj == NULL) {
 		DRM_UNLOCK();
@@ -5896,6 +5911,12 @@ inteldrm_965_reset(struct inteldrm_softc *dev_priv, u_int8_t flags)
 {
 	pcireg_t	reg;
 	int		i = 0;
+
+	/*
+	 * There seems to be soemthing wrong with !full reset modes, so force
+	 * the whole shebang for now.
+	 */
+	flags = GDRST_FULL;
 
 	if (flags == GDRST_FULL)
 		inteldrm_save_display(dev_priv);

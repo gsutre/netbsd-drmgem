@@ -1,3 +1,4 @@
+/* $OpenBSD: drm_irq.c,v 1.43 2011/06/02 18:22:00 weerd Exp $ */
 /*-
  * Copyright 2003 Eric Anholt
  * All Rights Reserved.
@@ -286,7 +287,7 @@ drm_modeset_ctl(struct drm_device *dev, void *data, struct drm_file *file_priv)
 		return (0);
 
 	crtc = modeset->crtc;
-	if (crtc >= dev->vblank->vb_num)
+	if (crtc >= dev->vblank->vb_num || crtc < 0)
 		return (EINVAL);
 
 	vbl = &dev->vblank->vb_crtcs[crtc];

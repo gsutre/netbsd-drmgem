@@ -1,4 +1,4 @@
-/*	$OpenBSD: pmap.c,v 1.60 2010/11/30 19:30:16 kettenis Exp $	*/
+/*	$OpenBSD: pmap.c,v 1.63 2011/05/17 18:06:13 ariane Exp $	*/
 /*	$NetBSD: pmap.c,v 1.3 2003/05/08 18:13:13 thorpej Exp $	*/
 
 /*
@@ -289,10 +289,8 @@ extern paddr_t msgbuf_paddr;
 extern vaddr_t idt_vaddr;			/* we allocate IDT early */
 extern paddr_t idt_paddr;
 
-#ifdef _LP64
 extern vaddr_t lo32_vaddr;
 extern vaddr_t lo32_paddr;
-#endif
 
 vaddr_t virtual_avail;
 extern int end;
@@ -649,7 +647,8 @@ pmap_bootstrap(paddr_t first_avail, paddr_t max_pa)
 	idt_paddr = first_avail;			/* steal a page */
 	first_avail += 2 * PAGE_SIZE;
 
-#ifdef _LP64
+#if defined(MULTIPROCESSOR) || \
+    (NACPI > 0 && !defined(SMALL_KERNEL))
 	/*
 	 * Grab a page below 4G for things that need it (i.e.
 	 * having an initial %cr3 for the MP trampoline).
@@ -659,6 +658,7 @@ pmap_bootstrap(paddr_t first_avail, paddr_t max_pa)
 	lo32_paddr = first_avail;
 	first_avail += PAGE_SIZE;
 #endif
+
 	/*
 	 * init the global lists.
 	 */
@@ -1790,7 +1790,7 @@ pmap_clear_attrs(struct vm_page *pg, unsigned long clearbits)
 void
 pmap_write_protect(struct pmap *pmap, vaddr_t sva, vaddr_t eva, vm_prot_t prot)
 {
-	pt_entry_t nx, opte, *ptes, *spte, *epte;
+	pt_entry_t nx, *ptes, *spte, *epte;
 	pd_entry_t **pdes;
 	vaddr_t blockend;
 	int shootall = 0;
@@ -1842,7 +1842,6 @@ pmap_write_protect(struct pmap *pmap, vaddr_t sva, vaddr_t eva, vm_prot_t prot)
 		for (/*null */; spte < epte ; spte++) {
 			if (!(*spte & PG_V))
 				continue;
-			opte = *spte;
 			pmap_pte_clearbits(spte, PG_RW);
 			pmap_pte_setbits(spte, nx);
 		}
@@ -2436,7 +2435,7 @@ pmap_virtual_space(vaddr_t *vstartp, vaddr_t *vendp)
  * cpus we need to send the IPI to, then we grab the counter, then
  * we send the IPIs, then we finally do our own shootdown.
  *
- * Our shootdown is last to make it parallell with the other cpus
+ * Our shootdown is last to make it parallel with the other cpus
  * to shorten the spin time.
  *
  * Notice that we depend on failures to send IPIs only being able to
