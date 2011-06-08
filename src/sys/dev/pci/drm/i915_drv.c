@@ -480,6 +480,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		return;
 	}
 
+#if !defined(__NetBSD__)
 	/*
 	 * i945G/GM report MSI capability despite not actually supporting it.
 	 * so explicitly disable it.
@@ -489,6 +490,9 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 
 	if (pci_intr_map_msi(pa, &dev_priv->ih) != 0 &&
 	    pci_intr_map(pa, &dev_priv->ih) != 0) {
+#else /* !defined(__NetBSD__) */
+	if (pci_intr_map(pa, &dev_priv->ih) != 0) {
+#endif /* !defined(__NetBSD__) */
 		printf(": couldn't map interrupt\n");
 		return;
 	}
