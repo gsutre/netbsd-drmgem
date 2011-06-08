@@ -1,3 +1,4 @@
+/* $OpenBSD: radeon_drv.c,v 1.55 2011/06/02 18:22:00 weerd Exp $ */
 /* radeon_drv.c -- ATI Radeon driver -*- linux-c -*-
  * Created: Wed Feb 14 17:10:04 2001 by gareth@valinux.com
  */
@@ -500,6 +501,8 @@ const static struct drm_pcidev radeondrm_pciidlist[] = {
 	    CHIP_RV635|RADEON_IS_MOBILITY|RADEON_NEW_MEMMAP},
 	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD3850,
 	    CHIP_RV670|RADEON_NEW_MEMMAP},
+	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD3000,
+	    CHIP_RS780|RADEON_NEW_MEMMAP|RADEON_IS_IGP},
 	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD3200_1,
 	    CHIP_RS780|RADEON_NEW_MEMMAP|RADEON_IS_IGP},
 	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD3200_2,
@@ -526,6 +529,8 @@ const static struct drm_pcidev radeondrm_pciidlist[] = {
 	    CHIP_RS880|RADEON_NEW_MEMMAP|RADEON_IS_IGP},
 	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD4200_M,
 	    CHIP_RS880|RADEON_IS_MOBILITY|RADEON_NEW_MEMMAP|RADEON_IS_IGP},
+	{PCI_VENDOR_ATI, PCI_PRODUCT_ATI_RADEON_HD5450,
+	    CHIP_RS880|RADEON_NEW_MEMMAP},
         {0, 0, 0}
 };
 
@@ -743,6 +748,8 @@ radeondrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 			return (radeon_surface_alloc(dev, data, file_priv));
 		case DRM_IOCTL_RADEON_SURF_FREE:
 			return (radeon_surface_free(dev, data, file_priv));
+		case DRM_IOCTL_RADEON_CS:
+			return (radeon_cs_ioctl(dev, data, file_priv));
 		}
 	}
 
@@ -796,10 +803,14 @@ radeondrm_write_rptr(struct drm_radeon_private *dev_priv, u_int32_t off,
 u_int32_t
 radeondrm_get_ring_head(struct drm_radeon_private *dev_priv)
 {
-	if (dev_priv->writeback_works)
+	if (dev_priv->writeback_works) {
 		return (radeondrm_read_rptr(dev_priv, 0));
-	else
-		return (RADEON_READ(RADEON_CP_RB_RPTR));
+	} else {
+		if ((dev_priv->flags & RADEON_FAMILY_MASK) >= CHIP_R600)
+			return (RADEON_READ(R600_CP_RB_RPTR));
+		else
+			return (RADEON_READ(RADEON_CP_RB_RPTR));
+	}
 }
 
 void
