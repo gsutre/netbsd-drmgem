@@ -1,4 +1,4 @@
-/*	$OpenBSD: uvm_page.h,v 1.44 2010/06/29 21:25:16 thib Exp $	*/
+/*	$OpenBSD: uvm_page.h,v 1.48 2011/05/30 22:25:24 oga Exp $	*/
 /*	$NetBSD: uvm_page.h,v 1.19 2000/12/28 08:24:55 chs Exp $	*/
 
 /* 
@@ -96,7 +96,8 @@
  */
 
 #include <uvm/uvm_extern.h>
-#include <uvm/uvm_pglist.h>
+
+TAILQ_HEAD(pglist, vm_page);
 
 struct vm_page {
 	TAILQ_ENTRY(vm_page)	pageq;		/* queue info for FIFO
@@ -201,7 +202,6 @@ struct vm_physseg {
 	paddr_t	end;			/* (PF# of last page in segment) + 1 */
 	paddr_t	avail_start;		/* PF# of first free page in segment */
 	paddr_t	avail_end;		/* (PF# of last free page in segment) +1  */
-	int	free_list;		/* which free list they belong on */
 	struct	vm_page *pgs;		/* vm_page structures (from start) */
 	struct	vm_page *lastpg;	/* vm_page structure for end */
 #ifdef __HAVE_PMAP_PHYSSEG
@@ -252,7 +252,8 @@ void		uvm_pagezero(struct vm_page *);
 void		uvm_pagealloc_pg(struct vm_page *, struct uvm_object *,
 		    voff_t, struct vm_anon *);
 
-int		uvm_page_lookup_freelist(struct vm_page *);
+struct uvm_constraint_range; /* XXX move to uvm_extern.h? */
+psize_t		uvm_pagecount(struct uvm_constraint_range*);
 
 #if  VM_PHYSSEG_MAX == 1
 /*
