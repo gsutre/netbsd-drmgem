@@ -1,3 +1,4 @@
+/* $OpenBSD: i915_irq.c,v 1.51 2011/06/02 18:22:00 weerd Exp $ */
 /* i915_irq.c -- IRQ support for the I915 -*- linux-c -*-
  */
 /*
@@ -31,7 +32,6 @@
 #include "i915_drm.h"
 #include "i915_drv.h"
 
-int	inteldrm_intr(void *);
 void	i915_enable_irq(struct inteldrm_softc *, u_int32_t);
 void	i915_disable_irq(struct inteldrm_softc *, u_int32_t);
 void	ironlake_enable_graphics_irq(struct inteldrm_softc *, u_int32_t);
