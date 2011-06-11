@@ -471,8 +471,14 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	    bar->addr, 0, 0);
 	if (dev_priv->regs == NULL) {
 #else /* !defined(__NetBSD__) */
-	vb_base = vga_bar_base(parent, (IS_I9XX(dev_priv) ? 0 : 1));
-	/* XXX horrible kludge: agp might have mapped it */
+	/* XXX horrible kludge due to sharing with agp_i810 */
+	if (pci_mapreg_info(dev_priv->pc, dev_priv->tag,
+	    PCI_MAPREG_START + (IS_I9XX(dev_priv) ? 0 : 4),
+	    PCI_MAPREG_TYPE_MEM, &vb_base, NULL, NULL)) {
+		printf(": can't get BAR info\n");
+		return;
+	}
+
 	if (!agp_i810_borrow(vb_base, &dev_priv->regs->bst,
 	    &dev_priv->regs->bsh)) {
 #endif /* !defined(__NetBSD__) */
