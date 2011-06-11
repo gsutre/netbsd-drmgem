@@ -53,6 +53,10 @@
 
 #define DP_LINK_CONFIGURATION_SIZE	9
 
+#ifndef __UNCONST
+#define __UNCONST(a)	(a)
+#endif
+
 struct i830_dp_priv {
 	uint32_t output_reg;
 	uint32_t DP;
@@ -459,7 +463,11 @@ i830_dp_aux_native_read(xf86OutputPtr output,
 		ret = i830_dp_aux_ch(output, msg, msg_bytes,
 				      reply, reply_bytes);
 		if (ret == 0)
+#ifdef EPROTO
 			return -EPROTO;
+#else
+			return -1;
+#endif
 		if (ret < 0)
 			return ret;
 		ack = reply[0];
