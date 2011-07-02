@@ -1,4 +1,4 @@
-#	$NetBSD: files,v 1.1016 2011/05/28 19:30:19 matt Exp $
+#	$NetBSD: files,v 1.1018 2011/06/27 11:52:24 uch Exp $
 #	@(#)files.newconf	7.5 (Berkeley) 5/10/93
 
 version 	20100430
@@ -1377,6 +1377,7 @@ include "fs/smbfs/files.smbfs"
 include "fs/sysvbfs/files.sysvbfs"
 include "fs/tmpfs/files.tmpfs"
 include "fs/union/files.union"
+include "fs/v7fs/files.v7fs"
 include "miscfs/fdesc/files.fdesc"
 include "miscfs/kernfs/files.kernfs"
 include "miscfs/nullfs/files.nullfs"
@@ -1481,7 +1482,7 @@ file	kern/kern_mutex.c
 file	kern/kern_mutex_obj.c
 file	kern/kern_fileassoc.c		fileassoc
 file	kern/kern_ntptime.c
-file	kern/kern_pax.c			pax_mprotect | pax_segvguard
+file	kern/kern_pax.c			pax_mprotect | pax_segvguard | pax_aslr
 file	kern/kern_physio.c
 file	kern/kern_pmf.c
 file	kern/kern_proc.c
