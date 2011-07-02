@@ -1803,11 +1803,11 @@ inteldrm_purge_obj(struct drm_obj *obj)
 	    PGO_ALLPAGES | PGO_FREE);
 	simple_unlock(&obj->uao->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&obj->uao->vmobjlock);
+	mutex_enter(obj->uao->vmobjlock);
 	obj->uao->pgops->pgo_put(obj->uao, 0, obj->size,
 	    PGO_ALLPAGES | PGO_FREE);
 	/* the mutex is already released (cf. uao_put in uvm_aobj.c) */
-	KASSERT(!mutex_owned(&obj->uao->vmobjlock));
+	KASSERT(!mutex_owned(obj->uao->vmobjlock));
 #endif /* !defined(__NetBSD__) */
 
 	/*
@@ -2720,7 +2720,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 	/* Are we about to suspend?, if so wait until we're done */
 	if (dev_priv->sc_flags & INTELDRM_QUIET) {
 		/* we're about to sleep, unlock the map etc */
+#if !defined(__NetBSD__)
 		uvmfault_unlockall(ufi, NULL, &obj->uobj, NULL);
+#else /* !defined(__NetBSD__) */
+		uvmfault_unlockall(ufi, NULL, &obj->uobj);
+#endif /* !defined(__NetBSD__) */
 		while (dev_priv->sc_flags & INTELDRM_QUIET)
 			tsleep(&dev_priv->flags, 0, "intelflt", 0);
 		dev_priv->entries++;
@@ -2743,10 +2747,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 
 #if !defined(__NetBSD__)
 	if (rw_enter(&dev->dev_lock, RW_NOSLEEP | RW_READ) != 0) {
+		uvmfault_unlockall(ufi, NULL, &obj->uobj, NULL);
 #else /* !defined(__NetBSD__) */
 	if (rw_tryenter(&dev->dev_lock, RW_READER) == 0) {
+		uvmfault_unlockall(ufi, NULL, &obj->uobj);
 #endif /* !defined(__NetBSD__) */
-		uvmfault_unlockall(ufi, NULL, &obj->uobj, NULL);
 		DRM_READLOCK();
 		locked = uvmfault_relock(ufi);
 		if (locked)
@@ -2827,7 +2832,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 		    mapprot, PMAP_CANFAIL | mapprot) != 0) {
 			drm_unhold_object(obj);
 			uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap,
+#if !defined(__NetBSD__)
 			    NULL, NULL);
+#else /* !defined(__NetBSD__) */
+			    NULL);
+#endif /* !defined(__NetBSD__) */
 			DRM_READUNLOCK();
 			dev_priv->entries--;
 			if (dev_priv->sc_flags & INTELDRM_QUIET)
@@ -2838,7 +2847,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 	}
 error:
 	drm_unhold_object(obj);
+#if !defined(__NetBSD__)
 	uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap, NULL, NULL);
+#else /* !defined(__NetBSD__) */
+	uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap, NULL);
+#endif /* !defined(__NetBSD__) */
 	DRM_READUNLOCK();
 	dev_priv->entries--;
 	if (dev_priv->sc_flags & INTELDRM_QUIET)

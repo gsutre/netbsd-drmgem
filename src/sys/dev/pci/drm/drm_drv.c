@@ -1285,7 +1285,7 @@ drm_hold_object_locked(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_exit(&obj->uobj.vmobjlock);
+		mutex_exit(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 #ifdef DRMLOCKDEBUG
 		{
@@ -1301,7 +1301,7 @@ drm_hold_object_locked(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 		simple_lock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_enter(&obj->uobj.vmobjlock);
+		mutex_enter(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	}
 #ifdef DRMLOCKDEBUG
@@ -1316,13 +1316,13 @@ drm_hold_object(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&obj->uobj.vmobjlock);
+	mutex_enter(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	drm_hold_object_locked(obj);
 #if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&obj->uobj.vmobjlock);
+	mutex_exit(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 }
 
@@ -1332,14 +1332,14 @@ drm_try_hold_object(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&obj->uobj.vmobjlock);
+	mutex_enter(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	/* if the object is free, grab it */
 	if (obj->do_flags & (DRM_BUSY | DRM_WANTED)) {
 #if !defined(__NetBSD__)
 		simple_unlock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_exit(&obj->uobj.vmobjlock);
+		mutex_exit(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 		return (0);
 	}
@@ -1350,7 +1350,7 @@ drm_try_hold_object(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&obj->uobj.vmobjlock);
+	mutex_exit(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	return (1);
 }
@@ -1373,13 +1373,13 @@ drm_unhold_object(struct drm_obj *obj)
 #if !defined(__NetBSD__)
 	simple_lock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&obj->uobj.vmobjlock);
+	mutex_enter(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	drm_unhold_object_locked(obj);
 #if !defined(__NetBSD__)
 	simple_unlock(&obj->uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&obj->uobj.vmobjlock);
+	mutex_exit(obj->uobj.vmobjlock);
 #endif /* !defined(__NetBSD__) */
 }
 
@@ -1395,13 +1395,13 @@ drm_ref(struct uvm_object *uobj)
 #if !defined(__NetBSD__)
 	simple_lock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&uobj->vmobjlock);
+	mutex_enter(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	drm_ref_locked(uobj);
 #if !defined(__NetBSD__)
 	simple_unlock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&uobj->vmobjlock);
+	mutex_exit(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 }
 
@@ -1411,7 +1411,7 @@ drm_unref(struct uvm_object *uobj)
 #if !defined(__NetBSD__)
 	simple_lock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_enter(&uobj->vmobjlock);
+	mutex_enter(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	drm_unref_locked(uobj);
 }
@@ -1428,7 +1428,7 @@ again:
 #if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_exit(&uobj->vmobjlock);
+		mutex_exit(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 		return;
 	}
@@ -1439,13 +1439,13 @@ again:
 #if !defined(__NetBSD__)
 		simple_unlock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_exit(&uobj->vmobjlock);
+		mutex_exit(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 		tsleep(obj, PVM, "drm_unref", 0); /* XXX msleep */
 #if !defined(__NetBSD__)
 		simple_lock(&uobj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-		mutex_enter(&uobj->vmobjlock);
+		mutex_enter(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 		goto again;
 	}
@@ -1456,7 +1456,7 @@ again:
 #if !defined(__NetBSD__)
 	simple_unlock(&obj->vmobjlock);
 #else /* !defined(__NetBSD__) */
-	mutex_exit(&uobj->vmobjlock);
+	mutex_exit(uobj->vmobjlock);
 #endif /* !defined(__NetBSD__) */
 	/* We own this thing now. it is on no queues, though it may still
 	 * be bound to the aperture (and on the inactive list, in which case
@@ -1473,7 +1473,7 @@ again:
 	if (obj->do_flags & DRM_WANTED) /* should never happen, not on lists */
 		wakeup(obj);
 #if defined(__NetBSD__)
-	UVM_OBJ_DESTROY(&obj->uobj);
+	uvm_obj_destroy(&obj->uobj, true);
 #endif /* defined(__NetBSD__) */
 	pool_put(&dev->objpl, obj);
 }
@@ -1522,7 +1522,11 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	if (UVM_ET_ISCOPYONWRITE(entry)) {
 		UVMHIST_LOG(maphist, "<- failed -- COW entry (etype=0x%lx)", 
 		    entry->etype, 0,0,0);
+#if !defined(__NetBSD__)
 		uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap, uobj, NULL);
+#else /* !defined(__NetBSD__) */
+		uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap, uobj);
+#endif /* !defined(__NetBSD__) */
 		return(VM_PAGER_ERROR);
 	}
 
@@ -1561,14 +1565,14 @@ drm_gem_object_alloc(struct drm_device *dev, size_t size)
 #if !defined(__NetBSD__)
 	uvm_objinit(&obj->uobj, &drm_pgops, 1);
 #else /* !defined(__NetBSD__) */
-	UVM_OBJ_INIT(&obj->uobj, &drm_pgops, 1);
+	uvm_obj_init(&obj->uobj, &drm_pgops, true, 1);
 #endif /* !defined(__NetBSD__) */
 
 	if (dev->driver->gem_init_object != NULL &&
 	    dev->driver->gem_init_object(obj) != 0) {
 		uao_detach(obj->uao);
 #if defined(__NetBSD__)
-		UVM_OBJ_DESTROY(&obj->uobj);
+		uvm_obj_destroy(&obj->uobj, true);
 #endif /* defined(__NetBSD__) */
 		pool_put(&dev->objpl, obj);
 		return (NULL);
