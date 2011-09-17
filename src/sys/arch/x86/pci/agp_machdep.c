@@ -54,7 +54,7 @@
 
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
-#include <machine/bus.h>
+#include <sys/bus.h>
 #include <machine/bus_private.h>
 
 #include <x86/sg_dma.h>
@@ -64,7 +64,7 @@
 /* bus_dma functions */
 
 #if NAGP_I810 > 0
-void	intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+void	intagp_dma_sync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 #endif /* NAGP_I810 > 0 */
 
@@ -146,49 +146,50 @@ int
 agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
     bus_dma_tag_t *dmat)
 {
-	struct x86_bus_dma_tag	*tag;
-	struct sg_cookie	*cookie;
+	bus_dma_tag_t tag;
+	struct bus_dma_overrides *ov;
+	struct sg_cookie *cookie;
+	uint64_t present;
+	int err;
 
 	/*
 	 * XXX add agp map into the main queue that takes up our chunk of
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
-	if ((tag = malloc(sizeof(*tag), M_DMAMAP,
+	if ((ov = malloc(sizeof(*ov), M_DMAMAP,
 	    M_ZERO | M_WAITOK | M_CANFAIL)) == NULL)
 		return (ENOMEM);
 
 	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc,
 	    start, end - start,
 	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb)) == NULL) {
-		free(tag, M_DMAMAP);
+		free(ov, M_DMAMAP);
 		return (ENOMEM);
 	}
 
-	tag->_cookie = cookie;
-	tag->_dmamap_create = sg_dmamap_create;
-	tag->_dmamap_destroy = sg_dmamap_destroy;
-	tag->_dmamap_load = sg_dmamap_load;
-	tag->_dmamap_load_mbuf = sg_dmamap_load_mbuf;
-	tag->_dmamap_load_uio = sg_dmamap_load_uio;
-	tag->_dmamap_load_raw = sg_dmamap_load_raw;
-	tag->_dmamap_unload = sg_dmamap_unload;
-	tag->_dmamem_alloc = sg_dmamem_alloc;
-	tag->_dmamem_free = _bus_dmamem_free;
-	tag->_dmamem_map = _bus_dmamem_map;
-	tag->_dmamem_unmap = _bus_dmamem_unmap;
-	tag->_dmamem_mmap = _bus_dmamem_mmap;
-	tag->_dmatag_subregion = _bus_dmatag_subregion;
-	tag->_dmatag_destroy = _bus_dmatag_destroy;
+	present = BUS_DMAMAP_OVERRIDE_CREATE | BUS_DMAMAP_OVERRIDE_DESTROY |
+	    BUS_DMAMAP_OVERRIDE_LOAD | BUS_DMAMAP_OVERRIDE_LOAD_MBUF |
+	    BUS_DMAMAP_OVERRIDE_LOAD_UIO | BUS_DMAMAP_OVERRIDE_LOAD_RAW |
+	    BUS_DMAMAP_OVERRIDE_UNLOAD | BUS_DMAMEM_OVERRIDE_ALLOC;
+
+	ov->ov_dmamap_create = sg_dmamap_create;
+	ov->ov_dmamap_destroy = sg_dmamap_destroy;
+	ov->ov_dmamap_load = sg_dmamap_load;
+	ov->ov_dmamap_load_mbuf = sg_dmamap_load_mbuf;
+	ov->ov_dmamap_load_uio = sg_dmamap_load_uio;
+	ov->ov_dmamap_load_raw = sg_dmamap_load_raw;
+	ov->ov_dmamap_unload = sg_dmamap_unload;
+	ov->ov_dmamem_alloc = sg_dmamem_alloc;
 
 	/* Driver may need special sync handling */
 	if (sc->as_methods->dma_sync != NULL) {
-		tag->_dmamap_sync = sc->as_methods->dma_sync;
-	} else {
-#ifdef __i386__
-		tag->_dmamap_sync = NULL;
-#else
-		tag->_dmamap_sync = _bus_dmamap_sync;
-#endif
+		present |= BUS_DMAMAP_OVERRIDE_SYNC;
+		ov->ov_dmamap_sync = sc->as_methods->dma_sync;
+	}
+
+	if ((err = bus_dma_tag_create(NULL, present, ov, cookie, &tag)) != 0) {
+		free(ov, M_DMAMAP);
+		return (err);
 	}
 
 	*dmat = tag;
@@ -198,7 +199,8 @@ agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
 void
 agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 {
-	struct sg_cookie	*cookie = dmat->_cookie;
+	/* XXX We probably shouldn't directly access bdt_ctx. */
+	struct sg_cookie	*cookie = dmat->bdt_ctx;
 	bus_addr_t		 offset;
 
 
@@ -361,7 +363,7 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
  * however, all cpus that have a new enough intel GMCH should be suitable.
  */
 void
-intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
+intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
 #if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)

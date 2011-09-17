@@ -72,7 +72,7 @@
 #include <sys/proc.h>
 #include <sys/tree.h>
 
-#include <machine/bus.h>
+#include <sys/bus.h>
 
 /* Scatter gather bus_dma functions. */
 struct sg_cookie {
@@ -113,23 +113,23 @@ struct sg_cookie	*sg_dmatag_init(char *, void *, bus_addr_t, bus_size_t,
 			    void (*)(void *, bus_addr_t, paddr_t, int),
 			    void (*)(void *, bus_addr_t), void (*)(void *));
 void	sg_dmatag_destroy(struct sg_cookie *);
-int	sg_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
+int	sg_dmamap_create(void *, bus_dma_tag_t, bus_size_t, int, bus_size_t,
 	    bus_size_t, int, bus_dmamap_t *);
-void	sg_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
+void	sg_dmamap_destroy(void *, bus_dma_tag_t, bus_dmamap_t);
 void	sg_dmamap_set_alignment(bus_dma_tag_t, bus_dmamap_t, u_long);
-int	sg_dmamap_load(bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
+int	sg_dmamap_load(void *, bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
 	    struct proc *, int);
-int	sg_dmamap_load_mbuf(bus_dma_tag_t, bus_dmamap_t,
+int	sg_dmamap_load_mbuf(void *, bus_dma_tag_t, bus_dmamap_t,
 	    struct mbuf *, int);
-int	sg_dmamap_load_uio(bus_dma_tag_t, bus_dmamap_t, struct uio *, int);
-int	sg_dmamap_load_raw(bus_dma_tag_t, bus_dmamap_t, bus_dma_segment_t *,
+int	sg_dmamap_load_uio(void *, bus_dma_tag_t, bus_dmamap_t, struct uio *, int);
+int	sg_dmamap_load_raw(void *, bus_dma_tag_t, bus_dmamap_t, bus_dma_segment_t *,
 	    int, bus_size_t, int);
-void	sg_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
+void	sg_dmamap_unload(void *, bus_dma_tag_t, bus_dmamap_t);
 int	sg_dmamap_load_buffer(bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
 	    struct proc *, int, int *, int);
 int	sg_dmamap_load_physarray(bus_dma_tag_t, bus_dmamap_t, paddr_t *,
 	    int, int, int *, int);
-int	sg_dmamem_alloc(bus_dma_tag_t, bus_size_t, bus_size_t, bus_size_t,
+int	sg_dmamem_alloc(void *, bus_dma_tag_t, bus_size_t, bus_size_t, bus_size_t,
 	    bus_dma_segment_t *, int, int *, int);
 
 #endif /* _X86_SG_DMA_H_ */

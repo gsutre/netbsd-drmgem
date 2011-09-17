@@ -66,6 +66,23 @@
 #define	_X86_BUS_PRIVATE_H_
 
 /*
+ * XXX We re-export the following functions, since sg_dma.c needs them.
+ * XXX Rescued from bus_private.h revision 1.13.
+ */
+
+int	_bus_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
+	    bus_size_t, int, bus_dmamap_t *);
+void	_bus_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
+void	_bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
+
+#ifndef _BUS_DMAMEM_ALLOC_RANGE
+int	_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
+	    bus_size_t alignment, bus_size_t boundary,
+	    bus_dma_segment_t *segs, int nsegs, int *rsegs, int flags,
+	    bus_addr_t low, bus_addr_t high);
+#endif
+
+/*
  * Cookie used for bounce buffers. A pointer to one of these it stashed in
  * the DMA map.
  */
@@ -155,8 +172,6 @@ _bus_virt_to_bus(struct pmap *pm, vaddr_t va)
 #endif
 
 struct x86_bus_dma_tag {
-	void	*_cookie;		/* cookie used in the guts */
-
 	bus_dma_tag_t				bdt_super;
 	/* bdt_present: bitmap indicating overrides present (1) in *this* tag,
 	 * bdt_exists: bitmap indicating overrides present (1) in *this* tag

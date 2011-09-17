@@ -95,7 +95,6 @@ __KERNEL_RCSID(0, "$NetBSD: eisa_machdep.c,v 1.37 2011/09/01 15:10:31 christos E
  * XXX really doesn't use bounce buffers? --dyoung
  */
 struct x86_bus_dma_tag eisa_bus_dma_tag = {
-	NULL,			/* cookie */
 	._tag_needs_free	= 0,
 	._bounce_thresh		= 0,
 	._bounce_alloc_lo	= 0,

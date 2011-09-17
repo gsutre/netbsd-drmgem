@@ -131,9 +131,9 @@ BUSDMA_EVCNT_DECL(bounces);
 #define STAT_DECR(x)
 #endif
 
-static int	_bus_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
+int		_bus_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
 	    bus_size_t, int, bus_dmamap_t *);
-static void	_bus_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
+void		_bus_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
 static int	_bus_dmamap_load(bus_dma_tag_t, bus_dmamap_t, void *,
 	    bus_size_t, struct proc *, int);
 static int	_bus_dmamap_load_mbuf(bus_dma_tag_t, bus_dmamap_t,
@@ -142,7 +142,7 @@ static int	_bus_dmamap_load_uio(bus_dma_tag_t, bus_dmamap_t,
 	    struct uio *, int);
 static int	_bus_dmamap_load_raw(bus_dma_tag_t, bus_dmamap_t,
 	    bus_dma_segment_t *, int, bus_size_t, int);
-static void	_bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
+void		_bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
 static void	_bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 
@@ -171,7 +171,7 @@ static inline int _bus_dmamap_load_busaddr(bus_dma_tag_t, bus_dmamap_t,
     bus_addr_t, int);
 
 #ifndef _BUS_DMAMEM_ALLOC_RANGE
-static int	_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
+int		_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
 	    bus_size_t alignment, bus_size_t boundary,
 	    bus_dma_segment_t *segs, int nsegs, int *rsegs, int flags,
 	    bus_addr_t low, bus_addr_t high);
@@ -182,7 +182,7 @@ static int	_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
  * Allocate physical memory from the given physical address range.
  * Called by DMA-safe memory allocation methods.
  */
-static int
+int
 _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
     bus_size_t alignment, bus_size_t boundary, bus_dma_segment_t *segs,
     int nsegs, int *rsegs, int flags, bus_addr_t low, bus_addr_t high)
@@ -265,7 +265,7 @@ _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
 /*
  * Create a DMA map.
  */
-static int
+int
 _bus_dmamap_create(bus_dma_tag_t t, bus_size_t size, int nsegments,
     bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp)
 {
@@ -351,7 +351,7 @@ _bus_dmamap_create(bus_dma_tag_t t, bus_size_t size, int nsegments,
 /*
  * Destroy a DMA map.
  */
-static void
+void
 _bus_dmamap_destroy(bus_dma_tag_t t, bus_dmamap_t map)
 {
 	struct x86_bus_dma_cookie *cookie = map->_dm_cookie;
@@ -733,7 +733,7 @@ _bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 /*
  * Unload a DMA map.
  */
-static void
+void
 _bus_dmamap_unload(bus_dma_tag_t t, bus_dmamap_t map)
 {
 	struct x86_bus_dma_cookie *cookie = map->_dm_cookie;
