@@ -1,4 +1,4 @@
-/* $OpenBSD: drm_drv.c,v 1.93 2011/06/02 18:22:00 weerd Exp $ */
+/* $OpenBSD: drm_drv.c,v 1.96 2011/07/03 18:34:14 oga Exp $ */
 /*-
  * Copyright 2007-2009 Owain G. Ainsworth <oga@openbsd.org>
  * Copyright © 2008 Intel Corporation
@@ -257,9 +257,6 @@ int
 drm_activate(struct device *self, int act)
 {
 	switch (act) {
-	case DVACT_ACTIVATE:
-		break;
-
 	case DVACT_DEACTIVATE:
 		/* FIXME */
 		break;
@@ -1301,8 +1298,6 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	struct drm_obj *obj = (struct drm_obj *)uobj;
 	struct drm_device *dev = obj->dev;
 	int ret;
-	UVMHIST_FUNC("udv_fault"); UVMHIST_CALLED(maphist);
-	UVMHIST_LOG(maphist,"  flags=%ld", flags,0,0,0);
 
 	/*
 	 * we do not allow device mappings to be mapped copy-on-write
@@ -1310,8 +1305,6 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	 */
 	
 	if (UVM_ET_ISCOPYONWRITE(entry)) {
-		UVMHIST_LOG(maphist, "<- failed -- COW entry (etype=0x%lx)", 
-		    entry->etype, 0,0,0);
 		uvmfault_unlockall(ufi, ufi->entry->aref.ar_amap, uobj, NULL);
 		return(VM_PAGER_ERROR);
 	}
@@ -1566,7 +1559,8 @@ drm_gem_load_uao(bus_dma_tag_t dmat, bus_dmamap_t map, struct uvm_object *uao,
 	 * This is really quite ugly, but nothing else would need
 	 * bus_dmamap_load_uao() yet.
 	 */
-	segs = malloc(npages * sizeof(*segs), M_DRM, M_WAITOK | M_ZERO);
+	segs = malloc(npages * sizeof(*segs), M_DRM,
+	    M_WAITOK | M_CANFAIL | M_ZERO);
 	if (segs == NULL)
 		return (ENOMEM);
 
