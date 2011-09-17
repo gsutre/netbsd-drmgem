@@ -1,4 +1,4 @@
-/*	$NetBSD: eisa_machdep.c,v 1.35 2011/07/01 18:14:15 dyoung Exp $	*/
+/*	$NetBSD: eisa_machdep.c,v 1.37 2011/09/01 15:10:31 christos Exp $	*/
 
 /*-
  * Copyright (c) 1997, 1998 The NetBSD Foundation, Inc.
@@ -65,7 +65,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: eisa_machdep.c,v 1.35 2011/07/01 18:14:15 dyoung Exp $");
+__KERNEL_RCSID(0, "$NetBSD: eisa_machdep.c,v 1.37 2011/09/01 15:10:31 christos Exp $");
 
 #include "ioapic.h"
 
@@ -91,29 +91,16 @@ __KERNEL_RCSID(0, "$NetBSD: eisa_machdep.c,v 1.35 2011/07/01 18:14:15 dyoung Exp
 /*
  * EISA doesn't have any special needs; just use the generic versions
  * of these funcions.
+ *
+ * XXX really doesn't use bounce buffers? --dyoung
  */
 struct x86_bus_dma_tag eisa_bus_dma_tag = {
 	NULL,			/* cookie */
-	0,			/* _tag_needs_free */
-	0,			/* _bounce_thresh */
-	0,			/* _bounce_alloc_lo */
-	0,			/* _bounce_alloc_hi */
-	NULL,			/* _may_bounce */
-	_bus_dmamap_create,
-	_bus_dmamap_destroy,
-	_bus_dmamap_load,
-	_bus_dmamap_load_mbuf,
-	_bus_dmamap_load_uio,
-	_bus_dmamap_load_raw,
-	_bus_dmamap_unload,
-	NULL,			/* _dmamap_sync */
-	_bus_dmamem_alloc,
-	_bus_dmamem_free,
-	_bus_dmamem_map,
-	_bus_dmamem_unmap,
-	_bus_dmamem_mmap,
-	_bus_dmatag_subregion,
-	_bus_dmatag_destroy,
+	._tag_needs_free	= 0,
+	._bounce_thresh		= 0,
+	._bounce_alloc_lo	= 0,
+	._bounce_alloc_hi	= 0,
+	._may_bounce		= NULL,
 };
 
 void
