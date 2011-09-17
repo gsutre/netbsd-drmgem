@@ -1,4 +1,4 @@
-/*	$NetBSD: sysv_shm.c,v 1.120 2011/06/12 03:35:56 rmind Exp $	*/
+/*	$NetBSD: sysv_shm.c,v 1.122 2011/08/27 09:11:52 christos Exp $	*/
 
 /*-
  * Copyright (c) 1999, 2007 The NetBSD Foundation, Inc.
@@ -61,7 +61,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: sysv_shm.c,v 1.120 2011/06/12 03:35:56 rmind Exp $");
+__KERNEL_RCSID(0, "$NetBSD: sysv_shm.c,v 1.122 2011/08/27 09:11:52 christos Exp $");
 
 #define SYSVSHM
 
@@ -268,7 +268,7 @@ shm_memlock(struct lwp *l, struct shmid_ds *shmseg, int shmid, int cmd)
 		    (shmseg->shm_perm.mode & SHMSEG_WIRED) == 0) {
 			/* Wire the object and map, then tag it */
 			error = uvm_obj_wirepages(shmseg->_shm_internal,
-			    0, size);
+			    0, size, NULL);
 			if (error)
 				return EIO;
 			error = uvm_map_pageable(&p->p_vmspace->vm_map,
@@ -734,7 +734,7 @@ sys_shmget(struct lwp *l, const struct sys_shmget_args *uap, register_t *retval)
 	shmseg->_shm_internal = uao_create(size, 0);
 	if (lockmem) {
 		/* Wire the pages and tag it */
-		error = uvm_obj_wirepages(shmseg->_shm_internal, 0, size);
+		error = uvm_obj_wirepages(shmseg->_shm_internal, 0, size, NULL);
 		if (error) {
 			uao_detach(shmseg->_shm_internal);
 			mutex_enter(&shm_lock);
@@ -877,8 +877,8 @@ shmrealloc(int newshmni)
 	/* Allocate new memory area */
 	sz = ALIGN(newshmni * sizeof(struct shmid_ds)) +
 	    ALIGN(newshmni * sizeof(kcondvar_t));
-	v = uvm_km_alloc(kernel_map, round_page(sz), 0,
-	    UVM_KMF_WIRED|UVM_KMF_ZERO);
+	sz = round_page(sz);
+	v = uvm_km_alloc(kernel_map, sz, 0, UVM_KMF_WIRED|UVM_KMF_ZERO);
 	if (v == 0)
 		return ENOMEM;
 
@@ -936,6 +936,7 @@ shmrealloc(int newshmni)
 
 	sz = ALIGN(oldshmni * sizeof(struct shmid_ds)) +
 	    ALIGN(oldshmni * sizeof(kcondvar_t));
+	sz = round_page(sz);
 	uvm_km_free(kernel_map, (vaddr_t)oldshmsegs, sz, UVM_KMF_WIRED);
 
 	return 0;
@@ -954,8 +955,8 @@ shminit(void)
 	/* Allocate the wired memory for our structures */
 	sz = ALIGN(shminfo.shmmni * sizeof(struct shmid_ds)) +
 	    ALIGN(shminfo.shmmni * sizeof(kcondvar_t));
-	v = uvm_km_alloc(kernel_map, round_page(sz), 0,
-	    UVM_KMF_WIRED|UVM_KMF_ZERO);
+	sz = round_page(sz);
+	v = uvm_km_alloc(kernel_map, sz, 0, UVM_KMF_WIRED|UVM_KMF_ZERO);
 	if (v == 0)
 		panic("sysv_shm: cannot allocate memory");
 	shmsegs = (void *)v;

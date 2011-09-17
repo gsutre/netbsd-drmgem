@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile,v 1.73 2011/06/15 09:45:59 mrg Exp $
+#	$NetBSD: Makefile,v 1.92 2011/08/31 13:25:50 mbalmer Exp $
 
 .include <bsd.own.mk>
 
@@ -23,6 +23,9 @@ SUBDIR+=	ffs
 SUBDIR+=	filecore
 SUBDIR+=	flash
 SUBDIR+=	fss
+SUBDIR+=	gpio
+SUBDIR+=	gpioow
+SUBDIR+=	gpiosim
 SUBDIR+=	hfs
 SUBDIR+=	kernfs
 SUBDIR+=	ksem
@@ -40,6 +43,7 @@ SUBDIR+=	nfsserver
 SUBDIR+=	nilfs
 SUBDIR+=	ntfs
 SUBDIR+=	null
+SUBDIR+=	onewire
 SUBDIR+=	overlay
 SUBDIR+=	pciverbose
 SUBDIR+=	pf
@@ -54,6 +58,7 @@ SUBDIR+=	secmodel_bsd44
 SUBDIR+=	secmodel_overlay
 SUBDIR+=	securelevel
 SUBDIR+=	smbfs
+SUBDIR+=	spdmem
 SUBDIR+=	sysvbfs
 SUBDIR+=	suser
 SUBDIR+=	swsensor
@@ -62,6 +67,7 @@ SUBDIR+=	udf
 SUBDIR+=	umap
 SUBDIR+=	union
 SUBDIR+=	usbverbose
+SUBDIR+=	v7fs
 SUBDIR+=	vnd
 SUBDIR+=	tprof
 .if (defined(NOTYET))
@@ -99,6 +105,9 @@ SUBDIR+=	tprof_pmi
 SUBDIR+=	tprof_amdpmi
 .endif
 
+#
+# ACPI modules
+#
 .if ${MACHINE_ARCH} == "i386" || \
     ${MACHINE_ARCH} == "ia64" || \
     ${MACHINE_ARCH} == "x86_64"
@@ -117,14 +126,17 @@ SUBDIR+=	acpilid
 SUBDIR+=	acpipmtr
 SUBDIR+=	acpitz
 SUBDIR+=	acpivga
+SUBDIR+=	acpiwdrt
 SUBDIR+=	acpiwmi
 SUBDIR+=	aibs
 SUBDIR+=	asus
 SUBDIR+=	fujbp
 SUBDIR+=	fujhk
+SUBDIR+=	hpacel
 SUBDIR+=	hpqlb
 SUBDIR+=	thinkpad
 SUBDIR+=	wmidell
+SUBDIR+=	wmieeepc
 SUBDIR+=	wmihp
 SUBDIR+=	wmimsi
 .endif
@@ -140,6 +152,7 @@ SUBDIR+=	pad
 .endif
 
 .if ${MACHINE_ARCH} == "i386"
+SUBDIR+=	ati_pcigart
 SUBDIR+=	azalia
 SUBDIR+=	compat_freebsd
 SUBDIR+=	compat_ibcs2
@@ -147,20 +160,28 @@ SUBDIR+=	compat_linux
 SUBDIR+=	compat_svr4
 SUBDIR+=	drm
 SUBDIR+=	i915drm
-SUBDIR+=	radeondrm
-SUBDIR+=	viadrm
+SUBDIR+=	mach64drm
+SUBDIR+=	mgadrm
+SUBDIR+=	nsclpcsio
 SUBDIR+=	pad
 SUBDIR+=	padlock
+SUBDIR+=	r128drm
+SUBDIR+=	radeondrm
+SUBDIR+=	savagedrm
+SUBDIR+=	sisdrm
+SUBDIR+=	tdfxdrm
 SUBDIR+=	viac7temp
-SUBDIR+=	wmieeepc
+SUBDIR+=	viadrm
 .endif
 
+#
+# ISA modules
+#
 .if ${MACHINE_ARCH} == "i386" || \
     ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=	aps
-SUBDIR+=	au8522
-SUBDIR+=	auvitek
-SUBDIR+=	xc5k
+SUBDIR+=	finsio
+SUBDIR+=	itesio
 .endif
 
 .if ${MACHINE_CPU} == "m68k"
@@ -168,6 +189,12 @@ SUBDIR+=	compat_aoutm68k
 #SUBDIR+=	compat_linux
 #SUBDIR+=	compat_sunos
 #SUBDIR+=	compat_svr4
+.endif
+
+.if ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "x86_64" || \
+    ${MACHINE_ARCH} == "sparc64"
+SUBDIR+=	pwdog
 .endif
 
 .include <bsd.own.mk>
@@ -192,6 +219,29 @@ SUBDIR+=	zfs
 
 .if (${MKCOMPATMODULES} != "no")
 SUBDIR+=	arch
+.endif
+
+#
+# DTV modules
+#
+SUBDIR+=	dtv
+SUBDIR+=	dtv_math
+.if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "x86_64"
+# tuners/demods
+SUBDIR+=	au8522
+SUBDIR+=	cx24227
+SUBDIR+=	lg3303
+SUBDIR+=	mt2131
+SUBDIR+=	nxt2k
+SUBDIR+=	tvpll
+SUBDIR+=	xc3028
+SUBDIR+=	xc5k
+SUBDIR+=	zl10353
+# hardware drivers
+SUBDIR+=	auvitek
+SUBDIR+=	coram
+SUBDIR+=	cxdtv
+SUBDIR+=	emdtv
 .endif
 
 .include <bsd.subdir.mk>

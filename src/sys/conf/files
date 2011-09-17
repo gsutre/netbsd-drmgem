@@ -1,4 +1,4 @@
-#	$NetBSD: files,v 1.1018 2011/06/27 11:52:24 uch Exp $
+#	$NetBSD: files,v 1.1026 2011/08/27 17:05:57 bouyer Exp $
 #	@(#)files.newconf	7.5 (Berkeley) 5/10/93
 
 version 	20100430
@@ -77,6 +77,8 @@ defflag	opt_pool.h		POOL_DIAGNOSTIC
 defparam opt_poollog.h		POOL_LOGSIZE
 
 defflag	opt_revcache.h		NAMECACHE_ENTER_REVERSE
+
+defflag	opt_exec.h		DEBUG_EXEC
 
 defflag	opt_execfmt.h		EXEC_AOUT EXEC_COFF EXEC_ECOFF EXEC_ELF32
 				EXEC_ELF64 EXEC_SCRIPT
@@ -326,6 +328,10 @@ define	audiobell
 #
 device	video
 attach	video at videobus
+
+# DTV subsystem
+#
+include "dev/dtv/files.dtv"
 
 # National Semiconductor LM7[89]
 #
@@ -940,6 +946,7 @@ define	ata_piobm
 device	wdc: ata, wdc_common
 
 defflag	opt_ata.h	ATADEBUG
+defflag	opt_wdc.h	WDC_NO_IDS
 
 device	atabus: atapi,ata_hl
 attach	atabus at ata
@@ -1280,6 +1287,7 @@ defpseudodev fss:	disk
 defpseudo pty:		tty
 defpseudo rnd
 defpseudo ksyms
+defparam opt_ksyms.h	SYMTAB_SPACE
 defpseudo nullcons
 defpseudo lockstat
 defpseudo bio:		sysmon_envsys
@@ -1529,6 +1537,7 @@ file	kern/subr_extent.c
 file	kern/subr_hash.c
 file	kern/subr_humanize.c
 file	kern/subr_iostat.c
+file	kern/subr_kcpuset.c
 file	kern/subr_kmem.c
 file	kern/subr_kobj.c
 file	kern/subr_kobj_vfs.c
@@ -1542,6 +1551,7 @@ file	kern/subr_percpu.c
 file	kern/subr_pool.c
 file	kern/subr_prf.c
 file	kern/subr_prof.c
+file	kern/subr_pserialize.c
 file	kern/subr_specificdata.c
 file	kern/subr_tftproot.c		tftproot
 file	kern/subr_time.c
@@ -1722,3 +1732,7 @@ include "dev/flash/files.flash"
 #
 include "dev/nand/files.nand"
 
+#
+# NOR subsytem
+#
+include "dev/nor/files.nor"
