@@ -57,7 +57,7 @@
 #include <sys/mutex.h>
 #include <sys/proc.h>
 
-#include <machine/bus.h>
+#include <sys/bus.h>
 #include <machine/bus_private.h>
 #include <machine/cpu.h>
 
@@ -122,7 +122,7 @@ sg_dmatag_destroy(struct sg_cookie *cookie)
 }
 
 int
-sg_dmamap_create(bus_dma_tag_t t, bus_size_t size, int nsegments,
+sg_dmamap_create(void *ctx, bus_dma_tag_t t, bus_size_t size, int nsegments,
     bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamap)
 {
 	struct sg_page_map	*spm;
@@ -155,7 +155,7 @@ sg_dmamap_set_alignment(bus_dma_tag_t tag, bus_dmamap_t dmam,
 }
 
 void
-sg_dmamap_destroy(bus_dma_tag_t t, bus_dmamap_t map)
+sg_dmamap_destroy(void *ctx, bus_dma_tag_t t, bus_dmamap_t map)
 {
 	/*
 	 * The specification (man page) requires a loaded
@@ -180,14 +180,14 @@ sg_dmamap_destroy(bus_dma_tag_t t, bus_dmamap_t map)
  * up to the page size and then divide by the page size)...
  */
 int
-sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
+sg_dmamap_load(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, void *buf,
     bus_size_t buflen, struct proc *p, int flags)
 {
 	int err = 0;
 	bus_size_t sgsize;
 	u_long dvmaddr, sgstart, sgend;
 	bus_size_t align, boundary;
-	struct sg_cookie *is = t->_cookie;
+	struct sg_cookie *is = ctx;
 	struct sg_page_map *spm = map->_dm_cookie;
 	pmap_t pmap;
 
@@ -321,7 +321,7 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 		}
 	}
 	if (err) {
-		sg_dmamap_unload(t, map);
+		sg_dmamap_unload(ctx, t, map);
 	} else {
 		spm->spm_origbuf = buf;
 		spm->spm_buftype = X86_DMA_BUFTYPE_LINEAR;
@@ -336,7 +336,7 @@ sg_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
  * pass it to load_raw.
  */
 int
-sg_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *mb,
+sg_dmamap_load_mbuf(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *mb,
     int flags)
 {
 	/*
@@ -396,7 +396,7 @@ sg_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *mb,
 		}
 	}
 
-	err = sg_dmamap_load_raw(t, map, segs, i, (bus_size_t)len, flags);
+	err = sg_dmamap_load_raw(ctx, t, map, segs, i, (bus_size_t)len, flags);
 
 	if (err == 0) {
 		spm->spm_origbuf = mb;
@@ -409,7 +409,7 @@ sg_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *mb,
  * Load a uio into the map. Turn it into segments and call load_raw()
  */
 int
-sg_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
+sg_dmamap_load_uio(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
     int flags)
 {
 	/*
@@ -471,7 +471,7 @@ sg_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
 
 	}
 
-	err = sg_dmamap_load_raw(t, map, segs, i, (bus_size_t)len, flags);
+	err = sg_dmamap_load_raw(ctx, t, map, segs, i, (bus_size_t)len, flags);
 
 	if (err == 0) {
 		spm->spm_origbuf = uio;
@@ -485,7 +485,7 @@ sg_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
  * or for part of the 2nd pass through the mapping.
  */
 int
-sg_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
+sg_dmamap_load_raw(void *ctx, bus_dma_tag_t t, bus_dmamap_t map,
     bus_dma_segment_t *segs, int nsegs, bus_size_t size, int flags)
 {
 	int i;
@@ -494,7 +494,7 @@ sg_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 	bus_size_t sgsize;
 	bus_size_t boundary, align;
 	u_long dvmaddr, sgstart, sgend;
-	struct sg_cookie *is = t->_cookie;
+	struct sg_cookie *is = ctx;
 	struct sg_page_map *spm = map->_dm_cookie;
 
 	if (map->dm_nsegs) {
@@ -582,7 +582,7 @@ sg_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 	    size, boundary);
 
 	if (err) {
-		sg_dmamap_unload(t, map);
+		sg_dmamap_unload(ctx, t, map);
 	} else {
 		/* This will be overwritten if mbuf or uio called us */
 		spm->spm_origbuf = segs;
@@ -765,9 +765,9 @@ sg_dmamap_load_seg(bus_dma_tag_t t, struct sg_cookie *is,
  * Unload a dvmamap.
  */
 void
-sg_dmamap_unload(bus_dma_tag_t t, bus_dmamap_t map)
+sg_dmamap_unload(void *ctx, bus_dma_tag_t t, bus_dmamap_t map)
 {
-	struct sg_cookie	*is = t->_cookie;
+	struct sg_cookie	*is = ctx;
 	struct sg_page_map	*spm = map->_dm_cookie;
 	bus_addr_t		 dvmaddr = spm->spm_start;
 	bus_size_t		 sgsize = spm->spm_size;
@@ -801,7 +801,7 @@ sg_dmamap_unload(bus_dma_tag_t t, bus_dmamap_t map)
  * This assumes that we can map all physical memory.
  */
 int
-sg_dmamem_alloc(bus_dma_tag_t t, bus_size_t size,
+sg_dmamem_alloc(void *ctx, bus_dma_tag_t t, bus_size_t size,
     bus_size_t alignment, bus_size_t boundary, bus_dma_segment_t *segs,
     int nsegs, int *rsegs, int flags)
 {

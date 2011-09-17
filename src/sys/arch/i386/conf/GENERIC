@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.1034 2011/06/21 05:01:17 jruoho Exp $
+# $NetBSD: GENERIC,v 1.1053 2011/09/04 12:31:30 mbalmer Exp $
 #
 # GENERIC machine description file
 #
@@ -22,15 +22,9 @@ include 	"arch/i386/conf/std.i386"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident 		"GENERIC-$Revision: 1.1034 $"
+#ident 		"GENERIC-$Revision: 1.1053 $"
 
 maxusers	64		# estimated number of users
-
-# For GENERIC, we build the exec formats as module(7)s by default.
-no options 	EXEC_AOUT	# exec a.out binaries
-no options 	EXEC_ELF32	# exec ELF binaries
-no options 	EXEC_SCRIPT	# exec #! scripts
-no options 	COREDUMP
 
 # CPU-related options.
 options 	VM86		# virtual 8086 emulation
@@ -90,9 +84,7 @@ options 	KTRACE		# system call tracing via ktrace(1)
 options 	SYSVMSG		# System V-like message queues
 options 	SYSVSEM		# System V-like semaphores
 options 	SYSVSHM		# System V-like memory sharing
-#options 	P1003_1B_SEMAPHORE	# p1003.1b semaphore support
-no options 	AIO		# POSIX asynchronous I/O, built as a module(7)
-no options 	MQUEUE		# POSIX messsage queues, built as a module(7)
+options 	P1003_1B_SEMAPHORE	# p1003.1b semaphore support
 
 options 	MODULAR		# new style module(7) framework
 
@@ -113,7 +105,8 @@ options 	SYSCTL_INCLUDE_DESCR	# Include sysctl descriptions in kernel
 options 	BUFQ_PRIOCSCAN
 
 # Diagnostic/debugging support options
-#options 	DIAGNOSTIC	# expensive kernel consistency checks
+options 	DIAGNOSTIC	# expensive kernel consistency checks
+				# XXX to be commented out on release branch
 #options 	DEBUG		# expensive debugging checks/support
 #options 	LOCKDEBUG	# expensive locking checks/support
 #options 	KMEMSTATS	# kernel memory statistics (vmstat -m)
@@ -128,7 +121,7 @@ options 	DDB_HISTORY_SIZE=512	# enable history editing in DDB
 #options 	SYSCALL_TIMES	# per syscall times
 #options 	SYSCALL_TIMES_HASCOUNTER	# use 'broken' rdtsc (soekris)
 
-# Compatibility options, built as module(7)s by default
+# Compatibility options
 options 	COMPAT_NOMID	# NetBSD 0.8, 386BSD, and BSDI
 options 	COMPAT_09	# NetBSD 0.9
 options 	COMPAT_10	# NetBSD 1.0
@@ -146,11 +139,11 @@ options 	COMPAT_43	# 4.3BSD, 386BSD, and BSDI
 #options 	COMPAT_386BSD_MBRPART # recognize old partition ID
 #options 	TCP_COMPAT_42	# 4.2BSD TCP/IP bug compat. Not recommended.
 
-#options 	COMPAT_OSSAUDIO	# OSS (Voxware) audio driver compatibility
-#options 	COMPAT_SVR4	# binary compatibility with SVR4
-#options 	COMPAT_IBCS2	# binary compatibility with SCO and ISC
-#options 	COMPAT_LINUX	# binary compatibility with Linux
-#options 	COMPAT_FREEBSD	# binary compatibility with FreeBSD
+options 	COMPAT_OSSAUDIO	# OSS (Voxware) audio driver compatibility
+options 	COMPAT_SVR4	# binary compatibility with SVR4
+options 	COMPAT_IBCS2	# binary compatibility with SCO and ISC
+options 	COMPAT_LINUX	# binary compatibility with Linux
+options 	COMPAT_FREEBSD	# binary compatibility with FreeBSD
 #options 	COMPAT_NDIS	# NDIS network driver
 options 	COMPAT_BSDPTY	# /dev/[pt]ty?? ptys.
 
@@ -163,39 +156,40 @@ options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
 
 file-system	FFS		# UFS
 file-system	NFS		# Network File System client
-# File systems, built as module(7)s by default
-#file-system	EXT2FS		# second extended file system (linux)
-#file-system	LFS		# log-structured file system
-#file-system	MFS		# memory file system
-#file-system	NTFS		# Windows/NT file system (experimental)
-#file-system	CD9660		# ISO 9660 + Rock Ridge file system
-#file-system	MSDOSFS		# MS-DOS file system
-#file-system	FDESC		# /dev/fd
-#file-system	KERNFS		# /kern
-#file-system	NULLFS		# loopback file system
-#file-system	OVERLAY		# overlay file system
-#file-system	PROCFS		# /proc
-#file-system	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
-#file-system	UMAPFS		# NULLFS + uid and gid remapping
-#file-system	UNION		# union file system
-#file-system	CODA		# Coda File System; also needs vcoda (below)
-#file-system	SMBFS		# experimental - CIFS; also needs nsmb (below)
-#file-system	PTYFS		# /dev/ptm support
-#file-system	TMPFS		# Efficient memory file-system
+file-system	EXT2FS		# second extended file system (linux)
+file-system	LFS		# log-structured file system
+file-system	MFS		# memory file system
+file-system	NTFS		# Windows/NT file system (experimental)
+file-system	CD9660		# ISO 9660 + Rock Ridge file system
+file-system	MSDOSFS		# MS-DOS file system
+file-system	FDESC		# /dev/fd
+file-system	KERNFS		# /kern
+file-system	NULLFS		# loopback file system
+file-system	OVERLAY		# overlay file system
+file-system	PROCFS		# /proc
+file-system	PUFFS		# Userspace file systems (e.g. ntfs-3g & sshfs)
+file-system	UMAPFS		# NULLFS + uid and gid remapping
+file-system	UNION		# union file system
+file-system	CODA		# Coda File System; also needs vcoda (below)
+file-system	SMBFS		# experimental - CIFS; also needs nsmb (below)
+file-system	PTYFS		# /dev/ptm support
+file-system	TMPFS		# Efficient memory file-system
 #file-system	UDF		# experimental - OSTA UDF CD/DVD file-system
 #file-system	HFS		# experimental - Apple HFS+ (read-only)
 #file-system	NILFS		# experimental - NTT's NiLFS(2)
+#file-system	V7FS		# 7th Edition(V7) File System
 
 # File system options
-#options 	QUOTA		# legacy UFS quotas
-#options 	QUOTA2		# new, in-filesystem UFS quotas
+options 	QUOTA		# legacy UFS quotas
+options 	QUOTA2		# new, in-filesystem UFS quotas
 #options 	FFS_EI		# FFS Endian Independent support
 options 	WAPBL		# File system journaling support - Experimental
 #options 	UFS_DIRHASH	# UFS Large Directory Hashing - Experimental
-#options 	NFSSERVER	# Network File System server
+options 	NFSSERVER	# Network File System server
 #options 	FFS_NO_SNAPSHOT	# No FFS snapshot support
 #options 	EXT2FS_SYSTEM_FLAGS # makes ext2fs file flags (append and
 				# immutable) behave as system flags.
+#options 	V7FS_EI		# V7FS Endian Independent support
 
 # Networking options
 #options 	GATEWAY		# packet forwarding
@@ -365,6 +359,7 @@ attimer*	at acpi?		# AT Timer
 #fdc*		at acpi?		# Floppy disk controller
 fujbp*		at acpi?		# Fujitsu Brightness & Pointer
 fujhk*		at acpi?		# Fujitsu Hotkeys
+#hpacel*	at acpi?		# HP 3D DriveGuard accelerometer
 #hpqlb*		at acpi?		# HP Quick Launch Buttons
 hpet*		at acpihpetbus?		# High Precision Event Timer (table)
 hpet*		at acpinodebus?		# High Precision Event Timer (device)
@@ -446,10 +441,9 @@ pci*	at elansc? bus ?
 
 # System Controllers
 elansc* at mainbus? bus ?		# AMD Elan SC520 System Controller
-gpio*	at elansc?
 
 # Temperatures
-amdtemp* at pci? dev ? function ?	# AMD CPU Temperature sensors
+amdtemp* at pchb?			# AMD CPU Temperature sensors
 
 # PCI bridges
 #amdpcib* at pci? dev ? function ?	# AMD 8111 PCI-ISA w/ HPET
@@ -459,9 +453,9 @@ ichlpcib* at pci? dev ? function ?	# Intel ICH PCI-LPC w/ timecounter,
 fwhrng* at ichlpcib?		# Intel 82802 FWH Random Number Generator
 #hpet*	at ichlpcib?
 gcscpcib* at pci? dev ? function ?	# AMD CS5535/CS5536 PCI-ISA w/
-gpio*	at gcscpcib?			# timecounter, watchdog and GPIO
+					# timecounter, watchdog and GPIO
 #piixpcib* at pci? dev ? function ?	# Intel PIIX4 PCI-ISA w/ SpeedStep
-#gscpcib* at pci? dev ? function ?	# NS Geode PCI-ISA w/ GPIO support
+gscpcib* at pci? dev ? function ?	# NS Geode SC1100 PCI-ISA w/ GPIO
 viapcib* at pci? dev ? function ?	# VIA VT8235 PCI-ISA w/ SMBus support
 iic*	at viapcib?
 rdcpcib* at pci? dev ? function ?	# RDC Vortex86/PMX-1000 PCI-ISA w/
@@ -473,6 +467,8 @@ pcmb*	at pci? dev ? function ?	# PCI-MCA bridges
 ppb*	at pci? dev ? function ?	# PCI-PCI bridges
 # XXX 'puc's aren't really bridges, but there's no better place for them here
 puc*	at pci? dev ? function ?	# PCI "universal" comm. cards
+
+pwdog*	at pci ? dev ? function ?	# QUANCOM PWDOG1
 
 agp*	at pchb?
 
@@ -688,7 +684,6 @@ iic*	at piixpm?			# SMBus on PIIX4
 
 # PC87366 hardware monitor
 #nsclpcsio*	at isa?
-#gpio*		at nsclpcsio?
 
 # Abit uGuru Hardware system monitor
 #ug0	at isa? port 0xe0
@@ -713,8 +708,7 @@ ld*	at iop? tid ?			# block devices
 dpti*	at iop? tid 0			# DPT/Adaptec control interface
 
 # GPIO devices
-#gpio*	at gscpcib?
-#gpio*	at gpiosim?
+#gpio*	at gpiobus?
 
 # 1-Wire support
 #gpioow* 	at gpio? offset ? mask ?	# 1-wire bitbanging via gpio
@@ -723,6 +717,10 @@ dpti*	at iop? tid 0			# DPT/Adaptec control interface
 
 # 1-Wire devices
 #owtemp* 	at onewire?			# Temperature sensors
+
+# i2c support
+#gpioiic*	at gpio?
+#iic*		at gpioiic?
 
 # Keylock support
 #gpiolock*	at gpio?
@@ -1204,6 +1202,10 @@ irframe* at stuirda?
 ustir*	at uhub? port ?
 irframe* at ustir?
 
+# Windows Media Center IR transceiver
+irmce*	at uhub? port ?
+cir*	at irmce?
+
 # USB Ethernet adapters
 aue*	at uhub? port ?		# ADMtek AN986 Pegasus based adapters
 axe*	at uhub? port ?		# ASIX AX88172 based adapters
@@ -1212,6 +1214,7 @@ cue*	at uhub? port ?		# CATC USB-EL1201A based adapters
 kue*	at uhub? port ?		# Kawasaki LSI KL5KUSB101B based adapters
 udav*	at uhub? port ?		# Davicom DM9601 based adapters
 url*	at uhub? port ?		# Realtek RTL8150L based adapters
+urndis*	at uhub? port ?		# Microsoft RNDIS specification
 
 # USB 802.11 adapters
 atu*	at uhub? port ?		# Atmel AT76C50XX based adapters
@@ -1425,8 +1428,7 @@ midi*	at pcppi?		# MIDI interface to the PC speaker
 
 pseye*	at uhub?		# Sony PLAYSTATION(R) Eye webcam
 uvideo* at uhub?		# USB Video Class capture devices
-auvitek* at uhub?		# Auvitek AU0828 video capture devices
-video*	at videobus?
+video* at videobus?
 
 
 # TV cards
@@ -1435,6 +1437,9 @@ video*	at videobus?
 bktr*	at pci? dev ? function ?
 radio*	at bktr?
 
+# Conexant CX2388[0-3]-based DTV cards
+#cxdtv*	at pci? dev ? function ?
+#iic*	at cxdtv?
 
 # Bluetooth Controller and Device support
 
@@ -1447,6 +1452,7 @@ sbt* at sdmmc?
 
 # Bluetooth USB Controllers
 ubt* at uhub? port ?
+aubtfwl* at uhub? port ?
 
 # Bluetooth Device Hub
 bthub* at bcsp?
@@ -1546,6 +1552,7 @@ options 	RAID_AUTOCONFIG		# auto-configuration of RAID components
 #options 	RF_INCLUDE_PARITY_DECLUSTERING=1
 #options 	RF_INCLUDE_PARITY_DECLUSTERING_DS=1
 pseudo-device	fss			# file system snapshot device
+pseudo-device	putter			# for puffs and pud
 
 pseudo-device	md			# memory disk device (ramdisk)
 options 	MEMORY_DISK_HOOKS	# enable root ramdisk
@@ -1586,9 +1593,9 @@ pseudo-device	agr			# IEEE 802.3ad link aggregation
 #pseudo-device	srt			# source-address-based routing
 
 #
-# accept filters, built as module(7)s by default
-#pseudo-device	accf_data		# "dataready" accept filter
-#pseudo-device	accf_http		# "httpready" accept filter
+# accept filters
+pseudo-device	accf_data		# "dataready" accept filter
+pseudo-device	accf_http		# "httpready" accept filter
 
 # miscellaneous pseudo-devices
 pseudo-device	pty			# pseudo-terminals
@@ -1604,10 +1611,10 @@ pseudo-device	btuart			# Bluetooth HCI UART (H4)
 #pseudo-device	gpiosim		1	# GPIO simulator
 
 # a pseudo device needed for Coda	# also needs CODA (above)
-#pseudo-device	vcoda		4	# coda minicache <-> venus comm.
+pseudo-device	vcoda		4	# coda minicache <-> venus comm.
 
 # a pseudo device needed for SMBFS
-#pseudo-device	nsmb			# experimental - SMB requester
+pseudo-device	nsmb			# experimental - SMB requester
 
 # wscons pseudo-devices
 pseudo-device	wsmux			# mouse & keyboard multiplexor

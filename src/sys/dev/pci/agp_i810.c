@@ -111,7 +111,7 @@ static int agp_i810_init(struct agp_softc *);
 static int agp_i810_write_gtt_entry(struct agp_i810_softc *, off_t,
 				    bus_addr_t);
 
-extern void intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+extern void intagp_dma_sync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 			    bus_size_t, int);
 
 static struct agp_methods agp_i810_methods = {
