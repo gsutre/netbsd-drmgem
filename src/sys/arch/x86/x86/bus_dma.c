@@ -1630,7 +1630,8 @@ bus_dma_tag_create(bus_dma_tag_t obdt, const uint64_t present,
 	}
 
 	bdt->bdt_ov = ov;
-	bdt->bdt_exists = obdt->bdt_exists | present;
+	/* XXX Should obdt == NULL be detected and rejected before? */
+	bdt->bdt_exists = (obdt == NULL ? 0 : obdt->bdt_exists) | present;
 	bdt->bdt_present = present;
 	bdt->bdt_ctx = ctx;
 
