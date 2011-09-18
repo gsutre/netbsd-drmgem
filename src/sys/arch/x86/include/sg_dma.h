@@ -71,14 +71,16 @@
 #include <sys/mutex.h>
 #include <sys/proc.h>
 #include <sys/tree.h>
-
-#include <machine/bus.h>
+#include <sys/bus.h>
 
 /* Scatter gather bus_dma functions. */
 struct sg_cookie {
 	kmutex_t	 sg_mtx;
 	struct extent	*sg_ex;
 	void		*sg_hdl;
+
+	bus_size_t	sg_align;
+	bus_size_t	sg_boundary;
 
 	void		(*bind_page)(void *, bus_addr_t, paddr_t, int);
 	void		(*unbind_page)(void *, bus_addr_t);
@@ -109,27 +111,12 @@ struct sg_page_map {
 	struct sg_page_entry	 spm_map[1];
 };
 
-struct sg_cookie	*sg_dmatag_init(char *, void *, bus_addr_t, bus_size_t,
-			    void (*)(void *, bus_addr_t, paddr_t, int),
-			    void (*)(void *, bus_addr_t), void (*)(void *));
+int sg_dmatag_create(char *, void *, bus_addr_t, bus_size_t,
+    void (*)(void *, bus_addr_t, paddr_t, int),
+    void (*)(void *, bus_addr_t), void (*)(void *),
+    void (*)(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t, bus_size_t, int),
+    bus_dma_tag_t *);
 void	sg_dmatag_destroy(struct sg_cookie *);
-int	sg_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
-	    bus_size_t, int, bus_dmamap_t *);
-void	sg_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
-void	sg_dmamap_set_alignment(bus_dma_tag_t, bus_dmamap_t, u_long);
-int	sg_dmamap_load(bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
-	    struct proc *, int);
-int	sg_dmamap_load_mbuf(bus_dma_tag_t, bus_dmamap_t,
-	    struct mbuf *, int);
-int	sg_dmamap_load_uio(bus_dma_tag_t, bus_dmamap_t, struct uio *, int);
-int	sg_dmamap_load_raw(bus_dma_tag_t, bus_dmamap_t, bus_dma_segment_t *,
-	    int, bus_size_t, int);
-void	sg_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
-int	sg_dmamap_load_buffer(bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
-	    struct proc *, int, int *, int);
-int	sg_dmamap_load_physarray(bus_dma_tag_t, bus_dmamap_t, paddr_t *,
-	    int, int, int *, int);
-int	sg_dmamem_alloc(bus_dma_tag_t, bus_size_t, bus_size_t, bus_size_t,
-	    bus_dma_segment_t *, int, int *, int);
+void	sg_dmamap_set_alignment(void *, bus_dma_tag_t, bus_dmamap_t, u_long);
 
 #endif /* _X86_SG_DMA_H_ */
