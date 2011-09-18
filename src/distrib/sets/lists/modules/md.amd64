@@ -53,8 +53,8 @@
 ./@MODULEDIR@/cx24227/cx24227.kmod		base-kernel-modules	kmod
 ./@MODULEDIR@/cxdtv				base-kernel-modules	kmod
 ./@MODULEDIR@/cxdtv/cxdtv.kmod			base-kernel-modules	kmod
-./@MODULEDIR@/drm				base-kernel-modules	kmod
-./@MODULEDIR@/drm/drm.kmod			base-kernel-modules	kmod
+#./@MODULEDIR@/drm				base-kernel-modules	kmod
+#./@MODULEDIR@/drm/drm.kmod			base-kernel-modules	kmod
 ./@MODULEDIR@/emdtv				base-kernel-modules	kmod
 ./@MODULEDIR@/emdtv/emdtv.kmod			base-kernel-modules	kmod
 ./@MODULEDIR@/est				base-kernel-modules	kmod
@@ -75,8 +75,8 @@
 ./@MODULEDIR@/hpet/hpet.kmod			base-kernel-modules	kmod
 ./@MODULEDIR@/hpqlb				base-kernel-modules	kmod
 ./@MODULEDIR@/hpqlb/hpqlb.kmod			base-kernel-modules	kmod
-./@MODULEDIR@/i915drm				base-kernel-modules	kmod
-./@MODULEDIR@/i915drm/i915drm.kmod		base-kernel-modules	kmod
+#./@MODULEDIR@/i915drm				base-kernel-modules	kmod
+#./@MODULEDIR@/i915drm/i915drm.kmod		base-kernel-modules	kmod
 ./@MODULEDIR@/itesio				base-kernel-modules	kmod
 ./@MODULEDIR@/itesio/itesio.kmod		base-kernel-modules	kmod
 ./@MODULEDIR@/lg3303				base-kernel-modules	kmod
