@@ -72,6 +72,10 @@
 #define BUS_DMA_24BIT	0
 #endif
 
+#ifndef _BUS_DMAMEM_ALLOC_RANGE
+#define _BUS_DMAMEM_ALLOC_RANGE _bus_dmamem_alloc_range
+#endif /* _BUS_DMAMEM_ALLOC_RANGE */
+
 int		sg_dmamap_load_seg(bus_dma_tag_t, struct sg_cookie *,
 		    bus_dmamap_t, bus_dma_segment_t *, int, int, bus_size_t,
 		    bus_size_t);
@@ -805,7 +809,7 @@ sg_dmamem_alloc(void *ctx, bus_dma_tag_t t, bus_size_t size,
     bus_size_t alignment, bus_size_t boundary, bus_dma_segment_t *segs,
     int nsegs, int *rsegs, int flags)
 {
-	return (_bus_dmamem_alloc_range(t, size, alignment, boundary,
+	return (_BUS_DMAMEM_ALLOC_RANGE(t, size, alignment, boundary,
 	    segs, nsegs, rsegs, flags | BUS_DMA_SG, 0, -1));
 }
 
