@@ -224,7 +224,7 @@ sg_dmamap_load(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 	sg_iomap_clear_pages(spm);
 	{ /* Scope */
 		bus_addr_t a, aend;
-		bus_addr_t addr = (bus_addr_t)buf;
+		bus_addr_t addr = (bus_addr_t)(vaddr_t)buf;
 		int seg_len = buflen;
 
 		aend = round_page(addr + seg_len);
@@ -282,7 +282,7 @@ sg_dmamap_load(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 
 	{ /* Scope */
 		bus_addr_t a, aend;
-		bus_addr_t addr = (bus_addr_t)buf;
+		bus_addr_t addr = (bus_addr_t)(vaddr_t)buf;
 		int seg_len = buflen;
 
 		aend = round_page(addr + seg_len);
