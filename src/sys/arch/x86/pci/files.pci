@@ -5,6 +5,7 @@ attach 	aapic at pci
 file 	arch/x86/pci/aapic.c		aapic
 
 file	arch/x86/pci/agp_machdep.c	agp
+file	arch/x86/x86/sg_dma.c		agp
 
 # PCI-Host bridge chipsets
 define amdtempbus {}
