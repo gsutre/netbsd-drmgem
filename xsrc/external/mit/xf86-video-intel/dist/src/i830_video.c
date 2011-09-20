@@ -1183,9 +1183,6 @@ I830SetPortAttributeOverlay(ScrnInfoPtr scrn,
 	if (attribute == xvColorKey)
 		REGION_EMPTY(scrn->screen, &adaptor_priv->clip);
 
-	if (attribute == xvColorKey)
-		REGION_EMPTY(scrn->screen, &adaptor_priv->clip);
-
 	return Success;
 }
 

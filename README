@@ -63,3 +63,11 @@ $ su root -c "make install"
 $ cd /usr/src/external/mit/xorg/server/drivers/xf86-video-intel
 $ make
 $ su root -c "make install"
+
+
+4. Full (cross-)build
+
+As an alternative to steps 2 and 3, you may perform a full (cross-)build of the
+patched NetBSD system, using the build.sh script.  For instance:
+
+$ ./build.sh -U -m i386 -x release
