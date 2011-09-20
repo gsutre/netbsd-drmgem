@@ -70,4 +70,4 @@ $ su root -c "make install"
 As an alternative to steps 2 and 3, you may perform a full (cross-)build of the
 patched NetBSD system, using the build.sh script.  For instance:
 
-$ ./build.sh -U -m i386 release
+$ ./build.sh -U -m i386 -x release
