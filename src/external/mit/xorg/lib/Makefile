@@ -7,7 +7,8 @@ SUBDIR=	expat libfontenc freetype libFS libICE libOSMesa \
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=libdrm_intel
 .endif
-SUBDIR+=libdrm_radeon pixman xkeyboard-config libxcb \
+#SUBDIR+=libdrm_radeon
+SUBDIR+=pixman xkeyboard-config libxcb \
 	.WAIT \
 	dri fontconfig libSM libX11 \
 	.WAIT \
@@ -23,9 +24,9 @@ SUBDIR+=libdrm_radeon pixman xkeyboard-config libxcb \
 	.WAIT
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=libI810XvMC
-SUBDIR+=libIntelXvMC
-SUBDIR+=libchromeXvMC
-SUBDIR+=libchromeXvMCPro
+#SUBDIR+=libIntelXvMC
+#SUBDIR+=libchromeXvMC
+#SUBDIR+=libchromeXvMCPro
 .endif
 SUBDIR+=libGLU libGLw libXaw6 libXaw libXcursor \
 	libXrandr \

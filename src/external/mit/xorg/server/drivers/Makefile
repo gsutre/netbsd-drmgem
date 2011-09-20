@@ -42,11 +42,13 @@ SUBDIR+= \
 
 SUBDIR+= \
 	xf86-video-intel \
-	xf86-video-mach64 \
-	xf86-video-mga \
+	xf86-video-mach64
+#	xf86-video-mga
+SUBDIR+= \
 	xf86-video-neomagic \
-	xf86-video-nv \
-	xf86-video-openchrome \
+	xf86-video-nv
+#	xf86-video-openchrome
+SUBDIR+= \
 	xf86-video-r128 \
 	xf86-video-radeon \
 	xf86-video-radeonhd \
