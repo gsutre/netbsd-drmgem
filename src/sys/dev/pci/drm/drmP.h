@@ -74,6 +74,7 @@
 #include <sys/condvar.h>
 #include <sys/kauth.h>
 #include <sys/select.h>
+#include <sys/bus.h>
 #endif /* defined(__NetBSD__) */
 
 #include <uvm/uvm.h>
@@ -82,12 +83,6 @@
 #include <dev/pci/agpvar.h>
 #include <dev/pci/vga_pcivar.h>
 #include <machine/param.h>
-
-#if !defined(__NetBSD__)
-#include <machine/bus.h>
-#else /* !defined(__NetBSD__) */
-#include <sys/bus.h>
-#endif /* !defined(__NetBSD__) */
 
 #if defined(__NetBSD__)
 MALLOC_DECLARE(M_DRM);

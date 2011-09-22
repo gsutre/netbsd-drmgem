@@ -72,17 +72,17 @@ static int agp_intel_init(struct agp_softc *);
 static bool agp_intel_resume(device_t, const pmf_qual_t *);
 
 static struct agp_methods agp_intel_methods = {
-	agp_intel_get_aperture,
-	agp_intel_set_aperture,
-	agp_intel_bind_page,
-	agp_intel_unbind_page,
-	agp_intel_flush_tlb,
-	NULL,
-	agp_generic_enable,
-	agp_generic_alloc_memory,
-	agp_generic_free_memory,
-	agp_generic_bind_memory,
-	agp_generic_unbind_memory,
+	.get_aperture	= agp_intel_get_aperture,
+	.set_aperture	= agp_intel_set_aperture,
+	.bind_page	= agp_intel_bind_page,
+	.unbind_page	= agp_intel_unbind_page,
+	.flush_tlb	= agp_intel_flush_tlb,
+	.dma_sync	= NULL,
+	.enable		= agp_generic_enable,
+	.alloc_memory	= agp_generic_alloc_memory,
+	.free_memory	= agp_generic_free_memory,
+	.bind_memory	= agp_generic_bind_memory,
+	.unbind_memory	= agp_generic_unbind_memory,
 };
 
 static int

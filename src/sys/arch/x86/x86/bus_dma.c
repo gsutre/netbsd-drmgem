@@ -131,9 +131,9 @@ BUSDMA_EVCNT_DECL(bounces);
 #define STAT_DECR(x)
 #endif
 
-int		_bus_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
+static int	_bus_dmamap_create(bus_dma_tag_t, bus_size_t, int, bus_size_t,
 	    bus_size_t, int, bus_dmamap_t *);
-void		_bus_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
+static void	_bus_dmamap_destroy(bus_dma_tag_t, bus_dmamap_t);
 static int	_bus_dmamap_load(bus_dma_tag_t, bus_dmamap_t, void *,
 	    bus_size_t, struct proc *, int);
 static int	_bus_dmamap_load_mbuf(bus_dma_tag_t, bus_dmamap_t,
@@ -142,7 +142,7 @@ static int	_bus_dmamap_load_uio(bus_dma_tag_t, bus_dmamap_t,
 	    struct uio *, int);
 static int	_bus_dmamap_load_raw(bus_dma_tag_t, bus_dmamap_t,
 	    bus_dma_segment_t *, int, bus_size_t, int);
-void		_bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
+static void	_bus_dmamap_unload(bus_dma_tag_t, bus_dmamap_t);
 static void	_bus_dmamap_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 
@@ -171,7 +171,7 @@ static inline int _bus_dmamap_load_busaddr(bus_dma_tag_t, bus_dmamap_t,
     bus_addr_t, int);
 
 #ifndef _BUS_DMAMEM_ALLOC_RANGE
-int		_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
+static int	_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
 	    bus_size_t alignment, bus_size_t boundary,
 	    bus_dma_segment_t *segs, int nsegs, int *rsegs, int flags,
 	    bus_addr_t low, bus_addr_t high);
@@ -182,7 +182,7 @@ int		_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
  * Allocate physical memory from the given physical address range.
  * Called by DMA-safe memory allocation methods.
  */
-int
+static int
 _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
     bus_size_t alignment, bus_size_t boundary, bus_dma_segment_t *segs,
     int nsegs, int *rsegs, int flags, bus_addr_t low, bus_addr_t high)
@@ -197,13 +197,6 @@ _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
 	size = round_page(size);
 
 	KASSERT(boundary >= PAGE_SIZE || boundary == 0);
-
-	segs[0]._ds_boundary = boundary;
-	segs[0]._ds_align = alignment;
-	if (flags & BUS_DMA_SG) {
-		boundary = 0;
-		alignment = 0;
-	}
 
 	/*
 	 * Allocate pages from the VM system.
@@ -265,7 +258,7 @@ _bus_dmamem_alloc_range(bus_dma_tag_t t, bus_size_t size,
 /*
  * Create a DMA map.
  */
-int
+static int
 _bus_dmamap_create(bus_dma_tag_t t, bus_size_t size, int nsegments,
     bus_size_t maxsegsz, bus_size_t boundary, int flags, bus_dmamap_t *dmamp)
 {
@@ -351,7 +344,7 @@ _bus_dmamap_create(bus_dma_tag_t t, bus_size_t size, int nsegments,
 /*
  * Destroy a DMA map.
  */
-void
+static void
 _bus_dmamap_destroy(bus_dma_tag_t t, bus_dmamap_t map)
 {
 	struct x86_bus_dma_cookie *cookie = map->_dm_cookie;
@@ -733,7 +726,7 @@ _bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
 /*
  * Unload a DMA map.
  */
-void
+static void
 _bus_dmamap_unload(bus_dma_tag_t t, bus_dmamap_t map)
 {
 	struct x86_bus_dma_cookie *cookie = map->_dm_cookie;
@@ -1630,8 +1623,7 @@ bus_dma_tag_create(bus_dma_tag_t obdt, const uint64_t present,
 	}
 
 	bdt->bdt_ov = ov;
-	/* XXX Should obdt == NULL be detected and rejected before? */
-	bdt->bdt_exists = (obdt == NULL ? 0 : obdt->bdt_exists) | present;
+	bdt->bdt_exists = obdt->bdt_exists | present;
 	bdt->bdt_present = present;
 	bdt->bdt_ctx = ctx;
 

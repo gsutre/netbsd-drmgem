@@ -1,4 +1,4 @@
-/* $OpenBSD: i915_drv.c,v 1.115 2011/07/06 01:50:08 deraadt Exp $ */
+/* $OpenBSD: i915_drv.c,v 1.111 2011/06/06 17:10:23 ariane Exp $ */
 /*
  * Copyright (c) 2008-2009 Owain G. Ainsworth <oga@openbsd.org>
  *
@@ -494,7 +494,8 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	if (IS_I945G(dev_priv) || IS_I945GM(dev_priv))
 		pa->pa_flags &= ~PCI_FLAGS_MSI_ENABLED;
 
-	if (pci_intr_map(pa, &dev_priv->ih) != 0) {
+	if (pci_intr_map_msi(pa, &dev_priv->ih) != 0 &&
+	    pci_intr_map(pa, &dev_priv->ih) != 0) {
 #else /* !defined(__NetBSD__) */
 	if (pci_intr_map(pa, &dev_priv->ih) != 0) {
 #endif /* !defined(__NetBSD__) */
@@ -1363,7 +1364,7 @@ i915_gem_init_ioctl(struct drm_device *dev, void *data,
 	if (args->gtt_end == dev->agp->info.ai_aperture_size)
 		args->gtt_end -= 4096;
 
-	if (agp_bus_dma_init(dev->agp->agpdev,
+	if (agp_bus_dma_init(dev->agp->agpdev, dev_priv->dmat,
 	    dev->agp->base + args->gtt_start, dev->agp->base + args->gtt_end,
 	    &dev_priv->agpdmat) != 0) {
 		DRM_UNLOCK();
@@ -2824,6 +2825,9 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 
 		paddr = dev->agp->base + obj_priv->gtt_offset + offset;
 
+		UVMHIST_LOG(maphist,
+		    "  MAPPING: device: pm=%p, va=0x%lx, pa=0x%lx, at=%ld",
+		    ufi->orig_map->pmap, vaddr, (u_long)paddr, mapprot);
 		if (pmap_enter(ufi->orig_map->pmap, vaddr, paddr,
 		    mapprot, PMAP_CANFAIL | mapprot) != 0) {
 			drm_unhold_object(obj);

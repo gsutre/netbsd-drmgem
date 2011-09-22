@@ -381,18 +381,14 @@ pcppi0		at isa?
 sysbeep0	at pcppi?
 
 # DRI driver
-#i915drm*	at drm?		# Intel i915, i945 DRM driver
-#mach64drm*	at drm?		# mach64 (3D Rage Pro, Rage) DRM driver
-#mgadrm* 	at drm?		# Matrox G[24]00, G[45]50 DRM driver
-#r128drm*	at drm?		# ATI Rage 128 DRM driver
-#radeondrm*	at drm?		# ATI Radeon DRM driver
-#savagedrm*	at drm?		# S3 Savage DRM driver
-#sisdrm* 	at drm?		# SiS DRM driver
-#tdfxdrm*	at drm?		# 3dfx (voodoo) DRM driver
-
-# New DRM/GEM driver ported from OpenBSD (Intel only)
-inteldrm*	at drm?
-drmdev*		at inteldrm?
+i915drm*	at drm?		# Intel i915, i945 DRM driver
+mach64drm*	at drm?		# mach64 (3D Rage Pro, Rage) DRM driver
+mgadrm* 	at drm?		# Matrox G[24]00, G[45]50 DRM driver
+r128drm*	at drm?		# ATI Rage 128 DRM driver
+radeondrm*	at drm?		# ATI Radeon DRM driver
+savagedrm*	at drm?		# S3 Savage DRM driver
+sisdrm* 	at drm?		# SiS DRM driver
+tdfxdrm*	at drm?		# 3dfx (voodoo) DRM driver
 
 # Cryptographic Devices
 

@@ -25,6 +25,3 @@ options 	MEMORY_DISK_RBFLAGS=RB_SINGLE	# boot in single-user mode
 #no sisdrm*	at drm?		# SiS DRM driver
 #no tdfxdrm*	at drm?		# 3dfx (voodoo) DRM driver
 #no viadrm*	at drm?		# VIA DRM driver
-
-no inteldrm*	at drm?
-no drmdev*	at inteldrm?

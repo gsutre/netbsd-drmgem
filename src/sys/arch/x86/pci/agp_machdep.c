@@ -43,6 +43,7 @@
 
 #include <sys/types.h>
 #include <sys/device.h>
+#include <sys/bus.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -52,19 +53,19 @@
 #include <dev/pci/agpvar.h>
 #include <dev/pci/agpreg.h>
 
+#include <x86/sg_dma.h>
+
+#include <machine/bus_private.h>
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
-#include <sys/bus.h>
-#include <machine/bus_private.h>
 
-#include <x86/sg_dma.h>
 
 #include "agp_i810.h"
 
 /* bus_dma functions */
 
 #if NAGP_I810 > 0
-void	intagp_dma_sync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+void	intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 #endif /* NAGP_I810 > 0 */
 
@@ -143,63 +144,21 @@ agp_sg_flush_tlb(void *dev)
 }
 
 int
-agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
-    bus_dma_tag_t *dmat)
+agp_bus_dma_init(struct agp_softc *sc, bus_dma_tag_t odmat,
+    bus_addr_t start, bus_addr_t end, bus_dma_tag_t *dmat)
 {
-	bus_dma_tag_t tag;
-	struct bus_dma_overrides *ov;
-	struct sg_cookie *cookie;
-	uint64_t present;
-	int err;
-
 	/*
 	 * XXX add agp map into the main queue that takes up our chunk of
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
-	if ((ov = malloc(sizeof(*ov), M_DMAMAP,
-	    M_ZERO | M_WAITOK | M_CANFAIL)) == NULL)
-		return (ENOMEM);
-
-	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc,
-	    start, end - start,
-	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb)) == NULL) {
-		free(ov, M_DMAMAP);
-		return (ENOMEM);
-	}
-
-	present = BUS_DMAMAP_OVERRIDE_CREATE | BUS_DMAMAP_OVERRIDE_DESTROY |
-	    BUS_DMAMAP_OVERRIDE_LOAD | BUS_DMAMAP_OVERRIDE_LOAD_MBUF |
-	    BUS_DMAMAP_OVERRIDE_LOAD_UIO | BUS_DMAMAP_OVERRIDE_LOAD_RAW |
-	    BUS_DMAMAP_OVERRIDE_UNLOAD | BUS_DMAMEM_OVERRIDE_ALLOC;
-
-	ov->ov_dmamap_create = sg_dmamap_create;
-	ov->ov_dmamap_destroy = sg_dmamap_destroy;
-	ov->ov_dmamap_load = sg_dmamap_load;
-	ov->ov_dmamap_load_mbuf = sg_dmamap_load_mbuf;
-	ov->ov_dmamap_load_uio = sg_dmamap_load_uio;
-	ov->ov_dmamap_load_raw = sg_dmamap_load_raw;
-	ov->ov_dmamap_unload = sg_dmamap_unload;
-	ov->ov_dmamem_alloc = sg_dmamem_alloc;
-
-	/* Driver may need special sync handling */
-	if (sc->as_methods->dma_sync != NULL) {
-		present |= BUS_DMAMAP_OVERRIDE_SYNC;
-		ov->ov_dmamap_sync = sc->as_methods->dma_sync;
-	}
-
-	if ((err = bus_dma_tag_create(NULL, present, ov, cookie, &tag)) != 0) {
-		free(ov, M_DMAMAP);
-		return (err);
-	}
-
-	*dmat = tag;
-	return (0);
+	return sg_dmatag_create("agpgtt", sc, odmat,
+	    start, end - start, agp_sg_bind_page, agp_sg_unbind_page,
+	    agp_sg_flush_tlb, sc->as_methods->dma_sync, dmat);
 }
 
 void
 agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 {
-	/* XXX We probably shouldn't directly access bdt_ctx. */
 	struct sg_cookie	*cookie = dmat->bdt_ctx;
 	bus_addr_t		 offset;
 
@@ -224,7 +183,7 @@ void
 agp_bus_dma_set_alignment(bus_dma_tag_t tag, bus_dmamap_t dmam,
     u_long alignment)
 {
-	sg_dmamap_set_alignment(tag, dmam, alignment);
+	sg_dmamap_set_alignment(tag->bdt_ctx, tag, dmam, alignment);
 }
 
 struct agp_map {
@@ -247,13 +206,11 @@ int
 agp_init_map(bus_space_tag_t tag, bus_addr_t address, bus_size_t size,
     int flags, struct agp_map **mapp)
 {
-#ifdef __i386__
-	struct extent	*ex;
-#endif
 	struct agp_map	*map;
 	int		 error;
-
 #ifdef __i386__
+	struct extent	*ex;
+
 	if (tag->bst_type == X86_BUS_SPACE_IO) {
 		ex = ioport_ex;
 		if (flags & BUS_SPACE_MAP_LINEAR)
@@ -363,7 +320,7 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
  * however, all cpus that have a new enough intel GMCH should be suitable.
  */
 void
-intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
+intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
 #if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
@@ -379,8 +336,8 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 	    (ops & (BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE)) != 0)
 		panic("agp_dmamap_sync: mix PRE and POST");
 	if (offset >= dmam->dm_mapsize)
-		panic("_intagp_dma_sync: bad offset %"PRIxPADDR" (size = %zu)",
-		    offset, dmam->dm_mapsize);
+		panic("_intagp_dma_sync: bad offset %" PRIuPTR " (size = %zu)",
+		    (uintptr_t)offset, dmam->dm_mapsize);
 	if (size == 0 || (offset + size) > dmam->dm_mapsize)
 		panic("intagp_dma_sync: bad length");
 #endif /* DIAGNOSTIC */
