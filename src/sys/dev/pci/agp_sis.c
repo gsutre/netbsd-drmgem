@@ -59,17 +59,17 @@ static int agp_sis_unbind_page(struct agp_softc *, off_t);
 static void agp_sis_flush_tlb(struct agp_softc *);
 
 static struct agp_methods agp_sis_methods = {
-	agp_sis_get_aperture,
-	agp_sis_set_aperture,
-	agp_sis_bind_page,
-	agp_sis_unbind_page,
-	agp_sis_flush_tlb,
-	NULL,
-	agp_generic_enable,
-	agp_generic_alloc_memory,
-	agp_generic_free_memory,
-	agp_generic_bind_memory,
-	agp_generic_unbind_memory,
+	.get_aperture	= agp_sis_get_aperture,
+	.set_aperture	= agp_sis_set_aperture,
+	.bind_page	= agp_sis_bind_page,
+	.unbind_page	= agp_sis_unbind_page,
+	.flush_tlb	= agp_sis_flush_tlb,
+	.dma_sync	= NULL,
+	.enable		= agp_generic_enable,
+	.alloc_memory	= agp_generic_alloc_memory,
+	.free_memory	= agp_generic_free_memory,
+	.bind_memory	= agp_generic_bind_memory,
+	.unbind_memory	= agp_generic_unbind_memory,
 };
 
 int
