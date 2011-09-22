@@ -146,7 +146,7 @@ SUBDIR+=	azalia
 SUBDIR+=	compat_linux
 SUBDIR+=	compat_linux32
 SUBDIR+=	compat_netbsd32
-SUBDIR+=	drm
+#SUBDIR+=	drm
 #SUBDIR+=	i915drm
 SUBDIR+=	pad
 .endif
@@ -158,7 +158,7 @@ SUBDIR+=	compat_freebsd
 SUBDIR+=	compat_ibcs2
 SUBDIR+=	compat_linux
 SUBDIR+=	compat_svr4
-SUBDIR+=	drm
+#SUBDIR+=	drm
 #SUBDIR+=	i915drm
 #SUBDIR+=	mach64drm
 #SUBDIR+=	mgadrm
