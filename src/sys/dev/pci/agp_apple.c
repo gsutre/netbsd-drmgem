@@ -51,17 +51,17 @@ static int agp_apple_unbind_page(struct agp_softc *, off_t);
 static void agp_apple_flush_tlb(struct agp_softc *);
 
 static struct agp_methods agp_apple_methods = {
-	agp_apple_get_aperture,
-	agp_apple_set_aperture,
-	agp_apple_bind_page,
-	agp_apple_unbind_page,
-	agp_apple_flush_tlb,
-	NULL,
-	agp_generic_enable,
-	agp_generic_alloc_memory,
-	agp_generic_free_memory,
-	agp_generic_bind_memory,
-	agp_generic_unbind_memory,
+	.get_aperture	= agp_apple_get_aperture,
+	.set_aperture	= agp_apple_set_aperture,
+	.bind_page	= agp_apple_bind_page,
+	.unbind_page	= agp_apple_unbind_page,
+	.flush_tlb	= agp_apple_flush_tlb,
+	.dma_sync	= NULL,
+	.enable		= agp_generic_enable,
+	.alloc_memory	= agp_generic_alloc_memory,
+	.free_memory	= agp_generic_free_memory,
+	.bind_memory	= agp_generic_bind_memory,
+	.unbind_memory	= agp_generic_unbind_memory,
 };
 
 struct agp_apple_softc {
