@@ -43,6 +43,7 @@
 
 #include <sys/types.h>
 #include <sys/device.h>
+#include <sys/bus.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -52,12 +53,11 @@
 #include <dev/pci/agpvar.h>
 #include <dev/pci/agpreg.h>
 
+#include <x86/sg_dma.h>
+
+#include <machine/bus_private.h>
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
-#include <sys/bus.h>
-#include <machine/bus_private.h>
-
-#include <x86/sg_dma.h>
 
 #include "agp_i810.h"
 
@@ -143,57 +143,17 @@ agp_sg_flush_tlb(void *dev)
 }
 
 int
-agp_bus_dma_init(struct agp_softc *sc, bus_addr_t start, bus_addr_t end,
-    bus_dma_tag_t *dmat)
+agp_bus_dma_init(struct agp_softc *sc, bus_dma_tag_t odmat, bus_addr_t start,
+    bus_addr_t end, bus_dma_tag_t *dmat)
 {
-	bus_dma_tag_t tag;
-	struct bus_dma_overrides *ov;
-	struct sg_cookie *cookie;
-	uint64_t present;
-	int err;
 
 	/*
 	 * XXX add agp map into the main queue that takes up our chunk of
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
-	if ((ov = malloc(sizeof(*ov), M_DMAMAP,
-	    M_ZERO | M_WAITOK | M_CANFAIL)) == NULL)
-		return (ENOMEM);
-
-	if ((cookie = sg_dmatag_init(__UNCONST("agpgtt"), sc,
-	    start, end - start,
-	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb)) == NULL) {
-		free(ov, M_DMAMAP);
-		return (ENOMEM);
-	}
-
-	present = BUS_DMAMAP_OVERRIDE_CREATE | BUS_DMAMAP_OVERRIDE_DESTROY |
-	    BUS_DMAMAP_OVERRIDE_LOAD | BUS_DMAMAP_OVERRIDE_LOAD_MBUF |
-	    BUS_DMAMAP_OVERRIDE_LOAD_UIO | BUS_DMAMAP_OVERRIDE_LOAD_RAW |
-	    BUS_DMAMAP_OVERRIDE_UNLOAD | BUS_DMAMEM_OVERRIDE_ALLOC;
-
-	ov->ov_dmamap_create = sg_dmamap_create;
-	ov->ov_dmamap_destroy = sg_dmamap_destroy;
-	ov->ov_dmamap_load = sg_dmamap_load;
-	ov->ov_dmamap_load_mbuf = sg_dmamap_load_mbuf;
-	ov->ov_dmamap_load_uio = sg_dmamap_load_uio;
-	ov->ov_dmamap_load_raw = sg_dmamap_load_raw;
-	ov->ov_dmamap_unload = sg_dmamap_unload;
-	ov->ov_dmamem_alloc = sg_dmamem_alloc;
-
-	/* Driver may need special sync handling */
-	if (sc->as_methods->dma_sync != NULL) {
-		present |= BUS_DMAMAP_OVERRIDE_SYNC;
-		ov->ov_dmamap_sync = sc->as_methods->dma_sync;
-	}
-
-	if ((err = bus_dma_tag_create(NULL, present, ov, cookie, &tag)) != 0) {
-		free(ov, M_DMAMAP);
-		return (err);
-	}
-
-	*dmat = tag;
-	return (0);
+	return sg_dmatag_create("agpgtt", sc, odmat, start, end - start,
+	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb,
+	    sc->as_methods->dma_sync, dmat);
 }
 
 void
@@ -247,13 +207,11 @@ int
 agp_init_map(bus_space_tag_t tag, bus_addr_t address, bus_size_t size,
     int flags, struct agp_map **mapp)
 {
-#ifdef __i386__
-	struct extent	*ex;
-#endif
 	struct agp_map	*map;
 	int		 error;
-
 #ifdef __i386__
+	struct extent	*ex;
+
 	if (tag->bst_type == X86_BUS_SPACE_IO) {
 		ex = ioport_ex;
 		if (flags & BUS_SPACE_MAP_LINEAR)

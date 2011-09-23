@@ -1363,7 +1363,7 @@ i915_gem_init_ioctl(struct drm_device *dev, void *data,
 	if (args->gtt_end == dev->agp->info.ai_aperture_size)
 		args->gtt_end -= 4096;
 
-	if (agp_bus_dma_init(dev->agp->agpdev,
+	if (agp_bus_dma_init(dev->agp->agpdev, dev_priv->dmat,
 	    dev->agp->base + args->gtt_start, dev->agp->base + args->gtt_end,
 	    &dev_priv->agpdmat) != 0) {
 		DRM_UNLOCK();
