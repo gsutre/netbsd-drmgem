@@ -59,13 +59,12 @@
 #include <machine/cpu.h>
 #include <machine/cpufunc.h>
 
-
 #include "agp_i810.h"
 
 /* bus_dma functions */
 
 #if NAGP_I810 > 0
-void	intagp_dma_sync(bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+void	intagp_dma_sync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	    bus_size_t, int);
 #endif /* NAGP_I810 > 0 */
 
@@ -320,7 +319,7 @@ agp_unmap_subregion(struct agp_map *map, bus_space_handle_t bsh,
  * however, all cpus that have a new enough intel GMCH should be suitable.
  */
 void
-intagp_dma_sync(bus_dma_tag_t tag, bus_dmamap_t dmam,
+intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
 #if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
