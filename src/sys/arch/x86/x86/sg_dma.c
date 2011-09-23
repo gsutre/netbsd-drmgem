@@ -641,7 +641,7 @@ sg_iomap_insert_page(struct sg_page_map *spm, paddr_t pa)
  * into the IOMMU tables.
  */
 static void
-sg_iomap_load_map(struct sg_cookie *sc, struct sg_page_map *spm,
+sg_iomap_load_map(struct sg_cookie *sg, struct sg_page_map *spm,
     bus_addr_t vmaddr, int flags)
 {
 	struct sg_page_entry	*e;
@@ -649,24 +649,24 @@ sg_iomap_load_map(struct sg_cookie *sc, struct sg_page_map *spm,
 
 	for (i = 0, e = spm->spm_map; i < spm->spm_pagecnt; ++i, ++e) {
 		e->spe_va = vmaddr;
-		sc->bind_page(sc->sg_hdl, e->spe_va, e->spe_pa, flags);
+		sg->bind_page(sg->sg_hdl, e->spe_va, e->spe_pa, flags);
 		vmaddr += PAGE_SIZE;
 	}
-	sc->flush_tlb(sc->sg_hdl);
+	sg->flush_tlb(sg->sg_hdl);
 }
 
 /*
  * Remove the iomap from the IOMMU.
  */
 static void
-sg_iomap_unload_map(struct sg_cookie *sc, struct sg_page_map *spm)
+sg_iomap_unload_map(struct sg_cookie *sg, struct sg_page_map *spm)
 {
 	struct sg_page_entry	*e;
 	int			 i;
 
 	for (i = 0, e = spm->spm_map; i < spm->spm_pagecnt; ++i, ++e)
-		sc->unbind_page(sc->sg_hdl, e->spe_va);
-	sc->flush_tlb(sc->sg_hdl);
+		sg->unbind_page(sg->sg_hdl, e->spe_va);
+	sg->flush_tlb(sg->sg_hdl);
 }
 
 /*

@@ -143,16 +143,17 @@ agp_sg_flush_tlb(void *dev)
 }
 
 int
-agp_bus_dma_init(struct agp_softc *sc, bus_dma_tag_t odmat,
-    bus_addr_t start, bus_addr_t end, bus_dma_tag_t *dmat)
+agp_bus_dma_init(struct agp_softc *sc, bus_dma_tag_t odmat, bus_addr_t start,
+    bus_addr_t end, bus_dma_tag_t *dmat)
 {
+
 	/*
 	 * XXX add agp map into the main queue that takes up our chunk of
 	 * GTT space to prevent the userland api stealing any of it.
 	 */
-	return sg_dmatag_create("agpgtt", sc, odmat,
-	    start, end - start, agp_sg_bind_page, agp_sg_unbind_page,
-	    agp_sg_flush_tlb, sc->as_methods->dma_sync, dmat);
+	return sg_dmatag_create("agpgtt", sc, odmat, start, end - start,
+	    agp_sg_bind_page, agp_sg_unbind_page, agp_sg_flush_tlb,
+	    sc->as_methods->dma_sync, dmat);
 }
 
 void

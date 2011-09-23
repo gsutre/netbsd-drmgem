@@ -199,8 +199,8 @@ int agp_alloc_dmamem(bus_dma_tag_t, size_t, int, bus_dmamap_t *, void **,
 void agp_free_dmamem(bus_dma_tag_t, size_t, bus_dmamap_t, void *,
 		     bus_dma_segment_t *, int) ;
 
-int	agp_bus_dma_init(struct agp_softc *, bus_dma_tag_t,
-	    bus_addr_t, bus_addr_t, bus_dma_tag_t *);
+int	agp_bus_dma_init(struct agp_softc *, bus_dma_tag_t, bus_addr_t,
+	    bus_addr_t, bus_dma_tag_t *);
 void	agp_bus_dma_destroy(struct agp_softc *, bus_dma_tag_t);
 void	agp_bus_dma_set_alignment(bus_dma_tag_t, bus_dmamap_t,
 	    u_long);
