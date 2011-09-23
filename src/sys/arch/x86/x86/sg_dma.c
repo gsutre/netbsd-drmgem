@@ -76,27 +76,28 @@
 #define _BUS_DMAMEM_ALLOC_RANGE _bus_dmamem_alloc_range
 #endif /* _BUS_DMAMEM_ALLOC_RANGE */
 
-static int	sg_dmamap_create(void *, bus_dma_tag_t, bus_size_t, int, bus_size_t,
-		    bus_size_t, int, bus_dmamap_t *);
+static int	sg_dmamap_create(void *, bus_dma_tag_t, bus_size_t, int,
+		    bus_size_t, bus_size_t, int, bus_dmamap_t *);
 static void	sg_dmamap_destroy(void *, bus_dma_tag_t, bus_dmamap_t);
-static int	sg_dmamap_load(void *, bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
-		    struct proc *, int);
+static int	sg_dmamap_load(void *, bus_dma_tag_t, bus_dmamap_t, void *,
+		    bus_size_t, struct proc *, int);
 static int	sg_dmamap_load_mbuf(void *, bus_dma_tag_t, bus_dmamap_t,
 		    struct mbuf *, int);
-static int	sg_dmamap_load_uio(void *, bus_dma_tag_t, bus_dmamap_t, struct uio *, int);
-static int	sg_dmamap_load_raw(void *, bus_dma_tag_t, bus_dmamap_t, bus_dma_segment_t *,
-		    int, bus_size_t, int);
+static int	sg_dmamap_load_uio(void *, bus_dma_tag_t, bus_dmamap_t,
+		    struct uio *, int);
+static int	sg_dmamap_load_raw(void *, bus_dma_tag_t, bus_dmamap_t,
+		    bus_dma_segment_t *, int, bus_size_t, int);
 static void	sg_dmamap_unload(void *, bus_dma_tag_t, bus_dmamap_t);
 
 /*
-static int	sg_dmamap_load_buffer(bus_dma_tag_t, bus_dmamap_t, void *, bus_size_t,
-		    struct proc *, int, int *, int);
-static int	sg_dmamap_load_physarray(bus_dma_tag_t, bus_dmamap_t, paddr_t *,
-		    int, int, int *, int);
+static int	sg_dmamap_load_buffer(bus_dma_tag_t, bus_dmamap_t, void *,
+		    bus_size_t, struct proc *, int, int *, int);
+static int	sg_dmamap_load_physarray(bus_dma_tag_t, bus_dmamap_t,
+		    paddr_t *, int, int, int *, int);
 */
 
-static int	sg_dmamem_alloc(void *, bus_dma_tag_t, bus_size_t, bus_size_t, bus_size_t,
-		    bus_dma_segment_t *, int, int *, int);
+static int	sg_dmamem_alloc(void *, bus_dma_tag_t, bus_size_t, bus_size_t,
+		    bus_size_t, bus_dma_segment_t *, int, int *, int);
 
 static int	sg_dmamap_load_seg(bus_dma_tag_t, struct sg_cookie *,
 		    bus_dmamap_t, bus_dma_segment_t *, int, int, bus_size_t,
