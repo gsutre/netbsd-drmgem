@@ -217,7 +217,7 @@ agp_bus_dma_destroy(struct agp_softc *sc, bus_dma_tag_t dmat)
 		agp_sg_unbind_page(sc, offset);
 
 	sg_dmatag_destroy(cookie);
-	free(dmat, M_DMAMAP);
+	bus_dma_tag_destroy(dmat);
 }
 
 void
