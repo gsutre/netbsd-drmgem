@@ -71,37 +71,37 @@
 #define BUS_DMA_24BIT	0
 #endif
 
-struct sg_page_map *sg_iomap_create(int);
-int		sg_iomap_insert_page(struct sg_page_map *, paddr_t);
-bus_addr_t	sg_iomap_translate(struct sg_page_map *, paddr_t);
-void		sg_iomap_load_map(struct sg_cookie *, struct sg_page_map *,
-		    bus_addr_t, int);
-void		sg_iomap_unload_map(struct sg_cookie *, struct sg_page_map *);
-void		sg_iomap_destroy(struct sg_page_map *);
-void		sg_iomap_clear_pages(struct sg_page_map *);
-
 static struct sg_page_map *sg_dmamap_to_spm(struct sg_cookie *, bus_dmamap_t);
-static int sg_dmamap_create(void *, bus_dma_tag_t, bus_size_t, int, bus_size_t,
-    bus_size_t, int, bus_dmamap_t *);
-static void sg_dmamap_destroy(void *, bus_dma_tag_t, bus_dmamap_t);
-static int sg_dmamap_load(void *, bus_dma_tag_t, bus_dmamap_t, void *,
-    bus_size_t, struct proc *, int);
-static int sg_dmamap_load_mbuf(void *, bus_dma_tag_t, bus_dmamap_t,
-    struct mbuf *, int);
-static int sg_dmamap_load_uio(void *, bus_dma_tag_t, bus_dmamap_t, struct uio *,
-    int);
-static int sg_dmamap_load_raw(void *, bus_dma_tag_t, bus_dmamap_t,
-    bus_dma_segment_t *, int, bus_size_t, int);
-static void sg_dmamap_unload(void *, bus_dma_tag_t, bus_dmamap_t);
-static int sg_dmamem_alloc(void *, bus_dma_tag_t, bus_size_t, bus_size_t,
-    bus_size_t, bus_dma_segment_t *, int, int *, int);
+static int	sg_dmamap_create(void *, bus_dma_tag_t, bus_size_t, int,
+		    bus_size_t, bus_size_t, int, bus_dmamap_t *);
+static void	sg_dmamap_destroy(void *, bus_dma_tag_t, bus_dmamap_t);
+static int	sg_dmamap_load(void *, bus_dma_tag_t, bus_dmamap_t, void *,
+		    bus_size_t, struct proc *, int);
+static int	sg_dmamap_load_mbuf(void *, bus_dma_tag_t, bus_dmamap_t,
+		    struct mbuf *, int);
+static int	sg_dmamap_load_uio(void *, bus_dma_tag_t, bus_dmamap_t,
+		    struct uio *, int);
+static int	sg_dmamap_load_raw(void *, bus_dma_tag_t, bus_dmamap_t,
+		    bus_dma_segment_t *, int, bus_size_t, int);
+static void	sg_dmamap_unload(void *, bus_dma_tag_t, bus_dmamap_t);
+static int	sg_dmamem_alloc(void *, bus_dma_tag_t, bus_size_t, bus_size_t,
+		    bus_size_t, bus_dma_segment_t *, int, int *, int);
+
+static struct sg_page_map *sg_iomap_create(int);
+static int	sg_iomap_insert_page(struct sg_page_map *, paddr_t);
+static bus_addr_t	sg_iomap_translate(struct sg_page_map *, paddr_t);
+static void	sg_iomap_load_map(struct sg_cookie *, struct sg_page_map *,
+		    bus_addr_t, int);
+static void	sg_iomap_unload_map(struct sg_cookie *, struct sg_page_map *);
+static void	sg_iomap_destroy(struct sg_page_map *);
+static void	sg_iomap_clear_pages(struct sg_page_map *);
 
 int
-sg_dmatag_create(const char *name, void *hdl,
-    bus_dma_tag_t odmat, bus_addr_t start, bus_size_t size,
+sg_dmatag_create(const char *name, void *hdl, bus_dma_tag_t odmat,
+    bus_addr_t start, bus_size_t size,
     void bind(void *, bus_addr_t, paddr_t, int),
-    void unbind(void *, bus_addr_t), void flush_tlb(void *),
-    void (*dmasync)(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+    void unbind(void *, bus_addr_t), void flushtlb(void *),
+    void dmasync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 	bus_size_t, int),
     bus_dma_tag_t *dmat)
 {
@@ -149,7 +149,7 @@ sg_dmatag_create(const char *name, void *hdl,
 	sg->sg_hdl = hdl;
 	sg->bind_page = bind;
 	sg->unbind_page = unbind;
-	sg->flush_tlb = flush_tlb;
+	sg->flush_tlb = flushtlb;
 	sg->sg_dmat = odmat;
 
 	error = bus_dma_tag_create(sg->sg_dmat, present, &sg->sg_ov, sg, dmat);
@@ -548,7 +548,7 @@ spm_size(int n)
 /*
  * Create a new iomap.
  */
-struct sg_page_map *
+static struct sg_page_map *
 sg_iomap_create(int n)
 {
 	struct sg_page_map	*spm;
@@ -579,7 +579,7 @@ sg_iomap_create(int n)
 /*
  * Destroy an iomap.
  */
-void
+static void
 sg_iomap_destroy(struct sg_page_map *spm)
 {
 	KASSERT(spm->spm_pagecnt == 0);
@@ -605,7 +605,7 @@ SPLAY_GENERATE(sg_page_tree, sg_page_entry, spe_node, iomap_compare);
 /*
  * Insert a pa entry in the iomap.
  */
-int
+static int
 sg_iomap_insert_page(struct sg_page_map *spm, paddr_t pa)
 {
 	struct sg_page_entry *e;
@@ -640,7 +640,7 @@ sg_iomap_insert_page(struct sg_page_map *spm, paddr_t pa)
  * Locate the iomap by filling in the pa->va mapping and inserting it
  * into the IOMMU tables.
  */
-void
+static void
 sg_iomap_load_map(struct sg_cookie *sc, struct sg_page_map *spm,
     bus_addr_t vmaddr, int flags)
 {
@@ -658,7 +658,7 @@ sg_iomap_load_map(struct sg_cookie *sc, struct sg_page_map *spm,
 /*
  * Remove the iomap from the IOMMU.
  */
-void
+static void
 sg_iomap_unload_map(struct sg_cookie *sc, struct sg_page_map *spm)
 {
 	struct sg_page_entry	*e;
@@ -672,7 +672,7 @@ sg_iomap_unload_map(struct sg_cookie *sc, struct sg_page_map *spm)
 /*
  * Translate a physical address (pa) into a DVMA address.
  */
-bus_addr_t
+static bus_addr_t
 sg_iomap_translate(struct sg_page_map *spm, paddr_t pa)
 {
 	struct sg_page_entry	*e, pe;
@@ -691,7 +691,7 @@ sg_iomap_translate(struct sg_page_map *spm, paddr_t pa)
 /*
  * Clear the iomap table and tree.
  */
-void
+static void
 sg_iomap_clear_pages(struct sg_page_map *spm)
 {
 	spm->spm_pagecnt = 0;

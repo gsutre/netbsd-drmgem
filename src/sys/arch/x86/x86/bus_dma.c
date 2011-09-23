@@ -1601,7 +1601,7 @@ bus_dma_tag_create(bus_dma_tag_t obdt, const uint64_t present,
 	bus_dma_tag_t bdt;
 	const void *fp;
 
-	if (ov == NULL || present == 0)
+	if (obdt == NULL || ov == NULL || present == 0)
 		return EINVAL;
 
 	bdt = kmem_alloc(sizeof(struct x86_bus_dma_tag), KM_SLEEP);

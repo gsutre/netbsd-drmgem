@@ -122,12 +122,13 @@ struct sg_page_map {
 	struct sg_page_entry	 spm_map[1];
 };
 
-int sg_dmatag_create(const char *, void *, bus_dma_tag_t,
-    bus_addr_t, bus_size_t,
-    void (*)(void *, bus_addr_t, paddr_t, int),
-    void (*)(void *, bus_addr_t), void (*)(void *),
-    void (*)(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t, bus_size_t, int),
-    bus_dma_tag_t *);
+int	sg_dmatag_create(const char *, void *, bus_dma_tag_t,
+	    bus_addr_t, bus_size_t,
+	    void (*)(void *, bus_addr_t, paddr_t, int),
+	    void (*)(void *, bus_addr_t), void (*)(void *),
+	    void (*)(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
+		bus_size_t, int),
+	    bus_dma_tag_t *);
 void	sg_dmatag_destroy(struct sg_cookie *);
 void	sg_dmamap_set_alignment(void *, bus_dma_tag_t, bus_dmamap_t, u_long);
 
