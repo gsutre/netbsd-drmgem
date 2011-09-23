@@ -115,17 +115,17 @@ extern void intagp_dma_sync(void *, bus_dma_tag_t, bus_dmamap_t, bus_addr_t,
 			    bus_size_t, int);
 
 static struct agp_methods agp_i810_methods = {
-	agp_i810_get_aperture,
-	agp_i810_set_aperture,
-	agp_i810_bind_page,
-	agp_i810_unbind_page,
-	agp_i810_flush_tlb,
-	intagp_dma_sync,
-	agp_i810_enable,
-	agp_i810_alloc_memory,
-	agp_i810_free_memory,
-	agp_i810_bind_memory,
-	agp_i810_unbind_memory,
+	.get_aperture	= agp_i810_get_aperture,
+	.set_aperture	= agp_i810_set_aperture,
+	.bind_page	= agp_i810_bind_page,
+	.unbind_page	= agp_i810_unbind_page,
+	.flush_tlb	= agp_i810_flush_tlb,
+	.dma_sync	= intagp_dma_sync,
+	.enable		= agp_i810_enable,
+	.alloc_memory	= agp_i810_alloc_memory,
+	.free_memory	= agp_i810_free_memory,
+	.bind_memory	= agp_i810_bind_memory,
+	.unbind_memory	= agp_i810_unbind_memory,
 };
 
 static int
