@@ -283,6 +283,18 @@ i915_driver_irq_install(struct drm_device *dev)
 int
 ironlake_irq_install(struct inteldrm_softc *dev_priv)
 {
+	u_int32_t error_mask;
+
+	/*
+	 * Enable some error detection, note the instruction error mask
+	 * bit is reserved, so we leave it masked.
+	 */
+	error_mask = I915_READ(EMR);
+	I915_WRITE(EMR, error_mask &
+	    ~((1<<4) |	/* Page Table Error */
+	      (1<<3) |	/* Memory Privilege Violation Error */
+	      (1<<2)));	/* Command Privilege Violation Error */
+
 	/* mask and ack everything before we turn anything on. */
 	/*
 	 * XXX this is a legacy of the only preinstall/postinstall split.

@@ -523,6 +523,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		dev_priv->irq_mask_reg = ~PCH_SPLIT_DISPLAY_INTR_FIX;
 		/* masked for now, turned on on demand */
 		dev_priv->gt_irq_mask_reg = ~PCH_SPLIT_RENDER_INTR_FIX;
+		dev_priv->gt_irq_mask_reg &= ~GT_MASTER_ERROR;
 		dev_priv->pch_irq_mask_reg = ~PCH_SPLIT_HOTPLUG_INTR_FIX;
 	} else {
 		dev_priv->irq_mask_reg = ~I915_INTERRUPT_ENABLE_FIX;
@@ -914,8 +915,11 @@ inteldrm_ironlake_intr(void *arg)
 		dev_priv->mm.hang_cnt = 0;
 		timeout_add_msec(&dev_priv->mm.hang_timer, 750);
 	}
-	if (gt_iir & GT_MASTER_ERROR)
+	if (gt_iir & GT_MASTER_ERROR) {
+		aprint_error("%s: master error intr (gt_iir 0x%08"PRIx32")\n",
+		    __func__, gt_iir);
 		inteldrm_error(dev_priv);
+	}
 
 	if (de_iir & DE_PIPEA_VBLANK)
 		drm_handle_vblank(dev, 0);
@@ -1966,10 +1970,13 @@ i915_gem_retire_requests(struct inteldrm_softc *dev_priv)
 	struct inteldrm_request	*request;
 	uint32_t		 seqno;
 
-	if (dev_priv->hw_status_page == NULL)
+	/* Check first because poking a wedged chip is bad. */
+	if (dev_priv->mm.wedged)
+		seqno = 0;	/* Dummy value, doesn't matter. */
+	else if (dev_priv->hw_status_page != NULL)
+		seqno = i915_get_gem_seqno(dev_priv);
+	else
 		return;
-
-	seqno = i915_get_gem_seqno(dev_priv);
 
 	mtx_enter(&dev_priv->request_lock);
 	while ((request = TAILQ_FIRST(&dev_priv->mm.request_list)) != NULL) {
@@ -2021,10 +2028,17 @@ i915_wait_request(struct inteldrm_softc *dev_priv, uint32_t seqno,
 			return (ENOMEM);
 	}
 
+	/*
+	 * XXX I believe that, when the gpu hangs, i915_gem_idle() may
+	 * XXX unmap the status page in our back.  Let's try to catch it
+	 * XXX early if it happens.  [gsutre]
+	 */
+	KASSERT(dev_priv->hw_status_page != NULL);
 	if (!i915_seqno_passed(i915_get_gem_seqno(dev_priv), seqno)) {
 		mtx_enter(&dev_priv->user_irq_lock);
 		i915_user_irq_get(dev_priv);
 		while (ret == 0) {
+			KASSERT(dev_priv->hw_status_page != NULL);
 			if (i915_seqno_passed(i915_get_gem_seqno(dev_priv),
 			    seqno) || dev_priv->mm.wedged)
 				break;
@@ -4498,6 +4512,14 @@ i915_gem_leavevt_ioctl(struct drm_device *dev, void *data,
 	/* don't unistall if we fail, repeat calls on failure will screw us */
 	if ((ret = i915_gem_idle(dev_priv)) == 0)
 		drm_irq_uninstall(dev);
+
+	if (!(TAILQ_EMPTY(&dev_priv->mm.active_list)))
+		aprint_error("%s: active_list is not empty!\n", __func__);
+	if (!(TAILQ_EMPTY(&dev_priv->mm.flushing_list)))
+		aprint_error("%s: flushing_list is not empty!\n", __func__);
+	if (!(TAILQ_EMPTY(&dev_priv->mm.request_list)))
+		aprint_error("%s: request_list is not empty!\n", __func__);
+
 	return (ret);
 }
 
@@ -4523,6 +4545,9 @@ inteldrm_error(struct inteldrm_softc *dev_priv)
 #if defined(__NetBSD__)
 	char		errbuf[128];
 #endif /* defined(__NetBSD__) */
+
+	aprint_normal("%s: eir 0x%08"PRIx32" esr 0x%08"PRIx32" pgtbl_er 0x%08"PRIx32"\n",
+	    __func__, I915_READ(EIR), I915_READ(ESR), I915_READ(PGTBL_ER));
 
 	eir = I915_READ(EIR);
 	if (eir == 0)
@@ -4653,6 +4678,8 @@ inteldrm_hung(void *arg, void *reset_type)
 	struct drm_device	*dev = (struct drm_device *)dev_priv->drmdev;
 	struct inteldrm_obj	*obj_priv;
 	u_int8_t		 reset = (u_int8_t)(uintptr_t)reset_type;
+
+	KASSERT(dev_priv->mm.wedged);
 
 	DRM_LOCK();
 	if (HAS_RESET(dev_priv)) {
