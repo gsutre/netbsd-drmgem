@@ -70,6 +70,25 @@
 
 #define I915_GEM_GPU_DOMAINS	(~(I915_GEM_DOMAIN_CPU | I915_GEM_DOMAIN_GTT))
 
+/*
+ * Macro to check and print error registers.
+ */
+static bool no_error_detected = true;
+#define CHECK_ERROR_REGISTER(line)										\
+do {														\
+	u_int32_t eir, esr, pgtbl_er;										\
+														\
+	eir = I915_READ(EIR);											\
+	esr = I915_READ(ESR);											\
+	pgtbl_er = I915_READ(PGTBL_ER);										\
+														\
+	if (no_error_detected && (eir || pgtbl_er)) {								\
+		aprint_error("ERROR: %s [%d]: eir 0x%08"PRIx32" esr 0x%08"PRIx32" pgtbl_er 0x%08"PRIx32"\n",	\
+		    __func__, line, eir, esr, pgtbl_er);							\
+		no_error_detected = false;									\
+	}													\
+} while (0)
+
 #if !defined(__NetBSD__)
 int	inteldrm_probe(struct device *, void *, void *);
 #else /* !defined(__NetBSD__) */
@@ -810,6 +829,8 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	int			 error = 0;
 
+	CHECK_ERROR_REGISTER(__LINE__);
+
 	while ((dev_priv->sc_flags & INTELDRM_QUIET) && error == 0)
 		error = tsleep(&dev_priv->flags, PCATCH, "intelioc", 0);
 	if (error)
@@ -821,6 +842,9 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 	dev_priv->entries--;
 	if (dev_priv->sc_flags & INTELDRM_QUIET)
 		wakeup(&dev_priv->entries);
+
+	CHECK_ERROR_REGISTER(__LINE__);
+
 	return (error);
 }
 
@@ -1999,9 +2023,13 @@ i915_gem_retire_work_handler(void *arg1, void *unused)
 {
 	struct inteldrm_softc	*dev_priv = arg1;
 
+	CHECK_ERROR_REGISTER(__LINE__);
+
 	i915_gem_retire_requests(dev_priv);
 	if (!TAILQ_EMPTY(&dev_priv->mm.request_list))
 		timeout_add_sec(&dev_priv->mm.retire_timer, 1);
+
+	CHECK_ERROR_REGISTER(__LINE__);
 }
 
 /**
@@ -4740,6 +4768,8 @@ inteldrm_hangcheck(void *arg)
 	struct inteldrm_softc	*dev_priv = arg;
 	u_int32_t		 acthd, instdone, instdone1;
 
+	CHECK_ERROR_REGISTER(__LINE__);
+
 	/* are we idle? no requests, or ring is empty */
 	if (TAILQ_EMPTY(&dev_priv->mm.request_list) ||
 	    (I915_READ(PRB0_HEAD) & HEAD_ADDR) ==
@@ -4797,6 +4827,8 @@ inteldrm_hangcheck(void *arg)
 out:
 	/* Set ourselves up again, in case we haven't added another batch */
 	timeout_add_msec(&dev_priv->mm.hang_timer, 750);
+
+	CHECK_ERROR_REGISTER(__LINE__);
 }
 
 void
