@@ -4348,8 +4348,18 @@ i915_gem_cleanup_hws(struct inteldrm_softc *dev_priv)
 	drm_unhold_and_unref(obj);
 	dev_priv->hws_obj = NULL;
 
+	/*
+	 * XXX Since I915_NEED_GFX_HWS(dev_priv) holds, the HWS_PGA register
+	 * XXX must contain a graphics virtual address, and not a physical
+	 * XXX address.  In pratice, with the line below, the ESR register
+	 * XXX shows a page table error after i915_gem_idle() on (the first)
+	 * XXX Leave VT (with PGTBL_ER = 0x00100000).  Tested on a Core i5
+	 * XXX laptop.  Related to issue #5.  [gsutre]
+	 */
+#if 0
 	/* Write high address into HWS_PGA when disabling. */
 	I915_WRITE(HWS_PGA, 0x1ffff000);
+#endif
 }
 
 int
