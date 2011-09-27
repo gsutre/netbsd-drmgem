@@ -4449,11 +4449,28 @@ inteldrm_start_ring(struct inteldrm_softc *dev_priv)
 	return (0);
 }
 
+static inline int
+inteldrm_wait_ring_idle(struct inteldrm_softc *dev_priv)
+{
+	return inteldrm_wait_ring(dev_priv, dev_priv->ring.size - 8);
+}
+
 void
 i915_gem_cleanup_ringbuffer(struct inteldrm_softc *dev_priv)
 {
+	int ret;
+
 	if (dev_priv->ring.ring_obj == NULL)
 		return;
+
+	/* Disable the ring buffer. The ring must be idle at this point */
+	ret = inteldrm_wait_ring_idle(dev_priv);
+	if (ret)
+		DRM_ERROR("failed to quiesce %s whilst cleaning up: %d\n",
+			  "ring buffer", ret);
+
+	I915_WRITE(PRB0_CTL, 0);
+
 	agp_unmap_subregion(dev_priv->agph, dev_priv->ring.bsh,
 	    dev_priv->ring.ring_obj->size);
 	drm_hold_object(dev_priv->ring.ring_obj);
