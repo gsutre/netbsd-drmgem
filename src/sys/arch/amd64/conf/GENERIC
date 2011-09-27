@@ -394,6 +394,12 @@ sysbeep0	at pcppi?
 inteldrm*	at drm?
 drmdev*		at inteldrm?
 
+options 	MSGBUFSIZE=104857600	# 100 MiB
+options 	AGP_DEBUG
+options 	DRMDEBUG
+options 	DRM_DEBUG_DEFAULT_ON
+options 	INTELDRM_DEBUG=2
+
 # Cryptographic Devices
 
 # PCI cryptographic devices

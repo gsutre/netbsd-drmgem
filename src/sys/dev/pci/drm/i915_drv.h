@@ -593,7 +593,7 @@ read64(struct inteldrm_softc *dev_priv, bus_size_t off)
 				    dev_priv->regs->bsh, (reg))
 #define I915_WRITE8(reg,val)	bus_space_write_1(dev_priv->regs->bst,	\
 				    dev_priv->regs->bsh, (reg), (val))
-#define INTELDRM_VERBOSE 0
+#define INTELDRM_VERBOSE 1
 #if INTELDRM_VERBOSE > 0
 #define	INTELDRM_VPRINTF(fmt, args...) DRM_INFO(fmt, ##args)
 #else
