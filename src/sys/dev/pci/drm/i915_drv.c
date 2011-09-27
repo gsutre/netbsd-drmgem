@@ -1109,7 +1109,7 @@ inteldrm_out_ring(struct inteldrm_softc *dev_priv, u_int32_t cmd)
 void
 inteldrm_advance_ring(struct inteldrm_softc *dev_priv)
 {
-	INTELDRM_VPRINTF("%s: %x, %x\n", __func__, dev_priv->ring.wspace,
+	INTELDRM_VPRINTF("%s: %x, %x\n", __func__, dev_priv->ring.space,
 	    dev_priv->ring.woffset);
 	DRM_MEMORYBARRIER();
 	I915_WRITE(PRB0_TAIL, dev_priv->ring.tail);
