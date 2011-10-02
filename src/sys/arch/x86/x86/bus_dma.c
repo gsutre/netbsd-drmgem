@@ -1,4 +1,4 @@
-/*	$NetBSD: bus_dma.c,v 1.60 2011/09/13 17:59:46 dyoung Exp $	*/
+/*	$NetBSD: bus_dma.c,v 1.67 2011/09/28 01:45:49 dyoung Exp $	*/
 
 /*-
  * Copyright (c) 1996, 1997, 1998, 2007 The NetBSD Foundation, Inc.
@@ -31,7 +31,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: bus_dma.c,v 1.60 2011/09/13 17:59:46 dyoung Exp $");
+__KERNEL_RCSID(0, "$NetBSD: bus_dma.c,v 1.67 2011/09/28 01:45:49 dyoung Exp $");
 
 /*
  * The following is included because _bus_dma_uiomove is derived from
@@ -167,8 +167,8 @@ static int _bus_dma_alloc_bouncebuf(bus_dma_tag_t t, bus_dmamap_t map,
 static void _bus_dma_free_bouncebuf(bus_dma_tag_t t, bus_dmamap_t map);
 static int _bus_dmamap_load_buffer(bus_dma_tag_t t, bus_dmamap_t map,
 	    void *buf, bus_size_t buflen, struct vmspace *vm, int flags);
-static inline int _bus_dmamap_load_busaddr(bus_dma_tag_t, bus_dmamap_t,
-    bus_addr_t, int);
+static int _bus_dmamap_load_busaddr(bus_dma_tag_t, bus_dmamap_t,
+    bus_addr_t, bus_size_t);
 
 #ifndef _BUS_DMAMEM_ALLOC_RANGE
 int		_bus_dmamem_alloc_range(bus_dma_tag_t tag, bus_size_t size,
@@ -402,11 +402,9 @@ _bus_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 		return 0;
 	}
 
-	if (cookie == NULL)
+	if (cookie == NULL ||
+	    (cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0)
 		return error;
-	if ((cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0)
-		return error;
-
 
 	/*
 	 * First attempt failed; bounce it.
@@ -431,7 +429,7 @@ _bus_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 	cookie->id_origbuflen = buflen;
 	cookie->id_buftype = X86_DMA_BUFTYPE_LINEAR;
 	map->dm_nsegs = 0;
-	error = _bus_dmamap_load(t, map, cookie->id_bouncebuf, buflen,
+	error = bus_dmamap_load(t, map, cookie->id_bouncebuf, buflen,
 	    p, flags);
 	if (error)
 		return (error);
@@ -441,15 +439,15 @@ _bus_dmamap_load(bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 	return (0);
 }
 
-static inline int
+static int
 _bus_dmamap_load_busaddr(bus_dma_tag_t t, bus_dmamap_t map,
-    bus_addr_t addr, int size)
+    bus_addr_t addr, bus_size_t size)
 {
 	bus_dma_segment_t * const segs = map->dm_segs;
 	int nseg = map->dm_nsegs;
 	bus_addr_t bmask = ~(map->_dm_boundary - 1);
 	bus_addr_t lastaddr = 0xdead; /* XXX gcc */
-	int sgsize;
+	bus_size_t sgsize;
 
 	if (nseg > 0)
 		lastaddr = segs[nseg-1].ds_addr + segs[nseg-1].ds_len;
@@ -601,7 +599,7 @@ _bus_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *m0,
 	map->dm_nsegs = 0;
 
 	if (cookie == NULL ||
-	    ((cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0))
+	    (cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0)
 		return error;
 
 	/*
@@ -627,7 +625,7 @@ _bus_dmamap_load_mbuf(bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *m0,
 	cookie->id_origbuf = m0;
 	cookie->id_origbuflen = m0->m_pkthdr.len;	/* not really used */
 	cookie->id_buftype = X86_DMA_BUFTYPE_MBUF;
-	error = _bus_dmamap_load(t, map, cookie->id_bouncebuf,
+	error = bus_dmamap_load(t, map, cookie->id_bouncebuf,
 	    m0->m_pkthdr.len, NULL, flags);
 	if (error)
 		return (error);
@@ -685,7 +683,7 @@ _bus_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
 	map->dm_nsegs = 0;
 
 	if (cookie == NULL ||
-	    ((cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0))
+	    (cookie->id_flags & X86_DMA_MIGHT_NEED_BOUNCE) == 0)
 		return error;
 
 	STAT_INCR(bounces);
@@ -707,7 +705,7 @@ _bus_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
 	cookie->id_origbuf = uio;
 	cookie->id_origbuflen = uio->uio_resid;
 	cookie->id_buftype = X86_DMA_BUFTYPE_UIO;
-	error = _bus_dmamap_load(t, map, cookie->id_bouncebuf,
+	error = bus_dmamap_load(t, map, cookie->id_bouncebuf,
 	    uio->uio_resid, NULL, flags);
 	if (error)
 		return (error);
@@ -723,11 +721,44 @@ _bus_dmamap_load_uio(bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio,
  */
 static int
 _bus_dmamap_load_raw(bus_dma_tag_t t, bus_dmamap_t map,
-    bus_dma_segment_t *segs, int nsegs,
-    bus_size_t size, int flags)
+    bus_dma_segment_t *segs, int nsegs, bus_size_t size0, int flags)
 {
+	bus_size_t size;
+	int i, error = 0;
 
-	panic("_bus_dmamap_load_raw: not implemented");
+	/*
+	 * Make sure that on error condition we return "no valid mappings."
+	 */
+	map->dm_mapsize = 0;
+	map->dm_nsegs = 0;
+	KASSERT(map->dm_maxsegsz <= map->_dm_maxmaxsegsz);
+
+	if (size0 > map->_dm_size)
+		return EINVAL;
+
+	for (i = 0, size = size0; i < nsegs && size > 0; i++) {
+		bus_dma_segment_t *ds = &segs[i];
+		bus_size_t sgsize;
+
+		sgsize = MIN(ds->ds_len, size);
+		if (sgsize == 0)
+			continue;
+		error = _bus_dmamap_load_busaddr(t, map, ds->ds_addr, sgsize);
+		if (error != 0)
+			break;
+		size -= sgsize;
+	}
+
+	if (error != 0) {
+		map->dm_mapsize = 0;
+		map->dm_nsegs = 0;
+		return error;
+	}
+
+	/* XXX TBD bounce */
+
+	map->dm_mapsize = size0;
+	return 0;
 }
 
 /*
@@ -1597,6 +1628,8 @@ bit_to_function_pointer(const struct bus_dma_overrides *ov, uint64_t bit)
 void
 bus_dma_tag_destroy(bus_dma_tag_t bdt)
 {
+	if (bdt->bdt_super != NULL)
+		bus_dmatag_destroy(bdt->bdt_super);
 	kmem_free(bdt, sizeof(struct x86_bus_dma_tag));
 }
 
@@ -1615,6 +1648,10 @@ bus_dma_tag_create(bus_dma_tag_t obdt, const uint64_t present,
 
 	if (bdt == NULL)
 		return ENOMEM;
+
+	*bdt = *obdt;
+	/* don't let bus_dmatag_destroy free these */
+	bdt->_tag_needs_free = 0;
 
 	bdt->bdt_super = obdt;
 
@@ -1635,6 +1672,8 @@ bus_dma_tag_create(bus_dma_tag_t obdt, const uint64_t present,
 	bdt->bdt_ctx = ctx;
 
 	*bdtp = bdt;
+	if (obdt->_tag_needs_free)
+		obdt->_tag_needs_free++;
 
 	return 0;
 einval:
