@@ -1514,8 +1514,19 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	int ret;
 
 #ifdef DRM_FAULT_DEBUG
-	DRM_DEBUG("entry (%d) %#"PRIxVADDR" -> %#"PRIxVADDR" -[ %#"PRIx64"\n",
-	    entry->etype, entry->start, entry->end, entry->offset);
+	DRM_DEBUG("entry (%d) %#"PRIxVADDR" -> %#"PRIxVADDR" [+ %#"PRIx64"], npages %d\n",
+	    entry->etype, entry->start, entry->end, entry->offset, npages);
+
+	for (int j = 0 ; j < npages ; j++) {
+		struct vm_page *curpg;
+
+		curpg = pps[j];
+		if (curpg == NULL || curpg == PGO_DONTCARE) {
+			continue;
+		}
+		DRM_DEBUG("page %5d: phys_addr %#"PRIxPADDR" wire_count %"PRId16"\n", j,
+		    curpg->phys_addr, curpg->wire_count);
+	}
 #endif /* DRM_FAULT_DEBUG */
 
 	/*
@@ -1838,7 +1849,7 @@ drm_gem_load_uao(bus_dma_tag_t dmat, bus_dmamap_t map, struct uvm_object *uao,
 #ifdef DRM_SG_DEBUG
 	DRM_DEBUG("size %zd, %lu segs\n", size, i);
 	for (int j = 0 ; j < i ; j++)
-		DRM_DEBUG("seg %d: addr %#"PRIxPADDR" size %zd\n", j,
+		DRM_DEBUG("seg %5d: addr %#"PRIxPADDR" size %zd\n", j,
 		    segs[j].ds_addr, segs[j].ds_len);
 #endif /* DRM_SG_DEBUG */
 
