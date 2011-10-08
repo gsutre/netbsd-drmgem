@@ -114,6 +114,11 @@ agp_sg_bind_page(void *dev, bus_addr_t address, paddr_t physical, int flags)
 	struct agp_softc *sc = dev;
 	int error;
 
+#ifdef DRM_SG_DEBUG
+	printf("%s: ba %#"PRIxPADDR", pa %#"PRIxPADDR"\n",
+	    __func__, address, physical);
+#endif /* DRM_SG_DEBUG */
+
 	error = AGP_BIND_PAGE(sc, address - sc->as_apaddr,
 	    _BUS_PHYS_TO_BUS(physical), flags);
 	if (error)
@@ -127,6 +132,11 @@ agp_sg_unbind_page(void *dev, bus_addr_t address)
 {
 	struct agp_softc *sc = dev;
 	int error;
+
+#ifdef DRM_SG_DEBUG
+	printf("%s: ba %#"PRIxPADDR"\n",
+	    __func__, address);
+#endif /* DRM_SG_DEBUG */
 
 	error = AGP_UNBIND_PAGE(sc, address - sc->as_apaddr);
 	if (error)

@@ -2754,6 +2754,11 @@ inteldrm_fault(struct drm_obj *obj, struct uvm_faultinfo *ufi, off_t offset,
 	vm_prot_t		 mapprot;
 	boolean_t		 locked = TRUE;
 
+#ifdef DRM_FAULT_DEBUG
+	DRM_DEBUG("obj %d, offset %#"PRIx64", vaddr %#"PRIxVADDR"\n",
+	    obj->name, offset, vaddr);
+#endif /* DRM_FAULT_DEBUG */
+
 #if defined(__NetBSD__)
 	UVMHIST_FUNC(__func__); UVMHIST_CALLED(maphist);
 #endif /* defined(__NetBSD__) */

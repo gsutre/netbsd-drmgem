@@ -835,6 +835,8 @@ drmread(dev_t kdev, struct uio *uio, int ioflag)
 	if (dev == NULL)
 		return (ENXIO);
 
+	DRM_DEBUG("\n");
+
 	DRM_LOCK();
 	file_priv = drm_find_file_by_minor(dev, minor(kdev));
 	DRM_UNLOCK();
@@ -926,6 +928,8 @@ drmpoll(dev_t kdev, int events, struct lwp *p)
 	if (dev == NULL)
 		return (POLLERR);
 
+	DRM_DEBUG("\n");
+
 	DRM_LOCK();
 	file_priv = drm_find_file_by_minor(dev, minor(kdev));
 	DRM_UNLOCK();
@@ -968,6 +972,8 @@ drmmmap(dev_t kdev, off_t offset, int prot)
 
 	if (dev == NULL)
 		return (-1);
+
+	DRM_DEBUG("\n");
 
 	DRM_LOCK();
 	file_priv = drm_find_file_by_minor(dev, minor(kdev));
@@ -1507,6 +1513,11 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	struct drm_device *dev = obj->dev;
 	int ret;
 
+#ifdef DRM_FAULT_DEBUG
+	DRM_DEBUG("entry (%d) %#"PRIxVADDR" -> %#"PRIxVADDR" -[ %#"PRIx64"\n",
+	    entry->etype, entry->start, entry->end, entry->offset);
+#endif /* DRM_FAULT_DEBUG */
+
 	/*
 	 * we do not allow device mappings to be mapped copy-on-write
 	 * so we kill any attempt to do so here.
@@ -1525,6 +1536,11 @@ drm_fault(struct uvm_faultinfo *ufi, vaddr_t vaddr, vm_page_t *pps,
 	ret = dev->driver->gem_fault(obj, ufi, entry->offset + (vaddr -
 	    entry->start), vaddr, pps, npages, centeridx,
 	    access_type, flags);
+
+#ifdef DRM_FAULT_DEBUG
+	DRM_DEBUG("ret %d\n", ret);
+#endif /* DRM_FAULT_DEBUG */
+
 	return (ret);
 }
 
@@ -1818,6 +1834,13 @@ drm_gem_load_uao(bus_dma_tag_t dmat, bus_dmamap_t map, struct uvm_object *uao,
 		ret = EINVAL;
 		goto unwire;
 	}
+
+#ifdef DRM_SG_DEBUG
+	DRM_DEBUG("size %zd, %lu segs\n", size, i);
+	for (int j = 0 ; j < i ; j++)
+		DRM_DEBUG("seg %d: addr %#"PRIxPADDR" size %zd\n", j,
+		    segs[j].ds_addr, segs[j].ds_len);
+#endif /* DRM_SG_DEBUG */
 
 	if ((ret = bus_dmamap_load_raw(dmat, map, segs, i, size, flags)) != 0)
 		goto unwire;
