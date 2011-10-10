@@ -458,6 +458,12 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	dev_priv->dmat = pa->pa_dmat;
 	dev_priv->bst = pa->pa_memt;
 
+#if defined(__NetBSD__)
+	/* XXX Is this safe for all chipsets?  [gsutre] */
+	if (pci_dma64_available(pa))
+		dev_priv->dmat = pa->pa_dmat64;
+#endif /* defined(__NetBSD__) */
+
 #if !defined(__NetBSD__)
 	/* we need to use this api for now due to sharing with intagp */
 	bar = vga_pci_bar_info((struct vga_pci_softc *)parent,
