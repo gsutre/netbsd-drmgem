@@ -598,11 +598,11 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		 * the cache is empty. allocate a page to scribble on
 		 */
 		dev_priv->ifp.i8xx.kva = NULL;
-		if (bus_dmamem_alloc(pa->pa_dmat, PAGE_SIZE, 0, 0,
+		if (bus_dmamem_alloc(dev_priv->dmat, PAGE_SIZE, 0, 0,
 		    &dev_priv->ifp.i8xx.seg, 1, &nsegs, BUS_DMA_WAITOK) == 0) {
-			if (bus_dmamem_map(pa->pa_dmat, &dev_priv->ifp.i8xx.seg,
+			if (bus_dmamem_map(dev_priv->dmat, &dev_priv->ifp.i8xx.seg,
 			    1, PAGE_SIZE, &dev_priv->ifp.i8xx.kva, 0) != 0) {
-				bus_dmamem_free(pa->pa_dmat,
+				bus_dmamem_free(dev_priv->dmat,
 				    &dev_priv->ifp.i8xx.seg, nsegs);
 				dev_priv->ifp.i8xx.kva = NULL;
 			}
@@ -612,7 +612,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	inteldrm_detect_bit_6_swizzle(dev_priv, &bpa);
 	/* Init HWS */
 	if (!I915_NEED_GFX_HWS(dev_priv)) {
-		if (i915_init_phys_hws(dev_priv, pa->pa_dmat) != 0) {
+		if (i915_init_phys_hws(dev_priv, dev_priv->dmat) != 0) {
 			printf(": couldn't alloc HWS page\n");
 			return;
 		}
