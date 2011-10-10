@@ -292,7 +292,6 @@ sg_map_segments(struct sg_cookie *sg, struct sg_page_map *spm, bus_dmamap_t map,
 				return EFBIG;
 			}
 			spm->spm_oaddrs[i] = ds->ds_addr;
-			ds->ds_addr = sg_iomap_translate(spm, ds->ds_addr);
 		}
 	}
 
@@ -319,6 +318,12 @@ sg_map_segments(struct sg_cookie *sg, struct sg_page_map *spm, bus_dmamap_t map,
 	spm->spm_size = sgsize;
 
 	sg_iomap_load_map(sg, spm, dvmaddr, flags);
+
+	/* Fill the DMA segment addresses in the map */
+	for (i = 0; i < map->dm_nsegs; i++) {
+		ds = &map->dm_segs[i];
+		ds->ds_addr = sg_iomap_translate(spm, ds->ds_addr);
+	}
 
 	return 0;
 }
