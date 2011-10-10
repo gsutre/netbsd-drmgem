@@ -85,7 +85,7 @@ struct sg_cookie {
 	struct {
 		bus_dmamap_t		mm_dmamap;
 		struct sg_page_map	*mm_spm;
-	} sg_mm[16];
+	} sg_mm[16384];
 
 	int sg_mm_next;
 
