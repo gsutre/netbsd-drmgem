@@ -320,6 +320,9 @@ _X_EXPORT Status XvMCCreateContext(Display * display, XvPortID port,
 	}
 	drm_intel_bufmgr_gem_enable_reuse(xvmc_driver->bufmgr);
 
+	/* Enable debug messages. */
+	drm_intel_bufmgr_set_debug(xvmc_driver->bufmgr, 1);
+
 	/* call driver hook.
 	 * driver hook should free priv_data after return if success.*/
 	ret =

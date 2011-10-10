@@ -2321,6 +2321,9 @@ void i830_init_bufmgr(ScrnInfoPtr scrn)
 	intel_bufmgr_gem_enable_reuse(intel->bufmgr);
 	drm_intel_bufmgr_gem_enable_fenced_relocs(intel->bufmgr);
 
+	/* Enable debug messages. */
+	drm_intel_bufmgr_set_debug(intel->bufmgr, 1);
+
 	list_init(&intel->batch_pixmaps);
 	list_init(&intel->flush_pixmaps);
 	list_init(&intel->in_flight);
