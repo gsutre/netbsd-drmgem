@@ -1853,14 +1853,21 @@ drm_gem_load_uao(bus_dma_tag_t dmat, bus_dmamap_t map, struct uvm_object *uao,
 	}
 
 #ifdef DRM_SG_DEBUG
-	DRM_DEBUG("size %zd, %lu segs\n", size, i);
+	DRM_DEBUG("raw: size %zd, %lu segs\n", size, i);
 	for (int j = 0 ; j < i ; j++)
-		DRM_DEBUG("seg %5d: addr %#"PRIxPADDR" size %zd\n", j,
+		DRM_DEBUG("raw: seg %5d: addr %#"PRIxPADDR" len %zd\n", j,
 		    segs[j].ds_addr, segs[j].ds_len);
 #endif /* DRM_SG_DEBUG */
 
 	if ((ret = bus_dmamap_load_raw(dmat, map, segs, i, size, flags)) != 0)
 		goto unwire;
+
+#ifdef DRM_SG_DEBUG
+	DRM_DEBUG("map: size %zd, %d segs\n", map->dm_mapsize, map->dm_nsegs);
+	for (int j = 0 ; j < map->dm_nsegs ; j++)
+		DRM_DEBUG("map: seg %5d: addr %#"PRIxPADDR" len %zd\n", j,
+		    map->dm_segs[j].ds_addr, map->dm_segs[j].ds_len);
+#endif /* DRM_SG_DEBUG */
 
 	*segp = segs;
 
