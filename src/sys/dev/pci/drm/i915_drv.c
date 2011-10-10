@@ -2925,7 +2925,11 @@ i915_gem_object_bind_to_gtt(struct drm_obj *obj, bus_size_t alignment,
 		return (EINVAL);
 	}
 
+#if !defined(__NetBSD__)
 	if ((ret = bus_dmamap_create(dev_priv->agpdmat, obj->size, 1,
+#else /* !defined(__NetBSD__) */
+	if ((ret = bus_dmamap_create(dev_priv->agpdmat, obj->size, atop(round_page(obj->size)),
+#endif /* !defined(__NetBSD__) */
 	    obj->size, 0, BUS_DMA_WAITOK, &obj_priv->dmamap)) != 0) {
 		DRM_ERROR("Failed to create dmamap\n");
 		return (ret);
