@@ -1109,7 +1109,7 @@ inteldrm_out_ring(struct inteldrm_softc *dev_priv, u_int32_t cmd)
 void
 inteldrm_advance_ring(struct inteldrm_softc *dev_priv)
 {
-	INTELDRM_VPRINTF("%s: %x, %x\n", __func__, dev_priv->ring.wspace,
+	INTELDRM_VPRINTF("%s: %x, %x\n", __func__, dev_priv->ring.space,
 	    dev_priv->ring.woffset);
 	DRM_MEMORYBARRIER();
 	I915_WRITE(PRB0_TAIL, dev_priv->ring.tail);
@@ -4334,8 +4334,18 @@ i915_gem_cleanup_hws(struct inteldrm_softc *dev_priv)
 	drm_unhold_and_unref(obj);
 	dev_priv->hws_obj = NULL;
 
+	/*
+	 * XXX Since I915_NEED_GFX_HWS(dev_priv) holds, the HWS_PGA register
+	 * XXX must contain a graphics virtual address, and not a physical
+	 * XXX address.  In pratice, with the line below, the ESR register
+	 * XXX shows a page table error after i915_gem_idle() on (the first)
+	 * XXX Leave VT (with PGTBL_ER = 0x00100000).  Tested on a Core i5
+	 * XXX laptop.  Related to issue #5.  [gsutre]
+	 */
+#if 0
 	/* Write high address into HWS_PGA when disabling. */
 	I915_WRITE(HWS_PGA, 0x1ffff000);
+#endif
 }
 
 int
@@ -4439,11 +4449,28 @@ inteldrm_start_ring(struct inteldrm_softc *dev_priv)
 	return (0);
 }
 
+static inline int
+inteldrm_wait_ring_idle(struct inteldrm_softc *dev_priv)
+{
+	return inteldrm_wait_ring(dev_priv, dev_priv->ring.size - 8);
+}
+
 void
 i915_gem_cleanup_ringbuffer(struct inteldrm_softc *dev_priv)
 {
+	int ret;
+
 	if (dev_priv->ring.ring_obj == NULL)
 		return;
+
+	/* Disable the ring buffer. The ring must be idle at this point */
+	ret = inteldrm_wait_ring_idle(dev_priv);
+	if (ret)
+		DRM_ERROR("failed to quiesce %s whilst cleaning up: %d\n",
+			  "ring buffer", ret);
+
+	I915_WRITE(PRB0_CTL, 0);
+
 	agp_unmap_subregion(dev_priv->agph, dev_priv->ring.bsh,
 	    dev_priv->ring.ring_obj->size);
 	drm_hold_object(dev_priv->ring.ring_obj);
