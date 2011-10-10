@@ -49,7 +49,6 @@
  */
 #include <sys/types.h>
 #include <sys/param.h>
-#include <sys/bus.h>
 #include <sys/extent.h>
 #include <sys/kmem.h>
 #include <sys/systm.h>
@@ -58,10 +57,11 @@
 #include <sys/mutex.h>
 #include <sys/proc.h>
 
+#include <sys/bus.h>
+#include <machine/bus_private.h>
 #include <machine/cpu.h>
 
 #include <x86/sg_dma.h>
-#include <x86/bus_private.h>
 
 #ifndef MAX_DMA_SEGS
 #define MAX_DMA_SEGS	20
