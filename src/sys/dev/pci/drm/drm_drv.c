@@ -138,6 +138,12 @@ drm_attach_pci(const struct drm_driver_info *driver, struct pci_attach_args *pa,
 	arg.irq = pa->pa_intrline;
 	arg.is_agp = is_agp;
 
+#if defined(__NetBSD__)
+	/* XXX Is this safe for all chipsets?  [gsutre] */
+	if (pci_dma64_available(pa))
+		arg.dmat = pa->pa_dmat64;
+#endif /* defined(__NetBSD__) */
+
 	arg.busid_len = 20;
 	arg.busid = malloc(arg.busid_len + 1, M_DRM, M_NOWAIT);
 	if (arg.busid == NULL) {
