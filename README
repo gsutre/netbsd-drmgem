@@ -38,6 +38,9 @@ tree with the following command, run from within the cloned git repository:
 
 $ git diff remotes/origin/netbsd-current remotes/origin/master -- src
 
+However, the generated patch only concerns /usr/src.  It is still necessary to
+overwrite /usr/xsrc with files in the xsrc sub-directory of this project.
+
 
 2. Build and install new kernel
 
