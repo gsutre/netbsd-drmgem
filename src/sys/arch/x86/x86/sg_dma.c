@@ -214,9 +214,9 @@ sg_dmamap_create(void *cookie, bus_dma_tag_t t, bus_size_t size, int nsegments,
 	}
 
 #ifdef DIAGNOSTIC
-	if (map->_dm_cookie != NULL)
+	if ((*mapp)->_dm_cookie != NULL)
 		printf("%s: non-NULL cookie, bounce thresh %#"PRIxPADDR"\n", __func__,
-		    map->_dm_bounce_thresh);
+		    (*mapp)->_dm_bounce_thresh);
 #endif
 
 	if ((spm = sg_iomap_create(atop(round_page(size)))) == NULL) {
