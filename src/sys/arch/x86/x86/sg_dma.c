@@ -209,7 +209,7 @@ sg_dmamap_create(void *ctx, bus_dma_tag_t t, bus_size_t size, int nsegments,
 		return (ENOMEM);
 	}
 
-	map->_dm_cookie = spm;
+	map->_dm_sg_cookie = spm;
 	*dmamap = map;
 
 	return (0);
@@ -237,9 +237,9 @@ sg_dmamap_destroy(void *ctx, bus_dma_tag_t t, bus_dmamap_t map)
 	if (map->dm_nsegs)
 		bus_dmamap_unload(t, map);
 
-	if (map->_dm_cookie)
-		sg_iomap_destroy(map->_dm_cookie);
-	map->_dm_cookie = NULL;
+	if (map->_dm_sg_cookie)
+		sg_iomap_destroy(map->_dm_sg_cookie);
+	map->_dm_sg_cookie = NULL;
 	bus_dmamap_destroy(sg->sg_dmat, map);
 }
 
@@ -261,7 +261,7 @@ sg_dmamap_load(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, void *buf,
 	u_long dvmaddr, sgstart, sgend;
 	bus_size_t align, boundary;
 	struct sg_cookie *sg = ctx;
-	struct sg_page_map *spm = map->_dm_cookie;
+	struct sg_page_map *spm = map->_dm_sg_cookie;
 	pmap_t pmap;
 
 	if (map->dm_nsegs) {
@@ -417,7 +417,7 @@ sg_dmamap_load_mbuf(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, struct mbuf *m
 	 * we may need to adapt the algorithm
 	 */
 	bus_dma_segment_t	 segs[MAX_DMA_SEGS];
-	struct sg_page_map	*spm = map->_dm_cookie;
+	struct sg_page_map	*spm = map->_dm_sg_cookie;
 	size_t			 len;
 	int			 i, err;
 
@@ -491,7 +491,7 @@ sg_dmamap_load_uio(void *ctx, bus_dma_tag_t t, bus_dmamap_t map, struct uio *uio
 	 * 'till then we only accept kernel data
 	 */
 	bus_dma_segment_t	 segs[MAX_DMA_SEGS];
-	struct sg_page_map	*spm = map->_dm_cookie;
+	struct sg_page_map	*spm = map->_dm_sg_cookie;
 	size_t			 len;
 	int			 i, j, err;
 
@@ -568,7 +568,7 @@ sg_dmamap_load_raw(void *ctx, bus_dma_tag_t t, bus_dmamap_t map,
 	bus_size_t boundary, align;
 	u_long dvmaddr, sgstart, sgend;
 	struct sg_cookie *sg = ctx;
-	struct sg_page_map *spm = map->_dm_cookie;
+	struct sg_page_map *spm = map->_dm_sg_cookie;
 
 	if (map->dm_nsegs) {
 		/* Already in use?? */
@@ -676,7 +676,7 @@ static int
 sg_dmamap_append_range(bus_dma_tag_t t, bus_dmamap_t map, paddr_t pa,
     bus_size_t length, int flags, bus_size_t boundary)
 {
-	struct sg_page_map *spm = map->_dm_cookie;
+	struct sg_page_map *spm = map->_dm_sg_cookie;
 	bus_addr_t sgstart, sgend, bd_mask;
 	bus_dma_segment_t *seg = NULL;
 	int i = map->dm_nsegs;
@@ -841,7 +841,7 @@ static void
 sg_dmamap_unload(void *ctx, bus_dma_tag_t t, bus_dmamap_t map)
 {
 	struct sg_cookie	*sg = ctx;
-	struct sg_page_map	*spm = map->_dm_cookie;
+	struct sg_page_map	*spm = map->_dm_sg_cookie;
 	bus_addr_t		 dvmaddr = spm->spm_start;
 	bus_size_t		 sgsize = spm->spm_size;
 	int			 error;
