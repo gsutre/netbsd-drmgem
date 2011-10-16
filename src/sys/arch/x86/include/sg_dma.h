@@ -96,7 +96,7 @@ struct sg_page_entry {
 	bus_addr_t			spe_va;
 };
 
-/* for sg_dma this will be in the map's dm_cookie. */
+/* for sg_dma this will be in the map's dm_sg_cookie. */
 struct sg_page_map {
 	SPLAY_HEAD(sg_page_tree, sg_page_entry) spm_tree;
 
