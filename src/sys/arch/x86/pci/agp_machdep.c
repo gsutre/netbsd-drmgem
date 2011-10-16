@@ -115,8 +115,8 @@ agp_sg_bind_page(void *dev, bus_addr_t address, paddr_t physical, int flags)
 	int error;
 
 #ifdef DRM_SG_DEBUG
-	printf("%s: ba %#"PRIxPADDR", pa %#"PRIxPADDR"\n",
-	    __func__, address, physical);
+	printf("%s: ba %#"PRIxPADDR" (off %#"PRIxPADDR") -> pa %#"PRIxPADDR"\n",
+	    __func__, address, address - sc->as_apaddr, physical);
 #endif /* DRM_SG_DEBUG */
 
 	error = AGP_BIND_PAGE(sc, address - sc->as_apaddr,
@@ -134,8 +134,8 @@ agp_sg_unbind_page(void *dev, bus_addr_t address)
 	int error;
 
 #ifdef DRM_SG_DEBUG
-	printf("%s: ba %#"PRIxPADDR"\n",
-	    __func__, address);
+	printf("%s: ba %#"PRIxPADDR" (off %#"PRIxPADDR")\n",
+	    __func__, address, address - sc->as_apaddr);
 #endif /* DRM_SG_DEBUG */
 
 	error = AGP_UNBIND_PAGE(sc, address - sc->as_apaddr);

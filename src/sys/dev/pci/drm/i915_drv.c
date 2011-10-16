@@ -74,19 +74,24 @@
  * Macro to check and print error registers.
  */
 static bool no_error_detected = true;
-#define CHECK_ERROR_REGISTER(line)										\
-do {														\
-	u_int32_t eir, esr, pgtbl_er;										\
-														\
-	eir = I915_READ(EIR);											\
-	esr = I915_READ(ESR);											\
-	pgtbl_er = I915_READ(PGTBL_ER);										\
-														\
-	if (no_error_detected && (eir || pgtbl_er)) {								\
-		aprint_error("ERROR: %s [%d]: eir 0x%08"PRIx32" esr 0x%08"PRIx32" pgtbl_er 0x%08"PRIx32"\n",	\
-		    __func__, line, eir, esr, pgtbl_er);							\
-		no_error_detected = false;									\
-	}													\
+#define CHECK_ERROR_REGISTER(line)						\
+do {										\
+	u_int32_t eir, esr, pgtbl_er, gtt_fsr;					\
+										\
+	eir = I915_READ(EIR);							\
+	esr = I915_READ(ESR);							\
+	pgtbl_er = I915_READ(PGTBL_ER);						\
+	gtt_fsr = I915_READ(0x44040);	/* GTT Fault Status Register */		\
+										\
+	if (no_error_detected && (eir || pgtbl_er || gtt_fsr)) {		\
+		aprint_error("ERROR: %s [%d]:"					\
+		    " eir 0x%08"PRIx32						\
+		    " esr 0x%08"PRIx32						\
+		    " pgtbl_er 0x%08"PRIx32					\
+		    " gtt_fsr 0x%08"PRIx32"\n",					\
+		    __func__, line, eir, esr, pgtbl_er, gtt_fsr);		\
+		no_error_detected = false;					\
+	}									\
 } while (0)
 
 #if !defined(__NetBSD__)
