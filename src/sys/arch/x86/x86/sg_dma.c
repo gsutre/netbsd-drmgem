@@ -156,6 +156,12 @@ sg_dmatag_create(const char *name, void *hdl, bus_dma_tag_t odmat,
 	if (error != 0)
 		goto out;
 
+#ifdef DIAGNOSTIC
+	if ((*dmat)->_bounce_thresh != 0)
+		printf("%s: bounce thresh %#"PRIxPADDR"\n", __func__,
+		    (*dmat)->_bounce_thresh);
+#endif
+
 	mutex_init(&sg->sg_mtx, MUTEX_DEFAULT, IPL_HIGH);
 
 	return 0;
@@ -206,6 +212,12 @@ sg_dmamap_create(void *cookie, bus_dma_tag_t t, bus_size_t size, int nsegments,
 		sg->sg_mm_next--;
 		return ret;
 	}
+
+#ifdef DIAGNOSTIC
+	if (map->_dm_cookie != NULL)
+		printf("%s: non-NULL cookie, bounce thresh %#"PRIxPADDR"\n", __func__,
+		    map->_dm_bounce_thresh);
+#endif
 
 	if ((spm = sg_iomap_create(atop(round_page(size)))) == NULL) {
 		bus_dmamap_destroy(sg->sg_dmat, *mapp);
@@ -308,7 +320,12 @@ sg_map_segments(struct sg_cookie *sg, struct sg_page_map *spm, bus_dmamap_t map,
 	    sgsize, align, (sgsize > boundary) ? 0 : boundary,
 	    EX_NOWAIT | EX_BOUNDZERO, (u_long *)&dvmaddr);
 	mutex_exit(&sg->sg_mtx);
+
 	if (err != 0) {
+#ifdef DIAGNOSTIC
+		printf("%s: unable to allocate extent subregion: %d\n",
+		    __func__, err);
+#endif
 		sg_iomap_clear_pages(spm);
 		return err;
 	}
@@ -564,13 +581,22 @@ sg_iomap_create(int n)
 		n = 16;
 
 	spm = kmem_zalloc(spm_size(n), KM_NOSLEEP);
-	if (spm == NULL)
+	if (spm == NULL) {
+#ifdef DIAGNOSTIC
+		printf("%s: unable to allocate page map with %d entries\n",
+		    __func__, n);
+#endif
 		return NULL;
+	}
 
 	spm->spm_oaddrs = kmem_zalloc(n * sizeof(*spm->spm_oaddrs), KM_NOSLEEP);
 
 	if (spm->spm_oaddrs == NULL) {
 		kmem_free(spm, spm_size(n));
+#ifdef DIAGNOSTIC
+		printf("%s: unable to allocate oaddrs array of size %d\n",
+		    __func__, n);
+#endif
 		return NULL;
 	}
 
@@ -587,6 +613,11 @@ sg_iomap_create(int n)
 static void
 sg_iomap_destroy(struct sg_page_map *spm)
 {
+#ifdef DIAGNOSTIC
+	if (spm->spm_pagecnt > 0)
+		printf("%s: %d page entries in use\n", __func__,
+		    spm->spm_pagecnt);
+#endif
 	KASSERT(spm->spm_pagecnt == 0);
 
 	kmem_free(spm->spm_oaddrs, spm->spm_maxpage * sizeof(*spm->spm_oaddrs));
@@ -622,6 +653,10 @@ sg_iomap_insert_page(struct sg_page_map *spm, paddr_t pa)
 		if (SPLAY_FIND(sg_page_tree, &spm->spm_tree, &spe))
 			return (0);
 
+#ifdef DIAGNOSTIC
+		printf("%s: max page count reached: %d >= %d\n", __func__,
+		    spm->spm_pagecnt, spm->spm_maxpage);
+#endif
 		return (ENOMEM);
 	}
 
@@ -687,8 +722,12 @@ sg_iomap_translate(struct sg_page_map *spm, paddr_t pa)
 
 	e = SPLAY_FIND(sg_page_tree, &spm->spm_tree, &pe);
 
-	if (e == NULL)
+	if (e == NULL) {
+#ifdef DIAGNOSTIC
+		printf("%s: phys addr %#"PRIxPADDR" not found\n", __func__, pa);
+#endif
 		return (0);
+	}
 
 	return (e->spe_va | offset);
 }
