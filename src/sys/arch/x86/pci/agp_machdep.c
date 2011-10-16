@@ -336,8 +336,8 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 	    (ops & (BUS_DMASYNC_POSTREAD | BUS_DMASYNC_POSTWRITE)) != 0)
 		panic("agp_dmamap_sync: mix PRE and POST");
 	if (offset >= dmam->dm_mapsize)
-		panic("_intagp_dma_sync: bad offset %" PRIuPTR " (size = %zu)",
-		    (uintptr_t)offset, dmam->dm_mapsize);
+		panic("_intagp_dma_sync: bad offset %"PRIxPADDR" (size = %zu)",
+		    offset, dmam->dm_mapsize);
 	if (size == 0 || (offset + size) > dmam->dm_mapsize)
 		panic("intagp_dma_sync: bad length");
 #endif /* DIAGNOSTIC */
@@ -373,7 +373,7 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 		soff = trunc_page(offset);
 		endoff = round_page(offset + size);
 		x86_mfence();
-		spm = dmam->_dm_cookie;
+		spm = dmam->_dm_sg_cookie;
 		switch (spm->spm_buftype) {
 		case X86_DMA_BUFTYPE_LINEAR:
 			addr = (vaddr_t)spm->spm_origbuf + soff;
