@@ -94,6 +94,42 @@ do {										\
 	}									\
 } while (0)
 
+#ifdef DRM_TLB_DEBUG
+/*
+ * Macros to dump active TLB pages (in the GTT).  See Section 1.3.4 of
+ * http://intellinuxgraphics.org/IHD_OS_Vol1_Part2r2.pdf.
+ *
+ * XXX CS and RC TLB registers are equal to 0xffffffff on my Core i5 laptop,
+ * XXX so I discard this value.  [gsutre]
+ */
+#define DUMP_ACTIVE_TLB_REGS(line, name, start, n)				\
+do {										\
+	u_int32_t reg, val;							\
+										\
+	reg = start;								\
+	for (int i = 0; i < n; i++, reg += 4) {					\
+		val = I915_READ(reg);						\
+		if (val != 0xffffffff && (val & 0x1))				\
+			aprint_normal("%s [%d]:"				\
+			    " %s TLB: @%"PRIx32"h: 0x%08"PRIx32"\n",		\
+			    __func__, line, name, reg, val);			\
+	}									\
+} while (0)
+/*
+ * XXX Dumping of RC TLB registers is commented out, as otherwise my Core i5
+ * XXX laptop hangs a few seconds after the X server starts (even if we only
+ * XXX dump one register, i.e., replace 224 by 1).  [gsutre]
+ */
+#define DUMP_ALL_ACTIVE_TLB_REGS(line)						\
+do {										\
+	DUMP_ACTIVE_TLB_REGS(line, "ISC", 0xb000,  16);				\
+	DUMP_ACTIVE_TLB_REGS(line, "VF ", 0xb100,  19);				\
+	DUMP_ACTIVE_TLB_REGS(line, "CS ", 0xb200,   6);				\
+	DUMP_ACTIVE_TLB_REGS(line, "MT ", 0xb300,  32);				\
+	/*DUMP_ACTIVE_TLB_REGS(line, "RC ", 0xb400, 224);*/			\
+} while (0)
+#endif /* DRM_TLB_DEBUG */
+
 #if !defined(__NetBSD__)
 int	inteldrm_probe(struct device *, void *, void *);
 #else /* !defined(__NetBSD__) */
@@ -840,6 +876,11 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	int			 error = 0;
 
+#ifdef DRM_TLB_DEBUG
+	if (IS_IRONLAKE(dev_priv))
+		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+#endif /* DRM_TLB_DEBUG */
+
 	CHECK_ERROR_REGISTER(__LINE__);
 
 	while ((dev_priv->sc_flags & INTELDRM_QUIET) && error == 0)
@@ -855,6 +896,11 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 		wakeup(&dev_priv->entries);
 
 	CHECK_ERROR_REGISTER(__LINE__);
+
+#ifdef DRM_TLB_DEBUG
+	if (IS_IRONLAKE(dev_priv))
+		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+#endif /* DRM_TLB_DEBUG */
 
 	return (error);
 }
@@ -2223,6 +2269,11 @@ i915_gem_object_unbind(struct drm_obj *obj, int interruptible)
 		return ret;
 
 	KASSERT(!inteldrm_is_active(obj_priv));
+
+#ifdef DRM_TLB_DEBUG
+	if (IS_IRONLAKE(dev_priv))
+		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+#endif /* DRM_TLB_DEBUG */
 
 	/* if it's purgeable don't bother dirtying the pages */
 	if (i915_obj_purgeable(obj_priv))
