@@ -138,6 +138,7 @@ struct x86_bus_dmamap {
 	int		_dm_flags;	/* misc. flags */
 
 	void		*_dm_cookie;	/* cookie for bus-specific functions */
+	void		*_dm_sg_cookie;	/* cookie for sg_page_map (XXX Ugh.) */
 
 	/*
 	 * PUBLIC MEMBERS: these are used by machine-independent code.

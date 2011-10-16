@@ -374,7 +374,7 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 		soff = trunc_page(offset);
 		endoff = round_page(offset + size);
 		x86_mfence();
-		spm = dmam->_dm_cookie;
+		spm = dmam->_dm_sg_cookie;
 		switch (spm->spm_buftype) {
 		case X86_DMA_BUFTYPE_LINEAR:
 			addr = (vaddr_t)spm->spm_origbuf + soff;
