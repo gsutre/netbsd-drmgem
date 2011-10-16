@@ -2927,7 +2927,7 @@ i915_gem_object_bind_to_gtt(struct drm_obj *obj, bus_size_t alignment,
 
 	if ((ret = bus_dmamap_create(dev_priv->agpdmat, obj->size, 1,
 	    obj->size, 0, BUS_DMA_WAITOK, &obj_priv->dmamap)) != 0) {
-		DRM_ERROR("Failed to create dmamap\n");
+		DRM_ERROR("Failed to create dmamap: %d\n", ret);
 		return (ret);
 	}
 	agp_bus_dma_set_alignment(dev_priv->agpdmat, obj_priv->dmamap,
@@ -3454,7 +3454,7 @@ i915_gem_object_pin_and_relocate(struct drm_obj *obj,
 
 		if ((ret = agp_map_subregion(dev_priv->agph,
 		    trunc_page(reloc_offset), PAGE_SIZE, &bsh)) != 0) {
-			DRM_ERROR("map failed...\n");
+			DRM_ERROR("map failed: %d\n", ret);
 			goto err;
 		}
 
@@ -4306,7 +4306,7 @@ i915_gem_init_hws(struct inteldrm_softc *dev_priv)
 	    PAGE_SIZE, obj->uao, 0, 0, UVM_MAPFLAG(UVM_PROT_RW, UVM_PROT_RW,
 	    UVM_INH_SHARE, UVM_ADV_RANDOM, 0));
 	if (ret != 0) {
-		DRM_ERROR("Failed to map status page.\n");
+		DRM_ERROR("Failed to map status page: %d\n", ret);
 		obj->uao->pgops->pgo_detach(obj->uao);
 		i915_gem_object_unpin(obj);
 		drm_unhold_and_unref(obj);
@@ -5438,7 +5438,8 @@ i915_gem_get_tiling(struct drm_device *dev, void *data,
 		args->swizzle_mode = I915_BIT_6_SWIZZLE_NONE;
 		break;
 	default:
-		DRM_ERROR("unknown tiling mode\n");
+		DRM_ERROR("unknown tiling mode %"PRIu32"\n",
+		    obj_priv->tiling_mode);
 	}
 
 	drm_unhold_and_unref(obj);
