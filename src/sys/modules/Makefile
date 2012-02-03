@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile,v 1.94 2011/10/02 12:13:08 mbalmer Exp $
+#	$NetBSD: Makefile,v 1.101 2012/01/17 16:59:38 jakllsch Exp $
 
 .include <bsd.own.mk>
 
@@ -15,6 +15,7 @@ SUBDIR+=	coda5
 SUBDIR+=	compat
 SUBDIR+=	compat_ossaudio
 SUBDIR+=	coredump
+SUBDIR+=	chfs
 SUBDIR+=	efs
 SUBDIR+=	ext2fs
 SUBDIR+=	exec_script
@@ -44,6 +45,8 @@ SUBDIR+=	nandemulator
 SUBDIR+=	nfs
 SUBDIR+=	nfsserver
 SUBDIR+=	nilfs
+SUBDIR+=	npf
+SUBDIR+=	npf_alg_icmp
 SUBDIR+=	ntfs
 SUBDIR+=	null
 SUBDIR+=	onewire
@@ -58,6 +61,7 @@ SUBDIR+=	puffs
 SUBDIR+=	putter
 SUBDIR+=	scsiverbose
 SUBDIR+=	secmodel_bsd44
+SUBDIR+=	secmodel_extensions
 SUBDIR+=	secmodel_overlay
 SUBDIR+=	securelevel
 SUBDIR+=	smbfs
@@ -106,6 +110,7 @@ SUBDIR+=	odcm
 SUBDIR+=	powernow
 SUBDIR+=	tprof_pmi
 SUBDIR+=	tprof_amdpmi
+SUBDIR+=	vmt
 .endif
 
 #
@@ -185,6 +190,11 @@ SUBDIR+=	viadrm
 SUBDIR+=	aps
 SUBDIR+=	finsio
 SUBDIR+=	itesio
+SUBDIR+=	lm
+SUBDIR+=	lm_isa
+SUBDIR+=	lm_isa_common
+SUBDIR+=	lm_wbsio
+SUBDIR+=	wbsio
 .endif
 
 .if ${MACHINE_CPU} == "m68k"
@@ -245,6 +255,10 @@ SUBDIR+=	auvitek
 SUBDIR+=	coram
 SUBDIR+=	cxdtv
 SUBDIR+=	emdtv
+.endif
+
+.if (${MKISCSI} != "no")
+SUBDIR+=	iscsi
 .endif
 
 .include <bsd.subdir.mk>
