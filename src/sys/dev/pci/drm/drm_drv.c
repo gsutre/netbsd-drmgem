@@ -238,7 +238,7 @@ drm_attach(struct device *parent, struct device *self, void *aux)
 	 * conflict with it.
 	 */
 	dev->handle_ext = extent_create("drmext", 1024*1024*1024, LONG_MAX,
-	    M_DRM, NULL, 0, EX_NOWAIT | EX_NOCOALESCE);
+	    NULL, 0, EX_NOWAIT | EX_NOCOALESCE);
 	if (dev->handle_ext == NULL) {
 		DRM_ERROR("Failed to initialise handle extent\n");
 		goto error;
