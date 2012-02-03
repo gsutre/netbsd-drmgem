@@ -160,7 +160,7 @@ sg_dmatag_create(const char *name, void *hdl, bus_dma_tag_t odmat,
 	}
 
 	sg->sg_ex = extent_create(name, start, start + size - 1,
-	    M_DMAMAP, NULL, 0, EX_NOWAIT | EX_NOCOALESCE);
+	    NULL, 0, EX_NOWAIT | EX_NOCOALESCE);
 	if (sg->sg_ex == NULL) {
 		kmem_free(sg, sizeof(*sg));
 		return (ENOMEM);
