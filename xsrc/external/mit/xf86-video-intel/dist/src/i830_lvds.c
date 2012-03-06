@@ -1557,7 +1557,7 @@ i830_lvds_init(ScrnInfoPtr scrn)
     }
     intel_output->type = I830_OUTPUT_LVDS;
     intel_output->pipe_mask = (1 << 1);
-    if (0 && IS_IGDNG(intel)) /* XXX put me back */
+    if (0 /*&& IS_IGDNG(intel)*/) /* XXX put me back */
 	intel_output->pipe_mask |= (1 << 0);
     intel_output->clone_mask = (1 << I830_OUTPUT_LVDS);
     
