@@ -3,7 +3,7 @@
 .include <bsd.own.mk>
 
 LIB=	I810XvMC
-.PATH:	${X11SRCDIR.xf86-video-intel}/src/xvmc
+.PATH:	${X11SRCDIR.xf86-video-intel}/src/legacy/i810/xvmc
 
 SRCS=	I810XvMC.c
 

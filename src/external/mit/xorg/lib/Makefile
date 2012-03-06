@@ -24,7 +24,7 @@ SUBDIR+=pixman xkeyboard-config libxcb \
 	.WAIT
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=libI810XvMC
-#SUBDIR+=libIntelXvMC
+SUBDIR+=libIntelXvMC
 #SUBDIR+=libchromeXvMC
 #SUBDIR+=libchromeXvMCPro
 .endif

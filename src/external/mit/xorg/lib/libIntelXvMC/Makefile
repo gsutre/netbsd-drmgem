@@ -3,15 +3,15 @@
 .include <bsd.own.mk>
 
 LIB=	IntelXvMC
-#MKLINT=	no
+MKLINT=	no
 .PATH:	${X11SRCDIR.xf86-video-intel}/src/xvmc
 
 SRCS=	intel_xvmc.c \
-	intel_xvmc_dump.c \
-	i915_xvmc.c \
-	i965_xvmc.c \
-	intel_batchbuffer.c \
-	xf86dri.c
+        intel_xvmc_dump.c              \
+        i915_xvmc.c                    \
+        i965_xvmc.c                    \
+        xvmc_vld.c                     \
+        intel_batchbuffer.c
 
 CPPFLAGS+=	${X11FLAGS.THREADLIB} \
 		-DHAVE_XEXTPROTO_71 \
@@ -25,7 +25,8 @@ LIBDPLIBS=	Xext	${.CURDIR}/../libXext \
 		X11	${.CURDIR}/../libX11/dynamic \
 		Xv	${.CURDIR}/../libXv \
 		XvMC	${.CURDIR}/../libXvMC \
-		drm	${.CURDIR}/../libdrm
+		drm	${.CURDIR}/../libdrm \
+		drm_intel	${.CURDIR}/../libdrm_intel
 
 CWARNFLAGS.clang+=	-Wno-pointer-sign -Wno-format -Wno-parentheses
 
