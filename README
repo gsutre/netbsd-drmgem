@@ -17,6 +17,9 @@ a focus on Intel graphics chipsets.  The OpenBSD Xenocara DRM library and X.org
 Intel video driver should not require much work.  So the main challenge of this
 project is the port of OpenBSD's DRM/GEM kernel driver to NetBSD.
 
+Note: This port is for NetBSD's native X.org.  It's not compatible with pkgsrc's
+      X.org.                    ^^^^^^
+
 
 *****      Use at your own risk        ******        Work in progress      *****
 
