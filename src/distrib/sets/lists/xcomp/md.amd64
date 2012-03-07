@@ -75,10 +75,10 @@
 ./usr/X11R7/lib/libI810XvMC_g.a				-unknown-	debuglib,xorg
 ./usr/X11R7/lib/libI810XvMC_p.a				-unknown-	profile,xorg
 ./usr/X11R7/lib/libI810XvMC_pic.a			-unknown-	xorg
-#./usr/X11R7/lib/libIntelXvMC.a				-unknown-	xorg
-#./usr/X11R7/lib/libIntelXvMC_g.a			-unknown-	debuglib,xorg
-#./usr/X11R7/lib/libIntelXvMC_p.a			-unknown-	profile,xorg
-#./usr/X11R7/lib/libIntelXvMC_pic.a			-unknown-	xorg
+./usr/X11R7/lib/libIntelXvMC.a				-unknown-	xorg
+./usr/X11R7/lib/libIntelXvMC_g.a			-unknown-	debuglib,xorg
+./usr/X11R7/lib/libIntelXvMC_p.a			-unknown-	profile,xorg
+./usr/X11R7/lib/libIntelXvMC_pic.a			-unknown-	xorg
 #./usr/X11R7/lib/libchromeXvMC.a				-unknown-	xorg
 #./usr/X11R7/lib/libchromeXvMC_g.a			-unknown-	debuglib,xorg
 #./usr/X11R7/lib/libchromeXvMC_p.a			-unknown-	profile,xorg

@@ -35,7 +35,7 @@
 
 #define _PARSE_EDID_
 #include "xf86.h"
-#include "i830.h"
+#include "intel.h"
 #include "i830_bios.h"
 #include "i830_dp.h"
 #include "edid.h"
@@ -222,7 +222,7 @@ static void parse_general_features(intel_screen_private *intel, struct bdb_heade
 	if (intel->lvds_use_ssc) {
 		if (IS_I85X(intel))
 			intel->lvds_ssc_freq = general->ssc_freq ? 66 : 48;
-		else if (IS_IGDNG(intel))
+		else if (IS_GEN5(intel) || IS_GEN6(intel))
 			intel->lvds_ssc_freq = general->ssc_freq ? 100 : 120;
 		else
 			intel->lvds_ssc_freq = general->ssc_freq ? 100 : 96;
