@@ -27,11 +27,6 @@ msleep(unsigned int msecs)
 	ret__;								\
 })
 
-#define HAS_PCH_SPLIT(x)	IS_IGDNG(x)
-#define HAS_PCH_CPT(x)		FALSE
-#define IS_GEN5(x)		IS_IGDNG(x)
-#define IS_GEN6(x)		FALSE
-
 #define I915_WRITE(reg, val)	OUTREG(reg, val)
 #define I915_READ(reg)		INREG(reg)
 #define DRM_ERROR(fmt, arg...)		ErrorF(fmt, ## arg)

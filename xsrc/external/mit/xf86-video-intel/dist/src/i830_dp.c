@@ -41,8 +41,9 @@
 #include <unistd.h>
 
 #include "xf86.h"
-#include "i830.h"
+#include "intel.h"
 #include "xf86Modes.h"
+#include "i830_reg.h"
 #include "i830_display.h"
 
 #include "i830_dp.h"

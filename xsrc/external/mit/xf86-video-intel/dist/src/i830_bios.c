@@ -40,7 +40,7 @@
 #include "i830_dp.h"
 #include "edid.h"
 
-#define SUPPORTS_EDP(x)		IS_IGDNG_M(x)
+#define SUPPORTS_EDP(x)		IS_IRONLAKE_M(x)
 
 #define INTEL_BIOS_8(_addr)	(bios[_addr])
 #define INTEL_BIOS_16(_addr)	(bios[_addr] |			\
