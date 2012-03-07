@@ -3,9 +3,9 @@
 ./usr/X11R7/lib/libI810XvMC.so			-unknown-		xorg
 ./usr/X11R7/lib/libI810XvMC.so.1		-unknown-		xorg
 ./usr/X11R7/lib/libI810XvMC.so.1.0		-unknown-		xorg
-#./usr/X11R7/lib/libIntelXvMC.so			-unknown-		xorg
-#./usr/X11R7/lib/libIntelXvMC.so.1		-unknown-		xorg
-#./usr/X11R7/lib/libIntelXvMC.so.1.0		-unknown-		xorg
+./usr/X11R7/lib/libIntelXvMC.so			-unknown-		xorg
+./usr/X11R7/lib/libIntelXvMC.so.1		-unknown-		xorg
+./usr/X11R7/lib/libIntelXvMC.so.1.0		-unknown-		xorg
 #./usr/X11R7/lib/libchromeXvMC.so		-unknown-		xorg
 #./usr/X11R7/lib/libchromeXvMC.so.1		-unknown-		xorg
 #./usr/X11R7/lib/libchromeXvMC.so.1.0		-unknown-		xorg

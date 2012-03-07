@@ -55,10 +55,10 @@ fi
 
 # Main #########################################################################
 
-# Check for NetBSD 5.99
+# Check for NetBSD 6.99
 set -- $(uname -r | tr '.' ' ')
-if [ "$(uname -s)" != "NetBSD" -o "$1" != "5" -o "$2" != "99" ]; then
-	echo "$self: error: host should be running NetBSD 5.99."
+if [ "$(uname -s)" != "NetBSD" -o "$1" != "6" -o "$2" != "99" ]; then
+	echo "$self: error: host should be running NetBSD 6.99."
 	exit 1
 fi
 set --
