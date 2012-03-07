@@ -1,4 +1,4 @@
-/*	$OpenBSD: agpreg.h,v 1.12 2008/12/24 05:42:58 oga Exp $	*/
+/*	$OpenBSD: agpreg.h,v 1.15 2011/10/24 15:42:33 oga Exp $	*/
 /*	$NetBSD: agpreg.h,v 1.1 2001/09/10 10:01:02 fvdl Exp $	*/
 
 /*-
@@ -52,10 +52,6 @@
 /*
  * Config offsets for Intel AGP chipsets.
  */
-/* i845/855PM */
-#define	AGP_I845_AGPMISC		0x51
-#define AGPMISC_AAGN			(1U << 1)  /* Aperture AccessEN */
-
 /* i840/850/850E */
 #define AGP_I840_MCHCFG			0x50
 #define MCHCFG_AAGN			(1U << 9)  /* Aperture AccessEN */
@@ -70,7 +66,9 @@
 #define	AGP_INTEL_I8XX_ERRSTS		0xc8
 
 /* Common register */
-#define	AGP_INTEL_ERRSTS		0x91	/* Not i8XX */
+#define	AGP_INTEL_ERRCMD		0x90	/* Not i8XX, 8 bits
+						 * ERRSTS is at + 1 and is 16
+						 */
 #define AGP_INTEL_AGPCMD		0xa8
 #define AGPCMD_SBA			(1U << 9)
 #define AGPCMD_AGPEN			(1U << 8)
@@ -101,6 +99,7 @@
 #define AGP3_VIA_GARTCTRL		0x90
 #define AGP3_VIA_APSIZE			0x94
 #define AGP3_VIA_ATTBASE		0x98
+#define AGP_VIA_AGPSEL_REG		0xfc
 #define AGP_VIA_AGPSEL			0xfd
 
 /*
@@ -274,5 +273,27 @@
 #define AGP_INTEL_GMCH_GMS_STOLEN_224M	0xc0
 #define AGP_INTEL_GMCH_GMS_STOLEN_352M	0xd0
 #define	AGP_G4X_GTT			0x200000
+
+/*
+ * Intel Sandybridge registers and values
+ */
+#define AGP_INTEL_SNB_GMCH_CTRL			0x50
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_MASK	0xF8
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_32M	(1 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_64M	(2 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_96M	(3 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_128M	(4 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_160M	(5 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_192M	(6 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_224M	(7 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_256M	(8 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_288M	(9 << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_320M	(0xa << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_352M	(0xb << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_384M	(0xc << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_416M	(0xd << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_448M	(0xe << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_480M	(0xf << 3)
+#define AGP_INTEL_SNB_GMCH_GMS_STOLEN_512M	(0x10 << 3)
 
 #endif /* !_PCI_AGPREG_H_ */
