@@ -1,4 +1,4 @@
-/*	$NetBSD: pcidevs_data.h,v 1.1099 2012/03/03 05:40:11 nonaka Exp $	*/
+/*	$NetBSD$	*/
 
 /*
  * THIS FILE AUTOMATICALLY GENERATED.  DO NOT EDIT.
@@ -3494,11 +3494,19 @@ static const uint16_t pci_products[] = {
 	    15945, 15954, 15996, 0,
 	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_HB, 
 	    16001, 6259, 6649, 6259, 0,
-	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_IGD, 
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_GT1_IGD, 
+	    16001, 6259, 692, 1716, 2427, 0,
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_IGD, 
+	    16001, 6259, 692, 1716, 2427, 0,
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_PLUS_IGD, 
 	    16001, 6259, 692, 1716, 2427, 0,
 	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_M_HB, 
 	    16001, 6259, 6649, 6259, 0,
-	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD, 
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT1_IGD, 
+	    16001, 6259, 692, 1716, 2427, 0,
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_IGD, 
+	    16001, 6259, 692, 1716, 2427, 0,
+	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_PLUS_IGD, 
 	    16001, 6259, 692, 1716, 2427, 0,
 	    PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_80312, 
 	    16007, 8044, 12853, 4562, 0,
@@ -8035,7 +8043,7 @@ static const char pci_words[] = { "."
 	    "Hitach\0" /* 1 refs @ 673 */
 	    "AMP\0" /* 1 refs @ 680 */
 	    "Silicon\0" /* 4 refs @ 684 */
-	    "Integrated\0" /* 67 refs @ 692 */
+	    "Integrated\0" /* 71 refs @ 692 */
 	    "Seiko\0" /* 1 refs @ 703 */
 	    "Tatung\0" /* 1 refs @ 709 */
 	    "Hewlett-Packard\0" /* 1 refs @ 716 */
@@ -8169,7 +8177,7 @@ static const char pci_words[] = { "."
 	    "Industrial\0" /* 2 refs @ 1688 */
 	    "Benchmarq\0" /* 1 refs @ 1699 */
 	    "Sierra\0" /* 2 refs @ 1709 */
-	    "Graphics\0" /* 66 refs @ 1716 */
+	    "Graphics\0" /* 70 refs @ 1716 */
 	    "ACC\0" /* 1 refs @ 1725 */
 	    "Digicom\0" /* 1 refs @ 1729 */
 	    "Honeywell\0" /* 1 refs @ 1737 */
@@ -8264,7 +8272,7 @@ static const char pci_words[] = { "."
 	    "F.\0" /* 1 refs @ 2404 */
 	    "Mikroelektronik\0" /* 1 refs @ 2407 */
 	    "I-O\0" /* 1 refs @ 2423 */
-	    "Device\0" /* 52 refs @ 2427 */
+	    "Device\0" /* 56 refs @ 2427 */
 	    "Soyo\0" /* 1 refs @ 2434 */
 	    "Fast\0" /* 22 refs @ 2439 */
 	    "NCube\0" /* 1 refs @ 2444 */
@@ -8772,7 +8780,7 @@ static const char pci_words[] = { "."
 	    "ACCM\0" /* 1 refs @ 6242 */
 	    "2188\0" /* 1 refs @ 6247 */
 	    "VL-PCI\0" /* 3 refs @ 6252 */
-	    "Bridge\0" /* 539 refs @ 6259 */
+	    "Bridge\0" /* 543 refs @ 6259 */
 	    "2051\0" /* 2 refs @ 6266 */
 	    "Single\0" /* 5 refs @ 6271 */
 	    "Solution\0" /* 2 refs @ 6278 */
@@ -10146,7 +10154,7 @@ static const char pci_words[] = { "."
 	    "Wireless-N\0" /* 2 refs @ 15980 */
 	    "1030\0" /* 2 refs @ 15991 */
 	    "6230\0" /* 2 refs @ 15996 */
-	    "Sandy\0" /* 4 refs @ 16001 */
+	    "Sandy\0" /* 8 refs @ 16001 */
 	    "80312\0" /* 1 refs @ 16007 */
 	    "80321\0" /* 1 refs @ 16013 */
 	    "IOP333\0" /* 2 refs @ 16019 */
