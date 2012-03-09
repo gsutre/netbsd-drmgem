@@ -66,6 +66,7 @@ __KERNEL_RCSID(0, "$NetBSD: agp_i810.c,v 1.73 2011/04/04 20:37:56 dyoung Exp $")
 #define CHIP_I965 4	/* 965Q/965PM */
 #define CHIP_G33  5	/* G33/Q33/Q35 */
 #define CHIP_G4X  6	/* G45/Q45 */
+#define CHIP_SNB  7	/* Sandy Bridge */
 
 struct agp_i810_softc {
 	u_int32_t initial_aperture;	/* aperture size at startup */
@@ -147,7 +148,8 @@ agp_i810_write_gtt_entry(struct agp_i810_softc *isc, off_t off, bus_addr_t v)
 		/* 965+ can do 36-bit addressing, add in the extra bits. */
 		if (isc->chiptype == CHIP_I965 ||
 		    isc->chiptype == CHIP_G33 ||
-		    isc->chiptype == CHIP_G4X) {
+		    isc->chiptype == CHIP_G4X ||
+		    isc->chiptype == CHIP_SNB) {
 			if (((uintmax_t)v >> 36) != 0)
 				return EINVAL;
 			pte |= (v >> 28) & 0xf0;
@@ -170,6 +172,7 @@ agp_i810_write_gtt_entry(struct agp_i810_softc *isc, off_t off, bus_addr_t v)
 		base_off = AGP_I965_GTT;
 		break;
 	case CHIP_G4X:
+	case CHIP_SNB:
 		base_off = AGP_G4X_GTT;
 		break;
 	case CHIP_I915:
@@ -234,6 +237,12 @@ agp_i810_vgamatch(const struct pci_attach_args *pa)
 	case PCI_PRODUCT_INTEL_IRONLAKE_M_IGD:
 	case PCI_PRODUCT_INTEL_PINEVIEW_IGD:
 	case PCI_PRODUCT_INTEL_PINEVIEW_M_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT1_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_PLUS_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT1_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_PLUS_IGD:
 		return (1);
 	}
 
@@ -353,6 +362,14 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 	case PCI_PRODUCT_INTEL_IRONLAKE_M_IGD:
 		isc->chiptype = CHIP_G4X;
 		break;
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT1_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_PLUS_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT1_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_IGD:
+	case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_PLUS_IGD:
+		isc->chiptype = CHIP_SNB;
+		break;
 	}
 
 	switch (isc->chiptype) {
@@ -362,6 +379,7 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 		break;
 	case CHIP_I965:
 	case CHIP_G4X:
+	case CHIP_SNB:
 		apbase = AGP_I965_GMADR;
 		break;
 	default:
@@ -369,7 +387,8 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 		break;
 	}
 
-	if (isc->chiptype == CHIP_I965 || isc->chiptype == CHIP_G4X) {
+	if (isc->chiptype == CHIP_I965 || isc->chiptype == CHIP_G4X ||
+	    isc->chiptype == CHIP_SNB) {
 		error = agp_i965_map_aperture(&isc->vga_pa, sc, apbase);
 	} else {
 		error = agp_map_aperture(&isc->vga_pa, sc, apbase);
@@ -398,7 +417,8 @@ agp_i810_attach(device_t parent, device_t self, void *aux)
 			agp_generic_detach(sc);
 			return error;
 		}
-	} else if (isc->chiptype == CHIP_I965 || isc->chiptype == CHIP_G4X) {
+	} else if (isc->chiptype == CHIP_I965 || isc->chiptype == CHIP_G4X ||
+	    isc->chiptype == CHIP_SNB) {
 		error = pci_mapreg_map(&isc->vga_pa, AGP_I965_MMADR,
 		    PCI_MAPREG_TYPE_MEM, 0, &isc->bst, &isc->bsh,
 		    &mmadr, &mmadrsize);
@@ -685,6 +705,86 @@ static int agp_i810_init(struct agp_softc *sc)
 		WRITE4(AGP_I810_PGTBL_CTL, pgtblctl);
 
 		gatt->ag_physical = pgtblctl & ~1;
+	} else if (isc->chiptype == CHIP_SNB) {
+		/*
+		 * Sandy Bridge has new memory control reg at 0x50.
+		 */
+		u_int32_t stolen;
+		u_int16_t gcc1;
+
+		gcc1 = (u_int16_t)pci_conf_read(sc->as_pc, sc->as_tag,
+		    AGP_SNB_GMCH_CTRL);
+
+		stolen = 4;
+
+		switch (gcc1 & AGP_SNB_GMCH_GMS_STOLEN_MASK) {
+		case AGP_SNB_GMCH_GMS_STOLEN_32M:
+			isc->stolen = (32768 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_64M:
+			isc->stolen = (65536 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_96M:
+			isc->stolen = (98304 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_128M:
+			isc->stolen = (131072 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_160M:
+			isc->stolen = (163840 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_192M:
+			isc->stolen = (196608 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_224M:
+			isc->stolen = (229376 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_256M:
+			isc->stolen = (262144 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_288M:
+			isc->stolen = (294912 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_320M:
+			isc->stolen = (327680 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_352M:
+			isc->stolen = (360448 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_384M:
+			isc->stolen = (393216 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_416M:
+			isc->stolen = (425984 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_448M:
+			isc->stolen = (458752 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_480M:
+			isc->stolen = (491520 - stolen) * 1024 / 4096;
+			break;
+		case AGP_SNB_GMCH_GMS_STOLEN_512M:
+			isc->stolen = (524288 - stolen) * 1024 / 4096;
+			break;
+		default:
+			isc->stolen = 0;
+			aprint_error(
+			    ": unknown memory configuration, disabling\n");
+			return EINVAL;
+		}
+
+		if (isc->stolen > 0)
+			aprint_normal(": detected %dk stolen memory\n%s",
+			    isc->stolen * 4, device_xname(sc->as_dev));
+		else
+			aprint_normal(": no pre-allocated video memory\n%s",
+			    device_xname(sc->as_dev));
+
+		/* GATT address is already in there, make sure it's enabled */
+		gatt->ag_physical = READ4(AGP_I810_PGTBL_CTL) & ~1;
+	} else {
+		aprint_error(": Unknown chipset\n");
+		return EINVAL;
 	}
 
 	/* Intel recommends that you have a fake page bound to the gtt always */
@@ -750,13 +850,32 @@ agp_i810_detach(struct agp_softc *sc)
 }
 #endif
 
+/*
+ * XXX Using MSAC (on i915 and later) to determine the aperture size seems
+ * XXX wrong.  Indeed, according to Intel docs (e.g., [1, page 175]),
+ * XXX
+ * XXX "Only the system BIOS will write this register based on pre-boot
+ * XXX  address allocation efforts, but the graphics may read this register
+ * XXX  to determine the correct aperture size."
+ * XXX
+ * XXX For instance, for i965, if MSAC bits [2:1] are 01, then the memory BAR
+ * XXX GMADR cannot be of length 128MB, since its bit [27] is forced to be 0.
+ * XXX In that case, GMADR may be of length 256MB or 512MB.
+ * XXX
+ * XXX Experiments on a laptop with an Ironlake IGD give MSAC bits [2:1] that
+ * XXX are equal to 00, meaning 128MB or more, whereas both X.org and Linux
+ * XXX report an aperture of 256MB.
+ * XXX
+ * XXX [1] http://intellinuxgraphics.org/VOL_1_graphics_core.pdf
+ */
 static u_int32_t
 agp_i810_get_aperture(struct agp_softc *sc)
 {
 	struct agp_i810_softc *isc = sc->as_chipc;
 	pcireg_t reg;
 	u_int32_t size;
-	u_int16_t miscc, gcc1, msac;
+	u_int16_t miscc, gcc1;
+	u_int8_t msac;
 
 	size = 0;
 
@@ -782,16 +901,38 @@ agp_i810_get_aperture(struct agp_softc *sc)
 		size = 128 * 1024 * 1024;
 		break;
 	case CHIP_I915:
-	case CHIP_G33:
-	case CHIP_G4X:
 		reg = pci_conf_read(sc->as_pc, sc->as_tag, AGP_I915_MSAC);
-		msac = (u_int16_t)(reg >> 16);
+		msac = (u_int8_t)(reg >> 16);
 		if (msac & AGP_I915_MSAC_APER_128M)
 			size = 128 * 1024 * 1024;
 		else
 			size = 256 * 1024 * 1024;
 		break;
+	case CHIP_G33:
+	case CHIP_G4X:
+	case CHIP_SNB:
+#if 0		/* XXX See above comment regarding MSAC. */
+		reg = pci_conf_read(sc->as_pc, sc->as_tag, AGP_I965_MSAC);
+		msac = (u_int8_t)(reg >> 16);
+		switch (msac & AGP_I965_MSAC_APER_MASK) {
+		case AGP_I965_MSAC_APER_128M:
+			size = 128 * 1024 * 1024;
+			break;
+		case AGP_I965_MSAC_APER_256M:
+			size = 256 * 1024 * 1024;
+			break;
+		case AGP_I965_MSAC_APER_512M:
+			size = 512 * 1024 * 1024;
+			break;
+		default:
+			aprint_error_dev(sc->as_dev, "invalid aperture size\n");
+		}
+#else
+		size = sc->as_apsize;
+#endif
+		break;
 	case CHIP_I965:
+		/* XXX Why not use the same logic as above? */
 		size = 512 * 1024 * 1024;
 		break;
 	default:
@@ -853,19 +994,18 @@ agp_i810_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 		break;
 	case CHIP_I855:
 	case CHIP_I915:
+	case CHIP_I965:
+	case CHIP_G33:
+	case CHIP_G4X:
+	case CHIP_SNB:
 		if (aperture != agp_i810_get_aperture(sc)) {
 			aprint_error_dev(sc->as_dev, "bad aperture size %d\n",
 			    aperture);
 			return EINVAL;
 		}
 		break;
-	case CHIP_I965:
-		if (aperture != 512 * 1024 * 1024) {
-			aprint_error_dev(sc->as_dev, "bad aperture size %d\n",
-			    aperture);
-			return EINVAL;
-		}
-		break;
+	default:
+		aprint_error(": Unknown chipset\n");
 	}
 
 	return 0;
@@ -879,7 +1019,7 @@ agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
 
 	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT)) {
 #ifdef AGP_DEBUG
-		printf("%s: failed: offset 0x%08x, shift %d, entries %d\n",
+		printf("%s: failed: offset 0x%08, shift %d, entries %d\n",
 		    device_xname(sc->as_dev), (int)offset, AGP_PAGE_SHIFT,
 		    isc->gatt->ag_entries);
 #endif
@@ -889,8 +1029,8 @@ agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
 	if (isc->chiptype != CHIP_I810) {
 		if ((offset >> AGP_PAGE_SHIFT) < isc->stolen) {
 #ifdef AGP_DEBUG
-			printf("%s: trying to bind into stolen memory\n",
-			    device_xname(sc->as_dev));
+			printf("%s: trying to bind into stolen memory: 0x%08\n",
+			    device_xname(sc->as_dev), (int)offset);
 #endif
 			return EINVAL;
 		}
@@ -911,14 +1051,20 @@ agp_i810_unbind_page(struct agp_softc *sc, off_t offset)
 {
 	struct agp_i810_softc *isc = sc->as_chipc;
 
-	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT))
+	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT)) {
+#ifdef AGP_DEBUG
+		printf("%s: failed: offset 0x%08, shift %d, entries %d\n",
+		    device_xname(sc->as_dev), (int)offset, AGP_PAGE_SHIFT,
+		    isc->gatt->ag_entries);
+#endif
 		return EINVAL;
+	}
 
 	if (isc->chiptype != CHIP_I810 ) {
 		if ((offset >> AGP_PAGE_SHIFT) < isc->stolen) {
 #ifdef AGP_DEBUG
-			printf("%s: trying to unbind from stolen memory\n",
-			    device_xname(sc->as_dev));
+			printf("%s: trying to unbind from stolen memory: 0x%08\n",
+			    device_xname(sc->as_dev), (int)offset);
 #endif
 			return EINVAL;
 		}
