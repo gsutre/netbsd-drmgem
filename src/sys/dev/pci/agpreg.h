@@ -252,6 +252,12 @@
 #define AGP_I965_PGTBL_SIZE_2MB		(4 << 1)
 #define AGP_I965_PGTBL_SIZE_1_5MB	(5 << 1)
 
+#define AGP_I965_MSAC			0x60 /* upper word */
+#define AGP_I965_MSAC_APER_MASK		0x6
+#define AGP_I965_MSAC_APER_128M		(0 << 1)
+#define AGP_I965_MSAC_APER_256M		(1 << 1)
+#define AGP_I965_MSAC_APER_512M		(3 << 1)
+
 
 /*
  * Config registers for G33

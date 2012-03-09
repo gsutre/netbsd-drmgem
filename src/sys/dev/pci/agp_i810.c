@@ -750,13 +750,28 @@ agp_i810_detach(struct agp_softc *sc)
 }
 #endif
 
+/*
+ * XXX Using MSAC (on i915 and later) to determine the aperture size seems
+ * XXX wrong.  Indeed, according to Intel docs (e.g., [1, page 175]),
+ * XXX
+ * XXX "Only the system BIOS will write this register based on pre-boot
+ * XXX  address allocation efforts, but the graphics may read this register
+ * XXX  to determine the correct aperture size."
+ * XXX
+ * XXX For instance, for i965, if MSAC bits [2:1] are 01, then the memory BAR
+ * XXX GMADR cannot be of length 128MB, since its bit [27] is forced to be 0.
+ * XXX In that case, GMADR may be of length 256MB or 512MB.
+ * XXX
+ * XXX [1] http://intellinuxgraphics.org/VOL_1_graphics_core.pdf
+ */
 static u_int32_t
 agp_i810_get_aperture(struct agp_softc *sc)
 {
 	struct agp_i810_softc *isc = sc->as_chipc;
 	pcireg_t reg;
 	u_int32_t size;
-	u_int16_t miscc, gcc1, msac;
+	u_int16_t miscc, gcc1;
+	u_int8_t msac;
 
 	size = 0;
 
@@ -782,16 +797,33 @@ agp_i810_get_aperture(struct agp_softc *sc)
 		size = 128 * 1024 * 1024;
 		break;
 	case CHIP_I915:
-	case CHIP_G33:
-	case CHIP_G4X:
 		reg = pci_conf_read(sc->as_pc, sc->as_tag, AGP_I915_MSAC);
-		msac = (u_int16_t)(reg >> 16);
+		msac = (u_int8_t)(reg >> 16);
 		if (msac & AGP_I915_MSAC_APER_128M)
 			size = 128 * 1024 * 1024;
 		else
 			size = 256 * 1024 * 1024;
 		break;
+	case CHIP_G33:
+	case CHIP_G4X:
+		reg = pci_conf_read(sc->as_pc, sc->as_tag, AGP_I965_MSAC);
+		msac = (u_int8_t)(reg >> 16);
+		switch (msac & AGP_I965_MSAC_APER_MASK) {
+		case AGP_I965_MSAC_APER_128M:
+			size = 128 * 1024 * 1024;
+			break;
+		case AGP_I965_MSAC_APER_256M:
+			size = 256 * 1024 * 1024;
+			break;
+		case AGP_I965_MSAC_APER_512M:
+			size = 512 * 1024 * 1024;
+			break;
+		default:
+			aprint_error_dev(sc->as_dev, "invalid aperture size\n");
+		}
+		break;
 	case CHIP_I965:
+		/* XXX Why not use the same logic as above? */
 		size = 512 * 1024 * 1024;
 		break;
 	default:
@@ -853,19 +885,17 @@ agp_i810_set_aperture(struct agp_softc *sc, u_int32_t aperture)
 		break;
 	case CHIP_I855:
 	case CHIP_I915:
+	case CHIP_I965:
+	case CHIP_G33:
+	case CHIP_G4X:
 		if (aperture != agp_i810_get_aperture(sc)) {
 			aprint_error_dev(sc->as_dev, "bad aperture size %d\n",
 			    aperture);
 			return EINVAL;
 		}
 		break;
-	case CHIP_I965:
-		if (aperture != 512 * 1024 * 1024) {
-			aprint_error_dev(sc->as_dev, "bad aperture size %d\n",
-			    aperture);
-			return EINVAL;
-		}
-		break;
+	default:
+		aprint_error(": Unknown chipset\n");
 	}
 
 	return 0;
