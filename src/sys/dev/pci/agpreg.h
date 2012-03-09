@@ -285,6 +285,28 @@
 #define AGP_G4X_GCC1_GMS_STOLEN_352M	0xd0
 
 /*
+ * Config registers for Sandy Bridge
+ */
+#define AGP_SNB_GMCH_CTRL		0x50
+#define AGP_SNB_GMCH_GMS_STOLEN_MASK	0xF8
+#define AGP_SNB_GMCH_GMS_STOLEN_32M	(1 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_64M	(2 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_96M	(3 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_128M	(4 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_160M	(5 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_192M	(6 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_224M	(7 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_256M	(8 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_288M	(9 << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_320M	(0xa << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_352M	(0xb << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_384M	(0xc << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_416M	(0xd << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_448M	(0xe << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_480M	(0xf << 3)
+#define AGP_SNB_GMCH_GMS_STOLEN_512M	(0x10 << 3)
+
+/*
  * AMD64 GART registers
  */
 #define	AGP_AMD64_APCTRL		0x90

@@ -214,6 +214,10 @@ const struct agp_product {
 	  NULL, 		agp_i810_attach },
 	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_PINEVIEW_M_HB,
 	  NULL, 		agp_i810_attach },
+	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_SANDYBRIDGE_HB,
+	  NULL,			agp_i810_attach },
+	{ PCI_VENDOR_INTEL,	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_HB,
+	  NULL,			agp_i810_attach },
 #endif
 
 #if NAGP_INTEL > 0
