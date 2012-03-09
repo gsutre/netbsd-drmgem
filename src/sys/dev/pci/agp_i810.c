@@ -762,6 +762,10 @@ agp_i810_detach(struct agp_softc *sc)
  * XXX GMADR cannot be of length 128MB, since its bit [27] is forced to be 0.
  * XXX In that case, GMADR may be of length 256MB or 512MB.
  * XXX
+ * XXX Experiments on a laptop with an Ironlake IGD give MSAC bits [2:1] that
+ * XXX are equal to 00, meaning 128MB or more, whereas both X.org and Linux
+ * XXX report an aperture of 256MB.
+ * XXX
  * XXX [1] http://intellinuxgraphics.org/VOL_1_graphics_core.pdf
  */
 static u_int32_t
@@ -806,6 +810,7 @@ agp_i810_get_aperture(struct agp_softc *sc)
 		break;
 	case CHIP_G33:
 	case CHIP_G4X:
+#if 0		/* XXX See above comment regarding MSAC. */
 		reg = pci_conf_read(sc->as_pc, sc->as_tag, AGP_I965_MSAC);
 		msac = (u_int8_t)(reg >> 16);
 		switch (msac & AGP_I965_MSAC_APER_MASK) {
@@ -821,6 +826,9 @@ agp_i810_get_aperture(struct agp_softc *sc)
 		default:
 			aprint_error_dev(sc->as_dev, "invalid aperture size\n");
 		}
+#else
+		size = sc->as_apsize;
+#endif
 		break;
 	case CHIP_I965:
 		/* XXX Why not use the same logic as above? */
