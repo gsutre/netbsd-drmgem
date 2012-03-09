@@ -1019,7 +1019,7 @@ agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
 
 	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT)) {
 #ifdef AGP_DEBUG
-		printf("%s: failed: offset 0x%08x, shift %d, entries %d\n",
+		printf("%s: failed: offset 0x%08, shift %d, entries %d\n",
 		    device_xname(sc->as_dev), (int)offset, AGP_PAGE_SHIFT,
 		    isc->gatt->ag_entries);
 #endif
@@ -1029,8 +1029,8 @@ agp_i810_bind_page(struct agp_softc *sc, off_t offset, bus_addr_t physical,
 	if (isc->chiptype != CHIP_I810) {
 		if ((offset >> AGP_PAGE_SHIFT) < isc->stolen) {
 #ifdef AGP_DEBUG
-			printf("%s: trying to bind into stolen memory\n",
-			    device_xname(sc->as_dev));
+			printf("%s: trying to bind into stolen memory: 0x%08\n",
+			    device_xname(sc->as_dev), (int)offset);
 #endif
 			return EINVAL;
 		}
@@ -1051,14 +1051,20 @@ agp_i810_unbind_page(struct agp_softc *sc, off_t offset)
 {
 	struct agp_i810_softc *isc = sc->as_chipc;
 
-	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT))
+	if (offset < 0 || offset >= (isc->gatt->ag_entries << AGP_PAGE_SHIFT)) {
+#ifdef AGP_DEBUG
+		printf("%s: failed: offset 0x%08, shift %d, entries %d\n",
+		    device_xname(sc->as_dev), (int)offset, AGP_PAGE_SHIFT,
+		    isc->gatt->ag_entries);
+#endif
 		return EINVAL;
+	}
 
 	if (isc->chiptype != CHIP_I810 ) {
 		if ((offset >> AGP_PAGE_SHIFT) < isc->stolen) {
 #ifdef AGP_DEBUG
-			printf("%s: trying to unbind from stolen memory\n",
-			    device_xname(sc->as_dev));
+			printf("%s: trying to unbind from stolen memory: 0x%08\n",
+			    device_xname(sc->as_dev), (int)offset);
 #endif
 			return EINVAL;
 		}
