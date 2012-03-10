@@ -106,6 +106,8 @@ done
 # Overwrite source files with netbsd-drmgem ones
 cp -av netbsd-drmgem/src netbsd-drmgem/xsrc usr
 
+export USETOOLS=no
+
 # Build and install new kernel
 cd usr/src/sys/arch/$(uname -m)/conf
 config GENERIC
@@ -115,8 +117,10 @@ make
 mv netbsd ../../../../../../../$DISTDIR/netbsd-GENERIC-drmgem
 cd ../../../../../../..
 
+# Build the math library
+make -C usr/src/lib/libm
+
 # Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
-export USETOOLS=no
 cd usr/src/external/mit/xorg/lib/libdrm
 (sudo -E make includes) && make && (sudo -E make install)
 cd ../libdrm_intel
@@ -126,9 +130,8 @@ cd ../../server/drivers/xf86-video-intel
 cd ../../../../../../../..
 
 # Build the intel DRI modules
-make -C usr/src/lib/libm
 make -C usr/src/external/mit/xorg/tools/glsl
-make -C usr/src/external/mit/xorg/lib/expat
+make -C usr/src/external/mit/expat
 make -C usr/src/external/mit/xorg/lib/dri/libmesa
 cd usr/src/external/mit/xorg/lib/dri/i915
 (sudo -E make includes) && make && (sudo -E make install)
