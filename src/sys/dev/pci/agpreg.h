@@ -258,7 +258,6 @@
 #define AGP_I965_MSAC_APER_256M		(1 << 1)
 #define AGP_I965_MSAC_APER_512M		(3 << 1)
 
-
 /*
  * Config registers for G33
  */
