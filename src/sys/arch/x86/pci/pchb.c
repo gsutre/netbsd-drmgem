@@ -394,6 +394,8 @@ pchbattach(device_t parent, device_t self, void *aux)
 		case PCI_PRODUCT_INTEL_IRONLAKE_MC2_HB:
 		case PCI_PRODUCT_INTEL_PINEVIEW_HB:
 		case PCI_PRODUCT_INTEL_PINEVIEW_M_HB:
+		case PCI_PRODUCT_INTEL_SANDYBRIDGE_HB:
+		case PCI_PRODUCT_INTEL_SANDYBRIDGE_M_HB:
 			/*
 			 * The host bridge is either in GFX mode (internal
 			 * graphics) or in AGP mode. In GFX mode, we pretend
