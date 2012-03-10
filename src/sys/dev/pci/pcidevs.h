@@ -1,4 +1,4 @@
-/*	$NetBSD$	*/
+/*	$NetBSD: pcidevs.h,v 1.1100 2012/03/03 05:40:11 nonaka Exp $	*/
 
 /*
  * THIS FILE AUTOMATICALLY GENERATED.  DO NOT EDIT.
