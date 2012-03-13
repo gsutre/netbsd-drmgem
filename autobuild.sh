@@ -105,8 +105,8 @@ set --
 
 # Check remaining free space
 set -- $(df -m . | tail -1)
-if [ "$4" -lt "1500" ]; then
-	error "insufficient free space ($4 MiB < 1500 MiB)."
+if [ "$4" -lt "750" ]; then
+	error "insufficient free space ($4 MiB < 750 MiB)."
 fi
 set --
 
