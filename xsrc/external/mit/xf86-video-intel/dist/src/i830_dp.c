@@ -1721,16 +1721,7 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 	dev_priv->dpms_mode = DRM_MODE_DPMS_ON;
 
 	intel_output->dev_priv = dev_priv;
-
-	/*
-	 * Only allow pipe A, to make sure that the console is sent to
-	 * the eDP output when the X server exits.  See issue #11 for
-	 * more details.
-	 *
-	 * XXX Remove this hack (i.e., also allow pipe B) when proper
-	 * XXX hardware save/restore is implemented.
-	 */
-	intel_output->pipe_mask = (1 << 0);
+	intel_output->pipe_mask = (1 << 0) | (1 << 1);
 
 	if (HAS_PCH_SPLIT(intel) && output_reg == PCH_DP_D &&
 	    i830_dpd_is_edp(scrn))
@@ -1740,6 +1731,16 @@ i830_dp_init(ScrnInfoPtr scrn, int output_reg)
 		intel_output->type = I830_OUTPUT_EDP;
 	else
 		intel_output->type = I830_OUTPUT_DISPLAYPORT;
+
+	/*
+	 * Only allow pipe A, to make sure that the console is sent
+	 * to the eDP output when the X server exits.  See issue #11
+	 * for more details.
+	 *
+	 * XXX Remove this hack when hardware save/restore works?
+	 */
+	if (output_reg == DP_A)
+		intel_output->pipe_mask = (1 << 0);
 
 	intel_output->clone_mask = (1 << intel_output->type);
 
