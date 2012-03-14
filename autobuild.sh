@@ -103,16 +103,18 @@ if [ "$(uname -s)" != "NetBSD" -o "$1" != "6" -o "$2" != "99" ]; then
 fi
 set --
 
-# Check remaining free space
-set -- $(df -m . | tail -1)
-if [ "$4" -lt "750" ]; then
-	error "insufficient free space ($4 MiB < 750 MiB)."
-fi
-set --
+if [ "$continue" != "yes" ]; then
+	# Check remaining free space
+	set -- $(df -m . | tail -1)
+	if [ "$4" -lt "750" ]; then
+		error "insufficient free space ($4 MiB < 750 MiB)."
+	fi
+	set --
 
-# Check for wget
-if ! which wget >/dev/null; then
-	error "wget not found."
+	# Check for wget
+	if ! which wget >/dev/null; then
+		error "wget not found."
+	fi
 fi
 
 # Check for sudo
