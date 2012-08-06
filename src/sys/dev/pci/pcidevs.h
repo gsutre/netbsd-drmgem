@@ -2354,13 +2354,13 @@
 #define	PCI_PRODUCT_INTEL_WIFI_LINK_6230_1	0x0090		/* Centrino Advanced-N 6230 */
 #define	PCI_PRODUCT_INTEL_WIFI_LINK_6230_2	0x0091		/* Centrino Advanced-N 6230 */
 #define	PCI_PRODUCT_INTEL_SANDYBRIDGE_HB	0x0100		/* Sandy Bridge Host Bridge */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_GT1_IGD	0x0102		/* Sandy Bridge Integrated Graphics Device */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_IGD	0x0112		/* Sandy Bridge Integrated Graphics Device */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_GT2_PLUS_IGD	0x0122		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_IGD	0x0102		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_IGD_1	0x0112		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_IGD_2	0x0122		/* Sandy Bridge Integrated Graphics Device */
 #define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_HB	0x0104		/* Sandy Bridge Host Bridge */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT1_IGD	0x0106		/* Sandy Bridge Integrated Graphics Device */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_IGD	0x0116		/* Sandy Bridge Integrated Graphics Device */
-#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_GT2_PLUS_IGD	0x0126		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD	0x0106		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD_1	0x0116		/* Sandy Bridge Integrated Graphics Device */
+#define	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD_2	0x0126		/* Sandy Bridge Integrated Graphics Device */
 #define	PCI_PRODUCT_INTEL_80312	0x030d		/* 80312 I/O Companion Chip */
 #define	PCI_PRODUCT_INTEL_80321	0x0319		/* 80321 I/O Processor */
 #define	PCI_PRODUCT_INTEL_IOP333_A	0x0370		/* IOP333 PCI Express-to-PCI Bridge #0 */
