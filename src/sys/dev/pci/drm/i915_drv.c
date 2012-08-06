@@ -781,7 +781,7 @@ inteldrm_suspend(struct device *arg, const pmf_qual_t *qual)
 	struct inteldrm_softc	*dev_priv = (struct inteldrm_softc *)arg;
 
 	inteldrm_quiesce(dev_priv);
-	inteldrm_save_state(dev_priv);
+	i915_save_state(dev_priv);
 
 	return true;
 }
@@ -791,7 +791,7 @@ inteldrm_resume(struct device *arg, const pmf_qual_t *qual)
 {
 	struct inteldrm_softc	*dev_priv = (struct inteldrm_softc *)arg;
 
-	inteldrm_restore_state(dev_priv);
+	i915_restore_state(dev_priv);
 	/* entrypoints can stop sleeping now */
 	atomic_clearbits_int(&dev_priv->sc_flags, INTELDRM_QUIET);
 	wakeup(&dev_priv->flags);
