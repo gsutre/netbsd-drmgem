@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.1066 2012/01/22 06:44:29 christos Exp $
+# $NetBSD: GENERIC,v 1.1077 2012/08/01 04:20:05 matt Exp $
 #
 # GENERIC machine description file
 #
@@ -22,7 +22,7 @@ include 	"arch/i386/conf/std.i386"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident 		"GENERIC-$Revision: 1.1066 $"
+#ident 		"GENERIC-$Revision: 1.1077 $"
 
 maxusers	64		# estimated number of users
 
@@ -86,7 +86,6 @@ options 	CPU_UCODE	# cpu ucode loading support
 options 	SYSVMSG		# System V-like message queues
 options 	SYSVSEM		# System V-like semaphores
 options 	SYSVSHM		# System V-like memory sharing
-options 	P1003_1B_SEMAPHORE	# p1003.1b semaphore support
 
 options 	MODULAR		# new style module(7) framework
 
@@ -152,9 +151,10 @@ options 	COMPAT_BSDPTY	# /dev/[pt]ty?? ptys.
 # Wedge support
 options 	DKWEDGE_AUTODISCOVER	# Automatically add dk(4) instances
 options 	DKWEDGE_METHOD_GPT	# Supports GPT partitions as wedges
-# The following two options can break /etc/fstab, so handle with care
+# The following three options can break /etc/fstab, so handle with care
 #options 	DKWEDGE_METHOD_BSDLABEL	# Support disklabel entries as wedges
 #options 	DKWEDGE_METHOD_MBR	# Support MBR partitions as wedges
+#options	DKWEDGE_METHOD_APPLE    # Support Apple partitions as wedges
 
 file-system	FFS		# UFS
 file-system	NFS		# Network File System client
@@ -184,7 +184,7 @@ file-system	TMPFS		# Efficient memory file-system
 # File system options
 options 	QUOTA		# legacy UFS quotas
 options 	QUOTA2		# new, in-filesystem UFS quotas
-#options 	FFS_EI		# FFS Endian Independent support
+options 	FFS_EI		# FFS Endian Independent support
 options 	WAPBL		# File system journaling support
 #options 	UFS_DIRHASH	# UFS Large Directory Hashing - Experimental
 options 	NFSSERVER	# Network File System server
@@ -268,7 +268,7 @@ options 	WSDISPLAY_CUSTOM_BORDER	# custom border colors via wsconsctl(8)
 # compatibility to other console drivers
 options 	WSDISPLAY_COMPAT_PCVT		# emulate some ioctls
 options 	WSDISPLAY_COMPAT_SYSCONS	# emulate some ioctls
-options 	WSDISPLAY_COMPAT_USL		# VT handling
+options 	WSDISPLAY_COMPAT_USL		# wsconscfg VT handling
 options 	WSDISPLAY_COMPAT_RAWKBD		# can get raw scancodes
 #options 	WSKBD_EVENT_AUTOREPEAT		# auto repeat in event mode
 #options 	WSKBD_USONLY			# strip off non-US keymaps
@@ -446,7 +446,8 @@ pci*	at elansc? bus ?
 elansc* at mainbus? bus ?		# AMD Elan SC520 System Controller
 
 # Temperatures
-amdtemp* at pchb?			# AMD CPU Temperature sensors
+amdnb_misc* at pci?			# AMD NB Misc Configuration
+amdtemp* at amdnb_misc?			# AMD CPU Temperature sensors
 
 # PCI bridges
 #amdpcib* at pci? dev ? function ?	# AMD 8111 PCI-ISA w/ HPET
@@ -745,7 +746,8 @@ iha*	at pci? dev ? function ?	# Initio INIC-940/950 SCSI
 isp*	at pci? dev ? function ?	# Qlogic ISP [12]0x0 SCSI/FibreChannel
 mfi*	at pci? dev ? function ?	# LSI MegaRAID SAS
 mly*	at pci? dev ? function ?	# Mylex AcceleRAID and eXtremeRAID
-mpt*	at pci? dev ? function ?	# LSI Fusion SCSI/FC
+mpt*	at pci? dev ? function ?	# LSILogic 9x9 and 53c1030 (Fusion-MPT)
+mpii*	at pci? dev ? function ?	# LSI Logic Fusion-MPT II
 njs*	at pci? dev ? function ?	# Workbit NinjaSCSI-32
 pcscp*	at pci? dev ? function ?	# AMD 53c974 PCscsi-PCI SCSI
 siop*	at pci? dev ? function ?	# Symbios 53c8xx SCSI
@@ -970,6 +972,7 @@ jme*	at pci? dev ? function ?	# JMicron JMC2[56]0 Ethernet
 le*	at pci? dev ? function ?	# PCnet-PCI Ethernet
 lii*	at pci? dev ? function ?	# Atheros L2 Fast-Ethernet
 lmc*	at pci? dev ? function ?	# Lan Media Corp SSI/HSSI/DS3
+malo*   at pci? dev ? function ?    # Marvell Libertas Wireless
 mskc*	at pci? dev ? function ?	# Marvell Yukon 2 Gigabit Ethernet
 msk*	at mskc?			# Marvell Yukon 2 Gigabit Ethernet
 mtd*	at pci? dev ? function ?	# Myson MTD803 3-in-1 Ethernet
@@ -1065,6 +1068,7 @@ we1	at isa? port 0x300 iomem 0xcc000 irq 10
 # CardBus network cards
 ath*	at cardbus? function ?	# Atheros 5210/5211/5212 802.11
 atw*	at cardbus? function ?	# ADMtek ADM8211 (802.11)
+bwi*	at cardbus? function ?	# Broadcom BCM43xx wireless
 ex*	at cardbus? function ?	# 3Com 3c575TX
 fxp*	at cardbus? function ?	# Intel i8255x
 ral*	at cardbus? function ?	# Ralink Technology RT25x0 802.11a/b/g
@@ -1228,7 +1232,10 @@ atu*	at uhub? port ?		# Atmel AT76C50XX based adapters
 otus*	at uhub? port ?		# Atheros AR9001U
 ral*	at uhub? port ?		# Ralink Technology RT25x0 802.11a/b/g
 rum*	at uhub? port ?		# Ralink Technology RT2501/RT2601 802.11a/b/g
+run*	at uhub? port ?		# Ralink Technology RT(2[78]|30)00 802.11a/b/g/n
 upgt*	at uhub? port ?		# Intersil PrismGT
+urtw*	at uhub? port ?		# Realtek RTL8187/RTL8187B 802.11b/g
+urtwn*	at uhub? port ?		# Realtek RTL8188CU/RTL8192CU 802.11b/g/n
 zyd*	at uhub? port ?		# Zydas ZD1211
 
 # Prolific PL2301/PL2302 host-to-host adapter
