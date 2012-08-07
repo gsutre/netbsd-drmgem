@@ -34,6 +34,24 @@ mesa="no"
 xvmc="no"
 
 
+# Helper functions #############################################################
+
+error ()
+{
+	echo "$self: error: $1" 1>&2
+	exit 1
+}
+
+build_and_install ()
+{
+	cd "$1"
+	sudo -E $MAKE includes
+	$MAKE
+	sudo -E $MAKE install
+	cd ..
+}
+
+
 # Command-line Processing ######################################################
 
 usage ()
@@ -41,6 +59,7 @@ usage ()
 	cat <<EOF
 Usage: $self [-cmv] [-b <branch>] [-j <njobs>] <time stamp>
 EOF
+	exit 1
 }
 
 while getopts "b:cj:mv" option; do
@@ -62,7 +81,6 @@ while getopts "b:cj:mv" option; do
 			;;
 		*)
 			usage
-			exit 1
 			;;
 	esac
 done
@@ -73,7 +91,6 @@ TIMESTAMP="$1"
 
 if [ -z "$TIMESTAMP" ]; then
 	usage
-	exit 1
 fi
 
 
@@ -82,37 +99,34 @@ fi
 # Check for NetBSD 6.99
 set -- $(uname -r | tr '.' ' ')
 if [ "$(uname -s)" != "NetBSD" -o "$1" != "6" -o "$2" != "99" ]; then
-	echo "$self: error: host should be running NetBSD 6.99." 1>&2
-	exit 1
+	error "host should be running NetBSD 6.99."
 fi
 set --
 
-# Check remaining free space
-set -- $(df -m . | tail -1)
-if [ "$4" -lt "1500" ]; then
-	echo "$self: error: insufficient free space ($4 MiB < 1500 MiB)." 1>&2
-	exit 1
-fi
-set --
+if [ "$continue" != "yes" ]; then
+	# Check remaining free space
+	set -- $(df -m . | tail -1)
+	if [ "$4" -lt "750" ]; then
+		error "insufficient free space ($4 MiB < 750 MiB)."
+	fi
+	set --
 
-# Check for wget
-if ! which wget >/dev/null; then
-	echo "$self: error: wget not found." 1>&2
-	exit 1
+	# Check for wget
+	if ! which wget >/dev/null; then
+		error "wget not found."
+	fi
 fi
 
 # Check for sudo
 if ! which sudo >/dev/null; then
-	echo "$self: error: sudo not found." 1>&2
-	exit 1
+	error "sudo not found."
 fi
 
 DISTDIR=dist.$(uname -m)
 
 if [ "$continue" = "yes" ]; then
 	if [ ! \( -d "$DISTDIR" -a -e ".startbuild" -a -d "usr" \) ]; then
-		echo "$self: can't continue: missing file or directory." 1>&2
-		exit 1
+		error "can't continue: missing file or directory."
 	fi
 else
 	# Create distribution directory and time stamp for build start
@@ -124,14 +138,32 @@ else
 	mv gsutre-netbsd-drmgem-* netbsd-drmgem
 
 	# Download and extract source sets
-	cat > excludes <<EOF
-CVS
-usr/xsrc/xfree
+	cat > src.files <<EOF
+usr/src/build.sh
+usr/src/etc
+usr/src/external/mit
+usr/src/include
+usr/src/lib
+usr/src/tools
+EOF
+	cat > syssrc.files <<EOF
+usr/src/common
+usr/src/sys
+EOF
+	cat > xsrc.files <<EOF
+usr/xsrc/external/mit/MesaLib
+usr/xsrc/external/mit/libXau
+usr/xsrc/external/mit/libXdmcp
+usr/xsrc/external/mit/libxcb
+usr/xsrc/external/mit/libX11
+usr/xsrc/external/mit/libXext
+usr/xsrc/external/mit/libXv
+usr/xsrc/external/mit/libXvMC
 EOF
 	sets="src syssrc xsrc"
 	for set in $sets; do
 		wget -O - ${NETBSD_DAILY_FTP_URL}/HEAD/$TIMESTAMP/source/sets/$set.tgz | \
-		    tar -X excludes -zxf -
+		    tar -T $set.files -zxf -
 	done
 
 	# Overwrite source files with netbsd-drmgem ones
@@ -153,24 +185,22 @@ cd ../../../../../../..
 $MAKE -C usr/src/lib/libm
 
 # Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
-cd usr/src/external/mit/xorg/lib/libdrm
-(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-cd ../libdrm_intel
-(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-cd ../../server/drivers/xf86-video-intel
-(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-cd ../../../../../../../..
+cd usr/src/external/mit/xorg/lib
+build_and_install libdrm
+build_and_install libdrm_intel
+cd ../server/drivers
+build_and_install xf86-video-intel
+cd ../../../../../../..
 
 if [ "$mesa" = "yes" ]; then
 	# Build the intel DRI modules
 	$MAKE -C usr/src/external/mit/xorg/tools/glsl
 	$MAKE -C usr/src/external/mit/expat
 	$MAKE -C usr/src/external/mit/xorg/lib/dri/libmesa
-	cd usr/src/external/mit/xorg/lib/dri/i915
-	(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-	cd ../i965
-	(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-	cd ../../../../../../../..
+	cd usr/src/external/mit/xorg/lib/dri
+	build_and_install i915
+	build_and_install i965
+	cd ../../../../../../..
 fi
 
 if [ "$xvmc" = "yes" ]; then
@@ -182,11 +212,10 @@ if [ "$xvmc" = "yes" ]; then
 	$MAKE -C usr/src/external/mit/xorg/lib/libXext
 	$MAKE -C usr/src/external/mit/xorg/lib/libXv
 	$MAKE -C usr/src/external/mit/xorg/lib/libXvMC
-	cd usr/src/external/mit/xorg/lib/libI810XvMC
-	(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-	cd ../libIntelXvMC
-	(sudo -E $MAKE includes) && $MAKE && (sudo -E $MAKE install)
-	cd ../../../../../../..
+	cd usr/src/external/mit/xorg/lib
+	build_and_install libI810XvMC
+	build_and_install libIntelXvMC
+	cd ../../../../../..
 fi
 
 # Create tar archive for X11R7 new files

@@ -1,4 +1,4 @@
-#	$NetBSD: files,v 1.1044 2012/02/19 21:06:45 rmind Exp $
+#	$NetBSD: files,v 1.1056 2012/08/03 07:41:47 matt Exp $
 #	@(#)files.newconf	7.5 (Berkeley) 5/10/93
 
 version 	20100430
@@ -61,7 +61,6 @@ defflag				CPU_IN_CKSUM
 
 defflag opt_dtrace.h		KDTRACE_HOOKS
 
-defflag opt_posix.h		P1003_1B_SEMAPHORE
 defflag	opt_sysv.h		SYSVMSG SYSVSEM	SYSVSHM
 defparam opt_sysvparam.h	SHMMAXPGS SEMMNI SEMMNS SEMUME SEMMNU
 
@@ -70,11 +69,6 @@ defflag	opt_ntp.h		PPS_SYNC NTP
 defflag	opt_ptm.h		NO_DEV_PTM COMPAT_BSDPTY
 
 defparam opt_kmempages.h	NKMEMPAGES NKMEMPAGES_MIN NKMEMPAGES_MAX
-defflag	opt_malloclog.h		MALLOCLOG
-defparam opt_malloclog.h	MALLOCLOGSIZE
-defflag	opt_malloc_debug.h	MALLOC_DEBUG
-defflag	opt_pool.h		POOL_DIAGNOSTIC
-defparam opt_poollog.h		POOL_LOGSIZE
 
 defflag	opt_revcache.h		NAMECACHE_ENTER_REVERSE
 
@@ -88,6 +82,7 @@ defflag	opt_dkwedge.h		DKWEDGE_AUTODISCOVER
 				DKWEDGE_METHOD_BSDLABEL
 				DKWEDGE_METHOD_GPT
 				DKWEDGE_METHOD_MBR
+				DKWEDGE_METHOD_APPLE
 
 defflag	opt_veriexec.h		VERIFIED_EXEC_FP_SHA1
 				VERIFIED_EXEC_FP_SHA256
@@ -189,13 +184,13 @@ include "dev/sysmon/files.sysmon"
 #
 define	bpf_filter
 defparam opt_bpf.h	BPF_BUFSIZE
+defflag opt_bpf.h	BPF_JIT
 
 include "net80211/files.net80211"
 include "netatalk/files.netatalk"
 include "netbt/files.netbt"
 include "netinet/files.netinet"
 include "netinet6/files.netinet6"
-include "netinet6/files.ipsec"
 include "netipsec/files.netipsec"
 include "netiso/files.netiso"
 include "netmpls/files.netmpls"
@@ -296,6 +291,7 @@ define	videobus	{ }
 define	ata	        {[channel = -1]}
 define	sata
 define	sata_fis
+define	sata_pmp
 define	scsi_core
 define	scsi		{[channel = -1]}: scsi_core
 define	ata_hl		{[drive = -1]}
@@ -655,6 +651,10 @@ device	ral: arp, ether, ifnet, wlan, firmload
 file	dev/ic/rt2560.c			ral
 file	dev/ic/rt2661.c			ral
 
+# Marvell Libertas Open
+device  malo: arp, ether, ifnet, wlan, firmload
+file    dev/ic/malo.c           malo
+
 # 3Com Etherlink-III Ethernet controller
 #
 device	ep: arp, ether, ifnet, mii, mii_bitbang
@@ -980,12 +980,12 @@ file	dev/ic/lpt_upc.c		lpt_upc
 # AHCI-compatible SATA controllers
 define ahcisata_core
 file dev/ic/ahcisata_core.c ahcisata_core
-device ahcisata: ata, ata_dma, ata_udma, sata, sata_fis, ahcisata_core
+device ahcisata: ata, ata_dma, ata_udma, sata, sata_fis, sata_pmp, ahcisata_core
 
 # Silicon Image SteelVine SATA-II controllers
 define	siisata
 file	dev/ic/siisata.c		siisata
-device	siisata: ata, ata_dma, ata_udma, sata, sata_fis, siisata
+device	siisata: ata, ata_dma, ata_udma, sata, sata_fis, sata_pmp, siisata
 
 # Marvell Serial-ATA Host Controller
 define mvsata
@@ -1419,7 +1419,7 @@ include "secmodel/files.secmodel"
 #
 # kernel sources
 #
-file	compat/common/compat_mod.c	compat_netbsd
+file	compat/common/compat_mod.c	compat_netbsd | compat_netbsd32
 file	conf/debugsyms.c
 file	dev/auconv.c			auconv | mulaw
 file	dev/audio.c			audio | midi | midibus	needs-flag
@@ -1433,6 +1433,7 @@ file	dev/clock_subr.c
 file	dev/clockctl.c			clockctl		needs-flag
 file	dev/dksubr.c			cgd | xbd | ccd | raid | dm
 file	dev/dkwedge/dk.c
+file	dev/dkwedge/dkwedge_apple.c	dkwedge_method_apple
 file	dev/dkwedge/dkwedge_bsdlabel.c	dkwedge_method_bsdlabel
 file	dev/dkwedge/dkwedge_gpt.c	dkwedge_method_gpt
 file	dev/dkwedge/dkwedge_mbr.c	dkwedge_method_mbr
@@ -1491,8 +1492,6 @@ file	kern/kern_ksyms.c		ksyms | ddb | modular needs-flag
 file	kern/kern_lock.c
 file	kern/kern_lwp.c
 file	kern/kern_malloc.c
-file	kern/kern_malloc_stdtype.c
-file	kern/kern_malloc_debug.c	malloc_debug
 file	kern/kern_module.c
 file	kern/kern_module_vfs.c
 file	kern/kern_mutex.c
@@ -1606,7 +1605,7 @@ file	kern/uipc_mbuf.c
 file	kern/uipc_mbuf2.c
 file	net/link_proto.c
 file	kern/uipc_proto.c
-file	kern/uipc_sem.c			p1003_1b_semaphore
+file	kern/uipc_sem.c
 file	kern/uipc_socket.c
 file	kern/uipc_socket2.c
 file	kern/uipc_syscalls.c
@@ -1633,6 +1632,7 @@ file	kern/vnode_if.c
 file	miscfs/deadfs/dead_vnops.c
 file	miscfs/fifofs/fifo_vnops.c
 file	miscfs/genfs/genfs_io.c
+file	miscfs/genfs/genfs_rename.c
 file	miscfs/genfs/genfs_vfsops.c
 file	miscfs/genfs/genfs_vnops.c
 file	miscfs/genfs/layer_subr.c	nullfs | overlay | umapfs
@@ -1644,6 +1644,7 @@ file	miscfs/syncfs/sync_vnops.c
 
 file	net/bpf.c			bpfilter
 file	net/bpf_filter.c		bpf_filter
+file	net/bpf_jit.c			bpf_filter & bpf_jit
 file	net/bpf_stub.c
 file	net/bsd-comp.c			ppp & ppp_bsdcomp
 file	net/if.c

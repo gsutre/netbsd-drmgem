@@ -1463,6 +1463,7 @@ static Bool I830PreInit(ScrnInfoPtr scrn, int flags)
 		if (!vgaHWGetHWRec(scrn))
 			return FALSE;
 		hwp = VGAHWPTR(scrn);
+		vgaHWSetStdFuncs(hwp);
 	}
 
 	scrn->displayWidth = 640;	/* default it */
@@ -1555,7 +1556,7 @@ static Bool I830PreInit(ScrnInfoPtr scrn, int flags)
 
 	if (!intel->use_drm_mode) {
    /* console hack, stolen from G80 */
-	   if (IS_GEN5(intel)) {
+	   if (HAS_PCH_SPLIT(intel)) {
 	       if (xf86LoadSubModule(scrn, "int10")) {
 	       intel->int10 = xf86InitInt10(pEnt->index);
 	       if (intel->int10) {
@@ -2603,7 +2604,7 @@ static void I830LeaveVT(int scrnIndex, int flags)
 		RestoreHWState(scrn);
 
 		/* console restore hack */
-		if (IS_GEN5(intel) && intel->int10 && intel->int10Mode) {
+		if (HAS_PCH_SPLIT(intel) && intel->int10 && intel->int10Mode) {
 		    xf86Int10InfoPtr int10 = intel->int10;
 
 		    /* Use int10 to restore the console mode */
