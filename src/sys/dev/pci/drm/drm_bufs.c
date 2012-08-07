@@ -973,7 +973,8 @@ drm_mapbufs(struct drm_device *dev, void *data, struct drm_file *file_priv)
 	    (caddr_t)vn, foff, curproc->p_rlimit[RLIMIT_MEMLOCK].rlim_cur,
 	    curproc);
 #else /* !defined(__NetBSD__) */
-	vaddr = 0;
+	vaddr = curproc->p_emul->e_vm_default_addr(curproc,
+	    (vaddr_t)curproc->p_vmspace->vm_daddr, size);
 	retcode = uvm_mmap(&curproc->p_vmspace->vm_map, &vaddr, size,
 	    UVM_PROT_READ | UVM_PROT_WRITE, UVM_PROT_ALL, MAP_SHARED,
 	    (caddr_t)vn, foff, curproc->p_rlimit[RLIMIT_MEMLOCK].rlim_cur);
