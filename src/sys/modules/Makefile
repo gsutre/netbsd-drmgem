@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile,v 1.101 2012/01/17 16:59:38 jakllsch Exp $
+#	$NetBSD: Makefile,v 1.109 2012/08/05 04:03:39 riastradh Exp $
 
 .include <bsd.own.mk>
 
@@ -16,6 +16,7 @@ SUBDIR+=	compat
 SUBDIR+=	compat_ossaudio
 SUBDIR+=	coredump
 SUBDIR+=	chfs
+SUBDIR+=	dbcool
 SUBDIR+=	efs
 SUBDIR+=	ext2fs
 SUBDIR+=	exec_script
@@ -29,10 +30,12 @@ SUBDIR+=	gpio
 SUBDIR+=	gpioiic
 SUBDIR+=	gpioow
 SUBDIR+=	gpiosim
+SUBDIR+=	hdafg
+SUBDIR+=	hdaudio
 SUBDIR+=	hfs
+SUBDIR+=	if_axe
 SUBDIR+=	iic
 SUBDIR+=	kernfs
-SUBDIR+=	ksem
 SUBDIR+=	layerfs
 SUBDIR+=	lfs
 SUBDIR+=	mfs
@@ -60,6 +63,7 @@ SUBDIR+=	ptyfs
 SUBDIR+=	puffs
 SUBDIR+=	putter
 SUBDIR+=	scsiverbose
+SUBDIR+=	sdtemp
 SUBDIR+=	secmodel_bsd44
 SUBDIR+=	secmodel_extensions
 SUBDIR+=	secmodel_overlay
@@ -70,10 +74,12 @@ SUBDIR+=	sysvbfs
 SUBDIR+=	suser
 SUBDIR+=	swsensor
 SUBDIR+=	tmpfs
+SUBDIR+=	uatp
 SUBDIR+=	udf
 SUBDIR+=	umap
 SUBDIR+=	union
 SUBDIR+=	usbverbose
+SUBDIR+=	vcoda
 SUBDIR+=	v7fs
 SUBDIR+=	vnd
 SUBDIR+=	tprof
@@ -211,6 +217,14 @@ SUBDIR+=	pwdog
 .endif
 
 .include <bsd.own.mk>
+
+#
+# NetBSD/usermode support
+#
+.if ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "x86_64"
+SUBDIR+=	../arch/usermode/modules/syscallemu
+.endif
 
 # we need our device mapper for LVM
 .if (${MKLVM} != "no")
