@@ -1,4 +1,4 @@
-/* $OpenBSD: drmP.h,v 1.129 2012/04/11 17:42:53 mikeb Exp $ */
+/* $OpenBSD: drmP.h,v 1.131 2012/08/22 08:23:41 mpi Exp $ */
 /* drmP.h -- Private header for Direct Rendering Manager -*- linux-c -*-
  * Created: Mon Jan  4 10:05:05 1999 by faith@precisioninsight.com
  */
@@ -73,6 +73,12 @@
 #include "drm.h"
 #include "drm_atomic.h"
 
+#if BYTE_ORDER == BIG_ENDIAN
+#define __BIG_ENDIAN
+#else
+#define __LITTLE_ENDIAN
+#endif
+
 #define DRM_KERNEL_CONTEXT    0	 /* Change drm_resctx if changed	  */
 #define DRM_RESERVED_CONTEXTS 1	 /* Change drm_resctx if changed	  */
 
@@ -131,6 +137,10 @@ typedef u_int8_t u8;
 #define DRM_WRITEMEMORYBARRIER()	__asm __volatile("" : : : "memory");
 #define DRM_MEMORYBARRIER()		__asm __volatile( \
 					"lock; addl $0,0(%%rsp)" : : : "memory");
+#elif defined(__powerpc__)
+#define DRM_READMEMORYBARRIER()		DRM_MEMORYBARRIER() 
+#define DRM_WRITEMEMORYBARRIER()	DRM_MEMORYBARRIER()
+#define DRM_MEMORYBARRIER()		__asm __volatile("sync" : : : "memory");
 #endif
 
 #define	DRM_COPY_TO_USER(user, kern, size)	copyout(kern, user, size)
