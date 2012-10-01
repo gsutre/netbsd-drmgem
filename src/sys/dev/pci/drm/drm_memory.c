@@ -1,4 +1,4 @@
-/* $OpenBSD: drm_memory.c,v 1.22 2011/06/02 18:22:00 weerd Exp $ */
+/* $OpenBSD: drm_memory.c,v 1.23 2012/09/08 16:53:01 mpi Exp $ */
 /*-
  *Copyright 1999 Precision Insight, Inc., Cedar Park, Texas.
  * Copyright 2000 VA Linux Systems, Inc., Sunnyvale, California.
@@ -42,6 +42,10 @@
 #if defined(__NetBSD__)
 MALLOC_DEFINE(M_DRM, "drm", "Direct Rendering Management");
 #endif /* defined(__NetBSD__) */
+
+#if !defined(__amd64__) && !defined(__i386__)
+#define DRM_NO_MTRR	1
+#endif
 
 void*
 drm_alloc(size_t size)

@@ -73,6 +73,8 @@ USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "i830_bios.h"
 #include "intel_video.h"
 
+#include "i830_wraplinux.h"
+
 #ifdef INTEL_XVMC
 #define _INTEL_XVMC_SERVER_
 #include "intel_hwmc.h"
@@ -143,9 +145,9 @@ static OptionInfoRec I830Options[] = {
 };
 /* *INDENT-ON* */
 
-static void i830AdjustFrame(int scrnIndex, int x, int y, int flags);
-static Bool I830CloseScreen(int scrnIndex, ScreenPtr screen);
-static Bool I830EnterVT(int scrnIndex, int flags);
+static void i830AdjustFrame(ADJUST_FRAME_ARGS_DECL);
+static Bool I830CloseScreen(CLOSE_SCREEN_ARGS_DECL);
+static Bool I830EnterVT(VT_FUNC_ARGS_DECL);
 static Bool SaveHWState(ScrnInfoPtr scrn);
 static Bool RestoreHWState(ScrnInfoPtr scrn);
 
@@ -617,6 +619,23 @@ static int i830_output_clones (ScrnInfoPtr scrn, int type_mask)
 	return index_mask;
 }
 
+static Bool has_edp_a(ScrnInfoPtr scrn)
+{
+	intel_screen_private *intel = intel_get_screen_private(scrn);
+
+	if (!IS_MOBILE(intel))
+		return FALSE;
+
+	if ((I915_READ(DP_A) & DP_DETECTED) == 0)
+		return FALSE;
+
+	if (IS_GEN5(intel) &&
+	    (I915_READ(ILK_DISPLAY_CHICKEN_FUSES) & ILK_eDP_A_DISABLE))
+		return FALSE;
+
+	return TRUE;
+}
+
 /**
  * Set up the outputs according to what type of chip we are.
  *
@@ -629,6 +648,7 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int	    o, c;
 	Bool	    lvds_detected = FALSE;
+	Bool	    dpd_is_edp = FALSE;
 
 	/* everyone has at least a single analog output */
 	i830_crt_init(scrn);
@@ -636,6 +656,16 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 	/* Set up integrated LVDS */
 	if (IS_MOBILE(intel) && !IS_I830(intel))
 		i830_lvds_init(scrn);
+
+	if (HAS_PCH_SPLIT(intel)) {
+		dpd_is_edp = i830_dpd_is_edp(scrn);
+
+		if (has_edp_a(scrn))
+			i830_dp_init(scrn, DP_A);
+
+		if (dpd_is_edp && (I915_READ(PCH_DP_D) & DP_DETECTED))
+			i830_dp_init(scrn, PCH_DP_D);
+	}
 
 	if (HAS_PCH_SPLIT(intel)) {
 		int found;
@@ -646,6 +676,8 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 			found = 0;
 			if (!found)
 				i830_hdmi_init(scrn, HDMIB);
+			if (!found && (I915_READ(PCH_DP_B) & DP_DETECTED))
+				i830_dp_init(scrn, PCH_DP_B);
 		}
 
 		if (INREG(HDMIC) & PORT_DETECTED)
@@ -654,10 +686,11 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 		if (INREG(HDMID) & PORT_DETECTED)
 			i830_hdmi_init(scrn, HDMID);
 
-		/* Disable DP by force */
-		OUTREG(PCH_DP_B, INREG(PCH_DP_B) & ~PORT_ENABLE);
-		OUTREG(PCH_DP_C, INREG(PCH_DP_C) & ~PORT_ENABLE);
-		OUTREG(PCH_DP_D, INREG(PCH_DP_D) & ~PORT_ENABLE);
+		if (I915_READ(PCH_DP_C) & DP_DETECTED)
+			i830_dp_init(scrn, PCH_DP_C);
+
+		if (!dpd_is_edp && (I915_READ(PCH_DP_D) & DP_DETECTED))
+			i830_dp_init(scrn, PCH_DP_D);
 
 	} else if (IS_I9XX(intel)) {
 		Bool found = FALSE;
@@ -665,15 +698,31 @@ static void I830SetupOutputs(ScrnInfoPtr scrn)
 			found = i830_sdvo_init(scrn, SDVOB);
 
 			if (!found && SUPPORTS_INTEGRATED_HDMI(intel))
-			i830_hdmi_init(scrn, SDVOB);
+				i830_hdmi_init(scrn, SDVOB);
+
+			if (!found && SUPPORTS_INTEGRATED_DP(intel)) {
+				DRM_DEBUG_KMS("probing DP_B\n");
+				i830_dp_init(scrn, DP_B);
+			}
 		}
 
 		if ((INREG(SDVOB) & SDVO_DETECTED))
 			found = i830_sdvo_init(scrn, SDVOC);
 
-		if ((INREG(SDVOC) & SDVO_DETECTED) &&
-		    !found && SUPPORTS_INTEGRATED_HDMI(intel))
-			i830_hdmi_init(scrn, SDVOC);
+		if (!found && (INREG(SDVOC) & SDVO_DETECTED)) {
+			if (SUPPORTS_INTEGRATED_HDMI(intel))
+				i830_hdmi_init(scrn, SDVOC);
+			if (SUPPORTS_INTEGRATED_DP(intel)) {
+				DRM_DEBUG_KMS("probing DP_C\n");
+				i830_dp_init(scrn, DP_C);
+			}
+		}
+
+		if (SUPPORTS_INTEGRATED_DP(intel) &&
+		    (I915_READ(DP_D) & DP_DETECTED)) {
+			DRM_DEBUG_KMS("probing DP_D\n");
+			i830_dp_init(scrn, DP_D);
+		}
 
 	} else {
 		i830_dvo_init(scrn);
@@ -1555,29 +1604,29 @@ static Bool I830PreInit(ScrnInfoPtr scrn, int flags)
 	}
 
 	if (!intel->use_drm_mode) {
-   /* console hack, stolen from G80 */
-	   if (HAS_PCH_SPLIT(intel)) {
-	       if (xf86LoadSubModule(scrn, "int10")) {
-	       intel->int10 = xf86InitInt10(pEnt->index);
-	       if (intel->int10) {
-		       intel->int10->num = 0x10;
-		       intel->int10->ax = 0x4f03;
-		       intel->int10->bx =
-		       intel->int10->cx =
-		       intel->int10->dx = 0;
-		       xf86ExecX86int10(intel->int10);
-		       intel->int10Mode = intel->int10->bx & 0x3fff;
-		       xf86DrvMsg(scrn->scrnIndex, X_PROBED,
-			  "Console VGA mode is 0x%x\n", intel->int10Mode);
-		   } else {
-		       xf86DrvMsg(scrn->scrnIndex, X_WARNING,
-			      "Failed int10 setup, VT switch won't work\n");
-		   }
-	       } else {
-		   xf86DrvMsg(scrn->scrnIndex, X_WARNING,
-		       "Failed to load int10module, ironlake vt switch broken");
-	       }
-	       }
+		/* console restore hack */
+		if (HAS_PCH_SPLIT(intel)) {
+		    if (xf86LoadSubModule(scrn, "int10")) {
+			intel->int10 = xf86InitInt10(pEnt->index);
+			if (intel->int10) {
+			    intel->int10->num = 0x10;
+			    intel->int10->ax = 0x4f03;
+			    intel->int10->bx =
+			    intel->int10->cx =
+			    intel->int10->dx = 0;
+			    xf86ExecX86int10(intel->int10);
+			    intel->int10Mode = intel->int10->bx & 0x3fff;
+			    xf86DrvMsg(scrn->scrnIndex, X_PROBED,
+				"Console VGA mode is 0x%x\n", intel->int10Mode);
+			} else {
+			    xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+				"Failed int10 setup, VT switch won't work\n");
+			}
+		    } else {
+			xf86DrvMsg(scrn->scrnIndex, X_WARNING,
+			    "Failed to load int10module, ironlake vt switch broken");
+		    }
+		}
 
 		I830UnmapMMIO(scrn);
 
@@ -1662,8 +1711,15 @@ static Bool SaveHWState(ScrnInfoPtr scrn)
 	vgaRegPtr vgaReg = &hwp->SavedReg;
 	int i;
 
-	if (HAS_PCH_SPLIT(intel))
+	if (HAS_PCH_SPLIT(intel)) {
+		for (i = 0; i < xf86_config->num_output; i++) {
+			xf86OutputPtr   output = xf86_config->output[i];
+			if (output->funcs->save)
+				(*output->funcs->save) (output);
+		}
+
 		return TRUE;
+	}
 
 	/* Save video mode information for native mode-setting. */
 	if (!DSPARB_HWCONTROL(intel))
@@ -1783,8 +1839,16 @@ static Bool RestoreHWState(ScrnInfoPtr scrn)
 	vgaRegPtr vgaReg = &hwp->SavedReg;
 	int i;
 
-	if (HAS_PCH_SPLIT(intel))
+	if (HAS_PCH_SPLIT(intel)) {
+		/* Restore outputs */
+		for (i = 0; i < xf86_config->num_output; i++) {
+			xf86OutputPtr   output = xf86_config->output[i];
+			if (output->funcs->restore)
+				output->funcs->restore(output);
+		}
+
 		return TRUE;
+	}
 
 	DPRINTF(PFX, "RestoreHWState\n");
 
@@ -2030,15 +2094,15 @@ void IntelEmitInvarientState(ScrnInfoPtr scrn)
 }
 
 static void
-I830BlockHandler(int i, pointer blockData, pointer pTimeout, pointer pReadmask)
+I830BlockHandler(BLOCKHANDLER_ARGS_DECL)
 {
-	ScreenPtr screen = screenInfo.screens[i];
-	ScrnInfoPtr scrn = xf86Screens[i];
+	SCREEN_PTR(arg);
+	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 
 	screen->BlockHandler = intel->BlockHandler;
 
-	(*screen->BlockHandler) (i, blockData, pTimeout, pReadmask);
+	(*screen->BlockHandler) (BLOCKHANDLER_ARGS);
 
 	intel->BlockHandler = screen->BlockHandler;
 	screen->BlockHandler = I830BlockHandler;
@@ -2252,9 +2316,9 @@ intel_flush_callback(CallbackListPtr *list,
 }
 
 static Bool
-I830ScreenInit(int scrnIndex, ScreenPtr screen, int argc, char **argv)
+I830ScreenInit(SCREEN_INIT_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[screen->myNum];
+	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	vgaHWPtr hwp = NULL;
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	VisualPtr visual;
@@ -2469,7 +2533,7 @@ I830ScreenInit(int scrnIndex, ScreenPtr screen, int argc, char **argv)
 	 * later memory should be bound when allocating, e.g rotate_mem */
 	scrn->vtSema = TRUE;
 
-	if (!I830EnterVT(scrnIndex, 0))
+	if (!I830EnterVT(VT_FUNC_ARGS))
 		return FALSE;
 
 	intel->BlockHandler = screen->BlockHandler;
@@ -2551,9 +2615,9 @@ I830ScreenInit(int scrnIndex, ScreenPtr screen, int argc, char **argv)
 	return TRUE;
 }
 
-static void i830AdjustFrame(int scrnIndex, int x, int y, int flags)
+static void i830AdjustFrame(ADJUST_FRAME_ARGS_DECL)
 {
-   ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+   SCRN_INFO_PTR(arg);
    xf86CrtcConfigPtr	config = XF86_CRTC_CONFIG_PTR(scrn);
    intel_screen_private *intel = intel_get_screen_private(scrn);
    xf86OutputPtr  output = config->output[config->compat_output];
@@ -2575,20 +2639,20 @@ static void i830AdjustFrame(int scrnIndex, int x, int y, int flags)
    }
 }
 
-static void I830FreeScreen(int scrnIndex, int flags)
+static void I830FreeScreen(FREE_SCREEN_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	SCRN_INFO_PTR(arg);
 
 	intel_close_drm_master(scrn);
 
-	I830FreeRec(xf86Screens[scrnIndex]);
+	I830FreeRec(scrn);
 	if (xf86LoaderCheckSymbol("vgaHWFreeHWRec"))
-		vgaHWFreeHWRec(xf86Screens[scrnIndex]);
+		vgaHWFreeHWRec(scrn);
 }
 
-static void I830LeaveVT(int scrnIndex, int flags)
+static void I830LeaveVT(VT_FUNC_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	SCRN_INFO_PTR(arg);
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int ret;
 
@@ -2607,6 +2671,12 @@ static void I830LeaveVT(int scrnIndex, int flags)
 		if (HAS_PCH_SPLIT(intel) && intel->int10 && intel->int10Mode) {
 		    xf86Int10InfoPtr int10 = intel->int10;
 
+		    /* Unlock the PP_CONTROL register, otherwise the
+		     * int10 call fails to turn the panel back on.
+		     */
+		    OUTREG(PCH_PP_CONTROL,
+		        INREG(PCH_PP_CONTROL) | (0xabcd << 16));
+
 		    /* Use int10 to restore the console mode */
 		    int10->num = 0x10;
 		    int10->ax = 0x4f02;
@@ -2614,7 +2684,6 @@ static void I830LeaveVT(int scrnIndex, int flags)
 		    int10->cx = int10->dx = 0;
 		    xf86ExecX86int10(int10);
 		}
-
 	}
 
 	i830_unbind_all_memory(scrn);
@@ -2640,9 +2709,9 @@ static void I830LeaveVT(int scrnIndex, int flags)
 /*
  * This gets called when gaining control of the VT, and from ScreenInit().
  */
-static Bool I830EnterVT(int scrnIndex, int flags)
+static Bool I830EnterVT(VT_FUNC_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	SCRN_INFO_PTR(arg);
 	xf86CrtcConfigPtr xf86_config = XF86_CRTC_CONFIG_PTR(scrn);
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 	int i, ret;
@@ -2745,20 +2814,20 @@ static Bool I830EnterVT(int scrnIndex, int flags)
 	return TRUE;
 }
 
-static Bool I830SwitchMode(int scrnIndex, DisplayModePtr mode, int flags)
+static Bool I830SwitchMode(SWITCH_MODE_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	SCRN_INFO_PTR(arg);
 
 	return xf86SetSingleMode(scrn, mode, RR_Rotate_0);
 }
 
-static Bool I830CloseScreen(int scrnIndex, ScreenPtr screen)
+static Bool I830CloseScreen(CLOSE_SCREEN_ARGS_DECL)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	ScrnInfoPtr scrn = xf86ScreenToScrn(screen);
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 
 	if (scrn->vtSema == TRUE) {
-		I830LeaveVT(scrnIndex, 0);
+		I830LeaveVT(VT_FUNC_ARGS);
 	}
 
 	DeleteCallback(&FlushCallback, intel_flush_callback, scrn);
@@ -2811,7 +2880,7 @@ static Bool I830CloseScreen(int scrnIndex, ScreenPtr screen)
 	intel->offscreenImages = NULL;
 
 	screen->CloseScreen = intel->CloseScreen;
-	(*screen->CloseScreen) (scrnIndex, screen);
+	(*screen->CloseScreen) (CLOSE_SCREEN_ARGS);
 
 	if (intel->directRenderingOpen
 	    && intel->directRenderingType == DRI_DRI2) {
@@ -2819,18 +2888,18 @@ static Bool I830CloseScreen(int scrnIndex, ScreenPtr screen)
 		I830DRI2CloseScreen(screen);
 	}
 
-	xf86GARTCloseScreen(scrnIndex);
-
+	xf86GARTCloseScreen(scrn->scrnIndex);
 	scrn->vtSema = FALSE;
 	return TRUE;
 }
 
 static ModeStatus
-I830ValidMode(int scrnIndex, DisplayModePtr mode, Bool verbose, int flags)
+I830ValidMode(SCRN_ARG_TYPE arg, DisplayModePtr mode, Bool verbose, int flags)
 {
+	SCRN_INFO_PTR(arg);
 	if (mode->Flags & V_INTERLACE) {
 		if (verbose) {
-			xf86DrvMsg(scrnIndex, X_PROBED,
+			xf86DrvMsg(scrn->scrnIndex, X_PROBED,
 				   "Removing interlaced mode \"%s\"\n",
 				   mode->name);
 		}
@@ -2851,9 +2920,9 @@ I830ValidMode(int scrnIndex, DisplayModePtr mode, Bool verbose, int flags)
  * DoApmEvent() in common/xf86PM.c, including if we want to see events other
  * than suspend/resume.
  */
-static Bool I830PMEvent(int scrnIndex, pmEvent event, Bool undo)
+static Bool I830PMEvent(SCRN_ARG_TYPE arg, pmEvent event, Bool undo)
 {
-	ScrnInfoPtr scrn = xf86Screens[scrnIndex];
+	SCRN_INFO_PTR(arg);
 	intel_screen_private *intel = intel_get_screen_private(scrn);
 
 	DPRINTF(PFX, "Enter VT, event %d, undo: %s\n", event,
@@ -2866,12 +2935,12 @@ static Bool I830PMEvent(int scrnIndex, pmEvent event, Bool undo)
 	case XF86_APM_SYS_STANDBY:
 	case XF86_APM_USER_STANDBY:
 		if (!undo && !intel->suspended) {
-			scrn->LeaveVT(scrnIndex, 0);
+			scrn->LeaveVT(VT_FUNC_ARGS);
 			intel->suspended = TRUE;
 			sleep(SUSPEND_SLEEP);
 		} else if (undo && intel->suspended) {
 			sleep(RESUME_SLEEP);
-			scrn->EnterVT(scrnIndex, 0);
+			scrn->EnterVT(VT_FUNC_ARGS);
 			intel->suspended = FALSE;
 		}
 		break;
@@ -2880,7 +2949,7 @@ static Bool I830PMEvent(int scrnIndex, pmEvent event, Bool undo)
 	case XF86_APM_CRITICAL_RESUME:
 		if (intel->suspended) {
 			sleep(RESUME_SLEEP);
-			scrn->EnterVT(scrnIndex, 0);
+			scrn->EnterVT(VT_FUNC_ARGS);
 			intel->suspended = FALSE;
 			/*
 			 * Turn the screen saver off when resuming.  This seems to be
