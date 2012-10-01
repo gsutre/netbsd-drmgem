@@ -300,7 +300,7 @@
 /* chipsets require status page in non stolen memory */
 #define HWS_NEED_NONSTOLEN(pI810) (IS_G4X(pI810) || IS_GEN5(pI810) || IS_GEN6(pI810))
 #define SUPPORTS_INTEGRATED_HDMI(pI810) (IS_G4X(pI810) || IS_GEN5(pI810) || IS_GEN6(pI810))
-#define SUPPORTS_INTEGRATED_DP(pI810)   (IS_G4X(pI810) || IS_GEN5(pI810))
+#define SUPPORTS_INTEGRATED_DP(pI810)   (IS_G4X(pI810) || IS_GEN5(pI810) || IS_GEN6(pI810))
 /* dsparb controlled by hw only */
 #define DSPARB_HWCONTROL(pI810) (IS_G4X(pI810) || IS_GEN5(pI810) || IS_GEN6(pI810))
 
