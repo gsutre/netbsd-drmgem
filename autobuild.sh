@@ -36,6 +36,10 @@ mesa="no"
 # Don't build the intel XvMC libraries by default
 xvmc="no"
 
+# Directories
+DSTDIR=netbsd-drmgem.dist.$(uname -m)
+USRDIR=netbsd-drmgem.usr
+
 
 # Helper functions #############################################################
 
@@ -60,7 +64,15 @@ build_and_install ()
 usage ()
 {
 	cat <<EOF
-Usage: $self [-cmv] [-b <branch>] [-j <njobs>] <time stamp>
+Usage: $self [options] <time stamp>
+
+  -b <srt>    Use netbsd-drmgem branch <str> instead of master.
+  -c          Continue build without downloading and patching sources.
+  -j <int>    Specify the maximum number of make(1) jobs.
+  -m          Also build the intel DRI modules.
+  -v          Also build the intel XvMC libraries.
+
+WARNING: this script modifies the local X11R7 installation!
 EOF
 	exit 1
 }
@@ -152,46 +164,57 @@ if ! which sudo >/dev/null; then
 	error "sudo not found."
 fi
 
-DISTDIR=dist.$(uname -m)
-
+# Download and patch NetBSD sources
 if [ "$continue" = "yes" ]; then
-	if [ ! \( -d "$DISTDIR" -a -e ".startbuild" -a -d "usr" \) ]; then
+	echo "$self: continue build."
+
+	if [ ! \( -e "netbsd-drmgem.sources_done" -a -d "$USRDIR" \) ]; then
 		error "can't continue: missing file or directory."
 	fi
 else
-	# Create distribution directory and time stamp for build start
-	mkdir -p $DISTDIR
-	touch .startbuild
+	echo "$self: start build."
+
+	# Remove leftover files (if any)
+	rm -rf netbsd-drmgem netbsd-drmgem.* $DSTDIR $URSDIR
+
+	# Time stamp for build start
+	touch netbsd-drmgem.autobuild_start
 
 	# Download and extract netbsd-drmgem
 	wget --no-check-certificate -O - ${GITHUB_TARBALL_URL}/$BRANCH | tar -zxf -
 	mv gsutre-netbsd-drmgem-* netbsd-drmgem
+	rm -f pax_global_header
 
 	# Get NetBSD sources by CVS
 	for f in ${SRC_FILES} ${SYSSRC_FILES} ${XSRC_FILES}; do
-		cvs -z3 export -N -d usr -D "$TIMESTAMP" "$f"
+		cvs -z3 export -N -d $USRDIR -D "$TIMESTAMP" "$f"
 	done
 
 	# Overwrite source files with netbsd-drmgem ones
-	cp -av netbsd-drmgem/src netbsd-drmgem/xsrc usr
+	cp -av netbsd-drmgem/src netbsd-drmgem/xsrc $USRDIR
+
+	touch netbsd-drmgem.sources_done
 fi
 
 export USETOOLS=no
 
+# Create distribution directory for new kernel and X11R7 files
+mkdir -p $DSTDIR
+
 # Build and install new kernel
-cd usr/src/sys/arch/$(uname -m)/conf
+cd $USRDIR/src/sys/arch/$(uname -m)/conf
 config GENERIC
 cd ../compile/GENERIC
 $MAKE depend
 $MAKE
-mv netbsd ../../../../../../../$DISTDIR/netbsd-GENERIC-drmgem
+mv netbsd ../../../../../../../$DSTDIR/netbsd-GENERIC-drmgem
 cd ../../../../../../..
 
 # Build the math library
-$MAKE -C usr/src/lib/libm
+$MAKE -C $USRDIR/src/lib/libm
 
 # Build and install OpenBSD Xenocara's libdrm and Xorg intel driver
-cd usr/src/external/mit/xorg/lib
+cd $USRDIR/src/external/mit/xorg/lib
 build_and_install libdrm
 build_and_install libdrm_intel
 cd ../server/drivers
@@ -200,10 +223,10 @@ cd ../../../../../../..
 
 if [ "$mesa" = "yes" ]; then
 	# Build the intel DRI modules
-	$MAKE -C usr/src/external/mit/xorg/tools/glsl
-	$MAKE -C usr/src/external/mit/expat
-	$MAKE -C usr/src/external/mit/xorg/lib/dri/libmesa
-	cd usr/src/external/mit/xorg/lib/dri
+	$MAKE -C $USRDIR/src/external/mit/xorg/tools/glsl
+	$MAKE -C $USRDIR/src/external/mit/expat
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/dri/libmesa
+	cd $USRDIR/src/external/mit/xorg/lib/dri
 	build_and_install i915
 	build_and_install i965
 	cd ../../../../../../..
@@ -211,19 +234,23 @@ fi
 
 if [ "$xvmc" = "yes" ]; then
 	# Build the intel XvMC libraries
-	$MAKE -C usr/src/external/mit/xorg/lib/libXau
-	$MAKE -C usr/src/external/mit/xorg/lib/libXdmcp
-	$MAKE -C usr/src/external/mit/xorg/lib/libxcb
-	$MAKE -C usr/src/external/mit/xorg/lib/libX11
-	$MAKE -C usr/src/external/mit/xorg/lib/libXext
-	$MAKE -C usr/src/external/mit/xorg/lib/libXv
-	$MAKE -C usr/src/external/mit/xorg/lib/libXvMC
-	cd usr/src/external/mit/xorg/lib
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXau
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXdmcp
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libxcb
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libX11
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXext
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXv
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXvMC
+	cd $USRDIR/src/external/mit/xorg/lib
 	build_and_install libI810XvMC
 	build_and_install libIntelXvMC
 	cd ../../../../../..
 fi
 
 # Create tar archive for X11R7 new files
-tar -zcf $DISTDIR/usr-X11R7-drmgem.tgz \
-    $(find /usr/X11R7 -newer .startbuild ! -type d)
+tar -zcf $DSTDIR/usr-X11R7-drmgem.tgz \
+    $(find /usr/X11R7 -newer netbsd-drmgem.autobuild_start ! -type d)
+
+echo "$self: build complete."
+echo "$self: resulting kernel: $DSTDIR/netbsd-GENERIC-drmgem"
+echo "$self: new X11R7 files:  $DSTDIR/usr-X11R7-drmgem.tgz"
