@@ -1,9 +1,9 @@
 #!/bin/sh
 #
-# Automated build script for netbsd-drmgem.  Needs a NetBSD-daily/HEAD time
-# stamp, for instance:
+# Automated build script for netbsd-drmgem.  Needs a NetBSD CVS time stamp,
+# for instance:
 #
-# autobuild.sh 201106060220Z
+# autobuild.sh '2012-10-04 08:10 UTC'
 #
 # WARNING: this script modifies the local X11R7 installation!
 #
@@ -14,8 +14,11 @@ self="$(basename "$0")"
 # Abort as soon as something wrong occurs
 set -e
 
-# URLS
-NETBSD_DAILY_FTP_URL=ftp://nyftp.netbsd.org/pub/NetBSD-daily
+# Anonymous access to the NetBSD CVS repository (french mirror)
+export CVSROOT=anoncvs@anoncvs.fr.NetBSD.org:/pub/NetBSD-CVS
+export CVS_RSH=ssh
+
+# Base URL for netbsd-drmgem tarball
 GITHUB_TARBALL_URL=https://github.com/gsutre/netbsd-drmgem/tarball
 
 # Use netbsd-drmgem's master branch by default (selectable by option)
@@ -93,8 +96,35 @@ if [ -z "$TIMESTAMP" ]; then
 	usage
 fi
 
+# Make a time stamp like 201210040810Z compatible with cvs
+TIMESTAMP=$(echo "$TIMESTAMP" | \
+	    sed -e 's/^\([0-9]\{8\}\)\([0-9]\{4\}Z\)$/\1 \2/g')
+
 
 # Main #########################################################################
+
+# No need for the full source tree, only these directories
+SRC_FILES="				\
+	src/build.sh 			\
+	src/etc 			\
+	src/external/mit 		\
+	src/include 			\
+	src/lib 			\
+	src/tools"
+
+SYSSRC_FILES="				\
+	src/common 			\
+	src/sys"
+
+XSRC_FILES="				\
+	xsrc/external/mit/MesaLib 	\
+	xsrc/external/mit/libXau 	\
+	xsrc/external/mit/libXdmcp 	\
+	xsrc/external/mit/libxcb 	\
+	xsrc/external/mit/libX11 	\
+	xsrc/external/mit/libXext 	\
+	xsrc/external/mit/libXv 	\
+	xsrc/external/mit/libXvMC"
 
 # Check for NetBSD 6.99
 set -- $(uname -r | tr '.' ' ')
@@ -137,33 +167,9 @@ else
 	wget --no-check-certificate -O - ${GITHUB_TARBALL_URL}/$BRANCH | tar -zxf -
 	mv gsutre-netbsd-drmgem-* netbsd-drmgem
 
-	# Download and extract source sets
-	cat > src.files <<EOF
-usr/src/build.sh
-usr/src/etc
-usr/src/external/mit
-usr/src/include
-usr/src/lib
-usr/src/tools
-EOF
-	cat > syssrc.files <<EOF
-usr/src/common
-usr/src/sys
-EOF
-	cat > xsrc.files <<EOF
-usr/xsrc/external/mit/MesaLib
-usr/xsrc/external/mit/libXau
-usr/xsrc/external/mit/libXdmcp
-usr/xsrc/external/mit/libxcb
-usr/xsrc/external/mit/libX11
-usr/xsrc/external/mit/libXext
-usr/xsrc/external/mit/libXv
-usr/xsrc/external/mit/libXvMC
-EOF
-	sets="src syssrc xsrc"
-	for set in $sets; do
-		wget -O - ${NETBSD_DAILY_FTP_URL}/HEAD/$TIMESTAMP/source/sets/$set.tgz | \
-		    tar -T $set.files -zxf -
+	# Get NetBSD sources by CVS
+	for f in ${SRC_FILES} ${SYSSRC_FILES} ${XSRC_FILES}; do
+		cvs -z3 export -N -d usr -D "$TIMESTAMP" "$f"
 	done
 
 	# Overwrite source files with netbsd-drmgem ones
