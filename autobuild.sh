@@ -132,11 +132,13 @@ XSRC_FILES="				\
 	xsrc/external/mit/MesaLib 	\
 	xsrc/external/mit/libXau 	\
 	xsrc/external/mit/libXdmcp 	\
-	xsrc/external/mit/libxcb 	\
 	xsrc/external/mit/libX11 	\
 	xsrc/external/mit/libXext 	\
+	xsrc/external/mit/libXfixes 	\
 	xsrc/external/mit/libXv 	\
-	xsrc/external/mit/libXvMC"
+	xsrc/external/mit/libXvMC 	\
+	xsrc/external/mit/libxcb 	\
+	xsrc/external/mit/xcb-util"
 
 # Check for NetBSD 6.99
 set -- $(uname -r | tr '.' ' ')
@@ -236,11 +238,13 @@ if [ "$xvmc" = "yes" ]; then
 	# Build the intel XvMC libraries
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXau
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXdmcp
-	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libxcb
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libX11
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXext
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXfixes
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXv
 	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libXvMC
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/libxcb
+	$MAKE -C $USRDIR/src/external/mit/xorg/lib/xcb-util
 	cd $USRDIR/src/external/mit/xorg/lib
 	build_and_install libI810XvMC
 	build_and_install libIntelXvMC
