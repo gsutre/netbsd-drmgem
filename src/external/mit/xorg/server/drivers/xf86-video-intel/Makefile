@@ -24,6 +24,7 @@ SRCS.legacy+=	i810_io.c i810_memory.c i810_video.c i810_wmark.c
 .if ${X11DRI} != "no"
 SRCS+=		intel_dri.c
 SRCS.legacy+=	i810_dri.c
+CPPFLAGS+=	-DXF86DRI
 .endif
 
 # Enable XvMC
@@ -41,12 +42,9 @@ CPPFLAGS+=	-I${X11SRCDIR.${DRIVER}}/uxa
 CPPFLAGS+=	-I${X11SRCDIR.${DRIVER}}/src
 CPPFLAGS+=	-I${X11SRCDIR.${DRIVER}}/src/render_program
 
-LDADD+=		-lm -ldrm_intel
+LDADD+=		-lm -ldrm -ldrm_intel -lpciaccess
 
 .include "../Makefile.xf86-driver"
-
-# debug messages are most welcome (for now)
-CPPFLAGS+=	-DI830DEBUG
 
 SUBDIR=	ch7017 ch7xxx ivch sil164 tfp410
 

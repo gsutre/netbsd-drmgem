@@ -4,7 +4,7 @@
 
 
 The X.org intel driver included in NetBSD -current does not support the recent
-Ironlake IGPs found in Core i3/i5 based laptops.  However, OpenBSD 4.8 supports
+integrated GPUs found in Core i3/i5/i7 platforms.  However, OpenBSD 4.8 supports
 them (kudos to OpenBSD developers!).  This support involves three components of
 the system:
 
@@ -12,10 +12,9 @@ the system:
 2. Userland DRM library
 3. X.org video driver
 
-This project aims at porting these three components from OpenBSD to NetBSD, with
-a focus on Intel graphics chipsets.  The OpenBSD Xenocara DRM library and X.org
-Intel video driver should not require much work.  So the main challenge of this
-project is the port of OpenBSD's DRM/GEM kernel driver to NetBSD.
+This project ports these three components from OpenBSD to NetBSD.  Support for
+(embedded) display port has been, in addition, ported directly from Linux.  The
+port focusses on Intel GPUs and removes support for other graphics hardware.
 
 Note: This port is for NetBSD's native X.org.  It's not compatible with pkgsrc's
       X.org.                    ^^^^^^
@@ -24,7 +23,34 @@ Note: This port is for NetBSD's native X.org.  It's not compatible with pkgsrc's
 *****      Use at your own risk        ******        Work in progress      *****
 
 
-1. Patch kernel source tree (/usr/src and /usr/xsrc)
+There are several ways to build and install this port.  The safest option is to
+(cross-)build a new release from scratch.  But this may take time, so, instead,
+one may choose to use the automated build script that is provided with the port.
+Last, it is possible to manually build the required components.  Let us present
+in detail these three alternatives.
+
+
+Automated build script
+--------------------------------------------------------------------------------
+
+Download the script autobuild.sh, create a directory with enough free space for
+the build (750 MiB), and then run the script from this directory:
+
+$ /path/to/autobuild.sh -mv <time stamp>
+
+This builds a new kernel as well as intel-specific X.org modules and libraries.
+
+WARNING: this script modifies the local X11R7 installation!
+
+The <time stamp> specifies the date of NetBSD -current sources.  You may use any
+date compatible with the CVS date format.  But, obviously, it is safer to choose
+a date that is close to the sources of the running NetBSD system.
+
+
+Manual build
+--------------------------------------------------------------------------------
+
+1. Patch NetBSD source tree (/usr/src and /usr/xsrc)
 
 $ git clone https://github.com/gsutre/netbsd-drmgem.git
 
@@ -70,10 +96,21 @@ $ cd /usr/src/external/mit/xorg/server/drivers/xf86-video-intel
 $ make
 $ su root -c "make install"
 
+However, this only builds the X.org intel(4) driver as well as its dependencies.
+See the autobuild.sh script to build Mesa DRI modules and XvMC libraries.
 
-4. Full (cross-)build
 
-As an alternative to steps 2 and 3, you may perform a full (cross-)build of the
-patched NetBSD system, using the build.sh script.  For instance:
+Full (cross-)build
+--------------------------------------------------------------------------------
 
-$ ./build.sh -U -m i386 -x release
+Fetch a clean NetBSD -current source tree, as explained here:
+
+http://www.netbsd.org/docs/guide/en/chap-fetch.html
+
+Next, do step 1 of the Manual build section to patch the source tree, and, then,
+perform a full (cross-)build of the patched release using the build.sh script.
+For instance:
+
+$ ./build.sh -U -m amd64 -x release
+
+Install the release as usual.
