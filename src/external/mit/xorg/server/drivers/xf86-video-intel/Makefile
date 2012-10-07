@@ -46,6 +46,9 @@ LDADD+=		-lm -ldrm -ldrm_intel -lpciaccess
 
 .include "../Makefile.xf86-driver"
 
+# Enable debug messages
+CPPFLAGS+=	-DI830DEBUG
+
 SUBDIR=	ch7017 ch7xxx ivch sil164 tfp410
 
 CWARNFLAGS.clang+=	-Wno-parentheses -Wno-tautological-compare \
