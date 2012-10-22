@@ -403,12 +403,13 @@ drmdev*		at inteldrm?
 options 	MSGBUFSIZE=104857600	# 100 MiB
 options 	AGP_DEBUG
 options 	DRMDEBUG
-options 	DRM_DEBUG_DEFAULT_ON
+options 	DRMLOCKDEBUG
 options 	DRM_VBLANK_DEBUG
-options 	DRM_FAULT_DEBUG
-options 	DRM_SG_DEBUG
-options 	DRM_TLB_DEBUG
-options 	INTELDRM_DEBUG=2
+#options 	INTELDRM_VERBOSE=1
+#options 	DRM_FAULT_DEBUG
+#options 	DRM_SG_DEBUG
+#options 	DRM_TLB_DEBUG
+#options 	INTELDRM_DEBUG=2
 
 # Cryptographic Devices
 

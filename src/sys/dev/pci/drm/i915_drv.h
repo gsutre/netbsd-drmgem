@@ -611,8 +611,7 @@ read64(struct inteldrm_softc *dev_priv, bus_size_t off)
 #define POSTING_READ(reg)	(void)I915_READ(reg)
 #define POSTING_READ16(reg)	(void)I915_READ16(reg)
 
-#define INTELDRM_VERBOSE 1
-#if INTELDRM_VERBOSE > 0
+#if defined(INTELDRM_VERBOSE) && INTELDRM_VERBOSE > 0
 #define	INTELDRM_VPRINTF(fmt, args...) DRM_INFO(fmt, ##args)
 #else
 #define	INTELDRM_VPRINTF(fmt, args...)
