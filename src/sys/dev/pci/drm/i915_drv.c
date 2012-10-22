@@ -71,63 +71,80 @@
 #define I915_GEM_GPU_DOMAINS	(~(I915_GEM_DOMAIN_CPU | I915_GEM_DOMAIN_GTT))
 
 /*
- * Macro to check and print error registers.
+ * Function to check and print error registers.
  */
-static bool no_error_detected = true;
-#define CHECK_ERROR_REGISTER(line)						\
-do {										\
-	u_int32_t eir, esr, pgtbl_er, gtt_fsr;					\
-										\
-	eir = I915_READ(EIR);							\
-	esr = I915_READ(ESR);							\
-	pgtbl_er = I915_READ(PGTBL_ER);						\
-	gtt_fsr = I915_READ(0x44040);	/* GTT Fault Status Register */		\
-										\
-	if (no_error_detected && (eir || pgtbl_er || gtt_fsr)) {		\
-		aprint_error("ERROR: %s [%d]:"					\
-		    " eir 0x%08"PRIx32						\
-		    " esr 0x%08"PRIx32						\
-		    " pgtbl_er 0x%08"PRIx32					\
-		    " gtt_fsr 0x%08"PRIx32"\n",					\
-		    __func__, line, eir, esr, pgtbl_er, gtt_fsr);		\
-		no_error_detected = false;					\
-	}									\
-} while (0)
+static void inteldrm_check_error_regs(struct inteldrm_softc *dev_priv,
+    const char *func, int line)
+{
+	static bool error_detected = false;
+	u_int32_t eir, esr, pgtbl_er, gtt_fsr;
+
+	/* Stop at the first error. */
+	if (error_detected)
+		return;
+
+	eir = I915_READ(EIR);
+	esr = I915_READ(ESR);
+	pgtbl_er = I915_READ(PGTBL_ER);
+	gtt_fsr = 0;
+
+	error_detected = eir || pgtbl_er;
+	if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv)) {
+		gtt_fsr = I915_READ(0x44040);	/* GTT Fault Status Register */
+		error_detected = error_detected || gtt_fsr;
+	}
+
+	if (!error_detected)
+		return;
+
+	aprint_error("ERROR: %s [%d]:"
+	    " eir 0x%08"PRIx32
+	    " esr 0x%08"PRIx32
+	    " pgtbl_er 0x%08"PRIx32,
+	    func, line, eir, esr, pgtbl_er);
+	if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv))
+		aprint_error(" gtt_fsr 0x%08"PRIx32, gtt_fsr);
+	aprint_error("\n");
+}
 
 #ifdef DRM_TLB_DEBUG
 /*
- * Macros to dump active TLB pages (in the GTT).  See Section 1.3.4 of
+ * Functions to dump active TLB pages (in the GTT).  See Section 1.3.4 of
  * http://intellinuxgraphics.org/IHD_OS_Vol1_Part2r2.pdf.
  *
  * XXX CS and RC TLB registers are equal to 0xffffffff on my Core i5 laptop,
  * XXX so I discard this value.  [gsutre]
  */
-#define DUMP_ACTIVE_TLB_REGS(line, name, start, n)				\
-do {										\
-	u_int32_t reg, val;							\
-										\
-	reg = start;								\
-	for (int i = 0; i < n; i++, reg += 4) {					\
-		val = I915_READ(reg);						\
-		if (val != 0xffffffff && (val & 0x1))				\
-			aprint_normal("%s [%d]:"				\
-			    " %s TLB: @%"PRIx32"h: 0x%08"PRIx32"\n",		\
-			    __func__, line, name, reg, val);			\
-	}									\
-} while (0)
+static void inteldrm_dump_active_tlb_regs(struct inteldrm_softc *dev_priv,
+    const char *func, int line, const char *name, u_int32_t start, int n)
+{
+	u_int32_t reg, val;
+
+	reg = start;
+	for (int i = 0; i < n; i++, reg += 4) {
+		val = I915_READ(reg);
+		if (val != 0xffffffff && (val & 0x1))
+			aprint_normal("%s [%d]:"
+			    " %s TLB: @%"PRIx32"h: 0x%08"PRIx32"\n",
+			    func, line, name, reg, val);
+	}
+}
 /*
  * XXX Dumping of RC TLB registers is commented out, as otherwise my Core i5
  * XXX laptop hangs a few seconds after the X server starts (even if we only
  * XXX dump one register, i.e., replace 224 by 1).  [gsutre]
  */
-#define DUMP_ALL_ACTIVE_TLB_REGS(line)						\
-do {										\
-	DUMP_ACTIVE_TLB_REGS(line, "ISC", 0xb000,  16);				\
-	DUMP_ACTIVE_TLB_REGS(line, "VF ", 0xb100,  19);				\
-	DUMP_ACTIVE_TLB_REGS(line, "CS ", 0xb200,   6);				\
-	DUMP_ACTIVE_TLB_REGS(line, "MT ", 0xb300,  32);				\
-	/*DUMP_ACTIVE_TLB_REGS(line, "RC ", 0xb400, 224);*/			\
-} while (0)
+static void inteldrm_dump_all_active_tlb_regs(struct inteldrm_softc *dev_priv,
+    const char *func, int line)
+{
+	inteldrm_dump_active_tlb_regs(dev_priv, func, line, "ISC", 0xb000,  16);
+	inteldrm_dump_active_tlb_regs(dev_priv, func, line, "VF ", 0xb100,  19);
+	inteldrm_dump_active_tlb_regs(dev_priv, func, line, "CS ", 0xb200,   6);
+	inteldrm_dump_active_tlb_regs(dev_priv, func, line, "MT ", 0xb300,  32);
+#if 0
+	inteldrm_dump_active_tlb_regs(dev_priv, func, line, "RC ", 0xb400, 224);
+#endif
+}
 #endif /* DRM_TLB_DEBUG */
 
 #if !defined(__NetBSD__)
@@ -902,10 +919,10 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 
 #ifdef DRM_TLB_DEBUG
 	if (IS_IRONLAKE(dev_priv))
-		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+		inteldrm_dump_all_active_tlb_regs(dev_priv, __func__, __LINE__);
 #endif /* DRM_TLB_DEBUG */
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 
 	while ((dev_priv->sc_flags & INTELDRM_QUIET) && error == 0)
 		error = tsleep(&dev_priv->flags, PCATCH, "intelioc", 0);
@@ -919,11 +936,11 @@ inteldrm_ioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 	if (dev_priv->sc_flags & INTELDRM_QUIET)
 		wakeup(&dev_priv->entries);
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 
 #ifdef DRM_TLB_DEBUG
 	if (IS_IRONLAKE(dev_priv))
-		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+		inteldrm_dump_all_active_tlb_regs(dev_priv, __func__, __LINE__);
 #endif /* DRM_TLB_DEBUG */
 
 	return (error);
@@ -2112,13 +2129,13 @@ i915_gem_retire_work_handler(void *arg1, void *unused)
 {
 	struct inteldrm_softc	*dev_priv = arg1;
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 
 	i915_gem_retire_requests(dev_priv);
 	if (!TAILQ_EMPTY(&dev_priv->mm.request_list))
 		timeout_add_sec(&dev_priv->mm.retire_timer, 1);
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 }
 
 /**
@@ -2304,7 +2321,7 @@ i915_gem_object_unbind(struct drm_obj *obj, int interruptible)
 
 #ifdef DRM_TLB_DEBUG
 	if (IS_IRONLAKE(dev_priv))
-		DUMP_ALL_ACTIVE_TLB_REGS(__LINE__);
+		inteldrm_dump_all_active_tlb_regs(dev_priv, __func__, __LINE__);
 #endif /* DRM_TLB_DEBUG */
 
 	/* if it's purgeable don't bother dirtying the pages */
@@ -4924,7 +4941,7 @@ inteldrm_hangcheck(void *arg)
 	struct inteldrm_softc	*dev_priv = arg;
 	u_int32_t		 acthd, instdone, instdone1;
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 
 	/* are we idle? no requests, or ring is empty */
 	if (TAILQ_EMPTY(&dev_priv->mm.request_list) ||
@@ -4984,7 +5001,7 @@ out:
 	/* Set ourselves up again, in case we haven't added another batch */
 	timeout_add_msec(&dev_priv->mm.hang_timer, 750);
 
-	CHECK_ERROR_REGISTER(__LINE__);
+	inteldrm_check_error_regs(dev_priv, __func__, __LINE__);
 }
 
 void
