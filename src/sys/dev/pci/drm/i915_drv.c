@@ -1479,6 +1479,9 @@ i915_gem_init_ioctl(struct drm_device *dev, void *data,
 	struct inteldrm_softc		*dev_priv = dev->dev_private;
 	struct drm_i915_gem_init	*args = data;
 
+	DRM_DEBUG("gtt start %#"PRIx64", gtt end %#"PRIx64"\n",
+	    args->gtt_start, args->gtt_end);
+
 	DRM_LOCK();
 
 	if (args->gtt_start >= args->gtt_end ||
@@ -3801,6 +3804,9 @@ i915_gem_execbuffer2(struct drm_device *dev, void *data,
 	int					 pinned = 0, pin_tries;
 	uint32_t				 reloc_index;
 
+	DRM_DEBUG("count %"PRIu32", start offset %#"PRIx32", len %#"PRIx32"\n",
+	    args->buffer_count, args->batch_start_offset, args->batch_len);
+
 	/*
 	 * Check for valid execbuffer offset. We can do this early because
 	 * bound object are always page aligned, so only the start offset
@@ -4682,6 +4688,8 @@ i915_gem_entervt_ioctl(struct drm_device *dev, void *data,
 	struct inteldrm_softc *dev_priv = dev->dev_private;
 	int ret;
 
+	DRM_DEBUG("\n");
+
 	/* XXX until we have support for the rings on sandybridge */
 	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 		return (0);
@@ -4718,6 +4726,8 @@ i915_gem_leavevt_ioctl(struct drm_device *dev, void *data,
 {
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	int			 ret;
+
+	DRM_DEBUG("\n");
 
 	/* don't unistall if we fail, repeat calls on failure will screw us */
 	if ((ret = i915_gem_idle(dev_priv)) == 0)
