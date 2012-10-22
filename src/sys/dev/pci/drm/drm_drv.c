@@ -49,7 +49,11 @@
 #include <sys/systm.h>
 #include <uvm/uvm_extern.h>
 
+#if !defined(__NetBSD__)
 #include <sys/ttycom.h> /* for TIOCSGRP */
+#else /* !defined(__NetBSD__) */
+#include <sys/file.h>   /* for fsetown(9) and fgetown(9) */
+#endif /* !defined(__NetBSD__) */
 
 #include "drmP.h"
 #include "drm.h"
@@ -698,6 +702,7 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 	case FIOASYNC:
 		return 0;
 
+#if !defined(__NetBSD__)
 	case TIOCSPGRP:
 		dev->buf_pgid = *(int *)data;
 		return 0;
@@ -705,6 +710,17 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 	case TIOCGPGRP:
 		*(int *)data = dev->buf_pgid;
 		return 0;
+#else /* !defined(__NetBSD__) */
+	case SIOCSPGRP:
+	case TIOCSPGRP:
+	case FIOSETOWN:
+		return fsetown(&dev->buf_pgid, cmd, data);
+
+	case SIOCGPGRP:
+	case TIOCGPGRP:
+	case FIOGETOWN:
+		return fgetown(dev->buf_pgid, cmd, data);
+#endif /* !defined(__NetBSD__) */
 	case DRM_IOCTL_VERSION:
 		return (drm_version(dev, data, file_priv));
 	case DRM_IOCTL_GET_UNIQUE:
