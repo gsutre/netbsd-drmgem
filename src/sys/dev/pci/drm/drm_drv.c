@@ -848,8 +848,10 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 	}
 	if (dev->driver->ioctl != NULL)
 		return (dev->driver->ioctl(dev, cmd, data, file_priv));
-	else
+	else {
+		DRM_DEBUG("invalid ioctl command 0x%02lx\n", cmd);
 		return (EINVAL);
+	}
 }
 
 int

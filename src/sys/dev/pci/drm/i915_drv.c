@@ -986,6 +986,7 @@ inteldrm_doioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 			return (i915_gem_unpin_ioctl(dev, data, file_priv));
 		}
 	}
+	DRM_DEBUG("invalid ioctl command 0x%02lx\n", cmd);
 	return (EINVAL);
 }
 
