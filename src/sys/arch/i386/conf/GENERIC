@@ -580,6 +580,7 @@ options 	AGP_DEBUG
 options 	DRMDEBUG
 options 	DRMLOCKDEBUG
 options 	DRM_VBLANK_DEBUG
+options 	WATCH_INACTIVE
 #options 	INTELDRM_VERBOSE=1
 #options 	DRM_FAULT_DEBUG
 #options 	DRM_SG_DEBUG
