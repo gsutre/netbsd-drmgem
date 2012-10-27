@@ -176,8 +176,8 @@ typedef struct drm_i915_sarea {
 #define DRM_I915_GEM_SET_TILING	0x21
 #define DRM_I915_GEM_GET_TILING	0x22
 #define DRM_I915_GEM_GET_APERTURE	0x23
-#define DRM_I915_GEM_EXECBUFFER2	0x24
-#define DRM_I915_GEM_MADVISE	0x25
+#define DRM_I915_GEM_MADVISE	0x26
+#define DRM_I915_GEM_EXECBUFFER2	0x29
 
 #define DRM_IOCTL_I915_INIT		DRM_IOW( DRM_COMMAND_BASE + DRM_I915_INIT, drm_i915_init_t)
 #define DRM_IOCTL_I915_FLUSH		DRM_IO ( DRM_COMMAND_BASE + DRM_I915_FLUSH)
@@ -541,6 +541,11 @@ struct drm_i915_gem_execbuffer2 {
 	u_int32_t batch_start_offset;
 	/** Bytes used in batchbuffer from batch_start_offset */
 	u_int32_t batch_len;
+	u_int32_t DR1;
+	u_int32_t DR4;
+	u_int32_t num_cliprects;
+	/** This is a struct drm_clip_rect *cliprects */
+	u_int64_t cliprects_ptr;
 #define I915_EXEC_RING_MASK              (7<<0)
 #define I915_EXEC_DEFAULT                (0<<0)
 #define I915_EXEC_RENDER                 (1<<0)
