@@ -125,6 +125,12 @@ void	inteldrm_teardown_mchbar(struct inteldrm_softc *,
 #endif /* !defined(__NetBSD__) */
 
 /* Ioctls */
+#if defined(__NetBSD__)
+int	inteldrm_irq_emit(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_irq_wait(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_get_vblank_pipe(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_set_vblank_pipe(struct inteldrm_softc *dev_priv, void *data);
+#endif /* defined(__NetBSD__) */
 int	inteldrm_getparam(struct inteldrm_softc *dev_priv, void *data);
 int	inteldrm_setparam(struct inteldrm_softc *dev_priv, void *data);
 int	i915_gem_init_ioctl(struct drm_device *, void *, struct drm_file *);
@@ -861,6 +867,18 @@ inteldrm_doioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 
 	if (file_priv->authenticated == 1) {
 		switch (cmd) {
+#if defined(__NetBSD__)
+		/*
+		 * Legacy ioctls for compatibility with older X.org intel(4)
+		 * drivers, e.g., the one in NetBSD 6.
+		 */
+		case DRM_IOCTL_I915_IRQ_EMIT:
+			return (inteldrm_irq_emit(dev_priv, data));
+		case DRM_IOCTL_I915_IRQ_WAIT:
+			return (inteldrm_irq_wait(dev_priv, data));
+		case DRM_IOCTL_I915_GET_VBLANK_PIPE:
+			return (inteldrm_get_vblank_pipe(dev_priv, data));
+#endif /* defined(__NetBSD__) */
 		case DRM_IOCTL_I915_GETPARAM:
 			return (inteldrm_getparam(dev_priv, data));
 		case DRM_IOCTL_I915_GEM_EXECBUFFER2:
@@ -896,6 +914,16 @@ inteldrm_doioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 
 	if (file_priv->master == 1) {
 		switch (cmd) {
+#if defined(__NetBSD__)
+		/*
+		 * Legacy ioctls for compatibility with older X.org intel(4)
+		 * drivers, e.g., the one in NetBSD 6.
+		 */
+		case DRM_IOCTL_I915_INIT:
+			return 0;
+		case DRM_IOCTL_I915_SET_VBLANK_PIPE:
+			return (inteldrm_set_vblank_pipe(dev_priv, data));
+#endif /* defined(__NetBSD__) */
 		case DRM_IOCTL_I915_SETPARAM:
 			return (inteldrm_setparam(dev_priv, data));
 		case DRM_IOCTL_I915_GEM_INIT:
@@ -1327,6 +1355,49 @@ inteldrm_lastclose(struct drm_device *dev)
 	dev_priv->agpdmat = NULL;
 }
 
+#if defined(__NetBSD__)
+int
+inteldrm_irq_emit(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_irq_emit_t	*irqemit = data;
+	int			 seqno;
+
+	mtx_enter(&dev_priv->request_lock);
+	seqno = (int)i915_add_request(dev_priv);
+	mtx_leave(&dev_priv->request_lock);
+
+	if (seqno == 0)
+		return (ENOMEM);
+
+	return (copyout(&seqno, irqemit->irq_seq, sizeof(int)));
+}
+
+int
+inteldrm_irq_wait(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_irq_wait_t	*irqwait = data;
+
+	return i915_wait_request(dev_priv, (uint32_t)irqwait->irq_seq, 1);
+}
+
+int
+inteldrm_get_vblank_pipe(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_vblank_pipe_t	*pipe = data;
+
+	pipe->pipe = DRM_I915_VBLANK_PIPE_A | DRM_I915_VBLANK_PIPE_B;
+
+	return 0;
+}
+
+int
+inteldrm_set_vblank_pipe(struct inteldrm_softc *dev_priv, void *data)
+{
+
+	return 0;
+}
+#endif /* defined(__NetBSD__) */
+
 int
 inteldrm_getparam(struct inteldrm_softc *dev_priv, void *data)
 {
@@ -1359,6 +1430,10 @@ inteldrm_setparam(struct inteldrm_softc *dev_priv, void *data)
 	drm_i915_setparam_t	*param = data;
 
 	switch (param->param) {
+#if defined(__NetBSD__)
+	case I915_SETPARAM_USE_MI_BATCHBUFFER_START:
+		break;
+#endif /* defined(__NetBSD__) */
 	case I915_SETPARAM_NUM_USED_FENCES:
 		if (param->value > dev_priv->num_fence_regs ||
 		    param->value < 0)
