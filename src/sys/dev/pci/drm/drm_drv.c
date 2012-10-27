@@ -693,9 +693,9 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 
 	++file_priv->ioctl_count;
 
-	DRM_DEBUG("pid=%d, cmd=0x%02lx, nr=0x%02lx, dev %p, auth=%d\n",
+	DRM_DEBUG("pid=%d, cmd=0x%02lx, nr=0x%02lx, dev %p, auth=%d, master=%d\n",
 	    DRM_CURRENTPID, cmd, DRM_IOCTL_NR(cmd), &dev->device,
-	    file_priv->authenticated);
+	    file_priv->authenticated, file_priv->master);
 
 	switch (cmd) {
 	case FIONBIO:
