@@ -2513,7 +2513,7 @@ sandybridge_write_fence_reg(struct inteldrm_fence *reg)
 {
 	struct drm_obj		*obj = reg->obj;
 	struct drm_device	*dev = obj->dev;
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 	struct inteldrm_obj	*obj_priv = (struct inteldrm_obj *)obj;
 	int			 regnum = obj_priv->fence_reg;
 	u_int64_t		 val;
