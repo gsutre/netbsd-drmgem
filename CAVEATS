@@ -1,0 +1,32 @@
+Performance of 3D applications
+--------------------------------------------------------------------------------
+
+The port applies a hack to prevent gpu hangs with 3D applications:
+
+http://github.com/gsutre/netbsd-drmgem/commit/3a32fa0b567af67c03853bc6a271362631
+
+Without the hack, on an laptop with i915GM, glxgears is choppy and the gears
+stop moving after 30s.  The kernel log indicates that the gpu hung.
+
+However, this hack induces a performance penalty.  And it seems that the hack is
+not always necessary.  On a laptop with Ironlake, there seems to be no gpu hang
+without the hack, and the frame rate increases by 50% in tuxracer (even 100% in
+glxgears).
+
+To use the port without the hack, simply restore the original intel DRI modules,
+from the xserver set (i.e., the files /usr/X11R7/lib/modules/dri/i9*_dri.*).
+
+To directly build the port without the hack,
+
+- either revert the above commit before patching the NetBSD source,
+- or, with the automated build, do not pass the option `-m' (but this only works
+  if you did not already install the port before).
+
+
+The hack would probably be obsolete with a recent version of Mesa:
+
+http://cgit.freedesktop.org/~krh/mesa/commit/?id=e67c338b415c983bee570e6644b9684
+
+An attempt to apply this commit instead of the hack failed.  This commit depends
+on too many other post-7.8.2 Mesa commits.  Hopefully, the problem with resolve
+itself when Mesa is updated in NetBSD.

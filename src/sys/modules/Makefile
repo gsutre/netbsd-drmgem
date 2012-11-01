@@ -1,4 +1,4 @@
-#	$NetBSD: Makefile,v 1.110 2012/08/06 10:31:41 martin Exp $
+#	$NetBSD: Makefile,v 1.114 2012/10/28 16:25:03 alnsn Exp $
 
 .include <bsd.own.mk>
 
@@ -48,6 +48,8 @@ SUBDIR+=	nfsserver
 SUBDIR+=	nilfs
 SUBDIR+=	npf
 SUBDIR+=	npf_alg_icmp
+SUBDIR+=	npf_ext_log
+SUBDIR+=	npf_ext_normalise
 SUBDIR+=	ntfs
 SUBDIR+=	null
 SUBDIR+=	onewire
@@ -117,6 +119,12 @@ SUBDIR+=	powernow
 SUBDIR+=	tprof_pmi
 SUBDIR+=	tprof_amdpmi
 SUBDIR+=	vmt
+.endif
+
+.if ${MACHINE_ARCH} == "i386" || \
+    ${MACHINE_ARCH} == "x86_64"
+SUBDIR+=	bpfjit
+SUBDIR+=	sljit
 .endif
 
 #

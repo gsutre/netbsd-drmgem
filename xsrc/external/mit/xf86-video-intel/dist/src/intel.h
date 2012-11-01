@@ -71,6 +71,7 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "i915_drm.h"
 
 #include "intel_driver.h"
+#include "compat-api.h"
 
 #include "uxa.h"
 /* XXX
@@ -327,6 +328,8 @@ struct _intel_memory {
 #define I830_OUTPUT_LVDS 6
 #define I830_OUTPUT_TVOUT 7
 #define I830_OUTPUT_HDMI 8
+#define I830_OUTPUT_DISPLAYPORT 9
+#define I830_OUTPUT_EDP 10
 
 struct _I830DVODriver {
 	int type;
@@ -689,10 +692,25 @@ typedef struct intel_screen_private {
 	Bool lvds_dither;
 	DisplayModePtr lvds_fixed_mode;
 	DisplayModePtr sdvo_lvds_fixed_mode;
+	DisplayModePtr panel_fixed_mode;
 	Bool skip_panel_detect;
 	Bool integrated_lvds; /* LVDS config from driver feature BDB */
 
 	Bool tv_present; /* TV connector present (from VBIOS) */
+
+	Bool is_vbt_dvo_dpd_edp;
+
+	struct {
+		int rate;
+		int lanes;
+		int preemphasis;
+		int vswing;
+
+		Bool initialized;
+		Bool support;
+		int bpp;
+	} edp;
+	Bool no_aux_handshake;
 
 	/* Driver phase/state information */
 	Bool starting;
@@ -969,6 +987,15 @@ void i830_crt_init(ScrnInfoPtr scrn);
 
 /* i830_dvo.c */
 void i830_dvo_init(ScrnInfoPtr scrn);
+
+/* i830_dp.c */
+void i830_dp_init(ScrnInfoPtr scrn, int output_reg);
+void i830_dp_set_m_n(xf86CrtcPtr crtc, DisplayModePtr mode,
+		     DisplayModePtr adjusted_mode);
+extern Bool i830_dpd_is_edp(ScrnInfoPtr scrn);
+extern void i830_edp_link_config(I830OutputPrivatePtr intel_output,
+				 int *lane_num, int *link_bw);
+extern Bool i830_output_is_pch_edp(xf86OutputPtr output);
 
 /* i830_hdmi.c */
 void i830_hdmi_init(ScrnInfoPtr scrn, int output_reg);

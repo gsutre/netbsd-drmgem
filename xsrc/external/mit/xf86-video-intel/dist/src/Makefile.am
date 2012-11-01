@@ -62,6 +62,7 @@ intel_drv_la_SOURCES = \
 	 i830_display.h \
          i830_quirks.c \
 	 i830_dvo.c \
+	 i830_dp.c \
          i830.h \
 	 i830_hdmi.c \
          i830_i2c.c \
@@ -85,6 +86,7 @@ intel_drv_la_SOURCES = \
 	 i965_video.c \
 	 i965_render.c \
 	 drmmode_display.c \
+	 compat-api.h \
 	 $(NULL)
 
 if DRI

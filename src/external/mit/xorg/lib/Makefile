@@ -21,6 +21,7 @@ SUBDIR+=pixman xkeyboard-config libxcb \
 	libXinerama libXmu libXmuu libXpm libXrender \
 	libXres libXtst libXvMC libXvMCW libXv libXxf86dga libXxf86misc \
 	libxkbui \
+	xcb-util \
 	.WAIT
 .if ${MACHINE_ARCH} == "i386" || ${MACHINE_ARCH} == "x86_64"
 SUBDIR+=libI810XvMC
@@ -31,7 +32,6 @@ SUBDIR+=libIntelXvMC
 SUBDIR+=libGLU libGLw libXaw6 libXaw libXcursor \
 	libXrandr \
 	.WAIT \
-	libXft libglut \
-	xcb-util
+	libXft libglut
 	
 .include <bsd.subdir.mk>

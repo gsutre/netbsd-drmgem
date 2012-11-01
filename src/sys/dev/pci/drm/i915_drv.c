@@ -1,4 +1,4 @@
-/* $OpenBSD: i915_drv.c,v 1.122 2012/05/26 19:30:53 kettenis Exp $ */
+/* $OpenBSD: i915_drv.c,v 1.123 2012/09/25 10:19:46 jsg Exp $ */
 /*
  * Copyright (c) 2008-2009 Owain G. Ainsworth <oga@openbsd.org>
  *
@@ -125,6 +125,12 @@ void	inteldrm_teardown_mchbar(struct inteldrm_softc *,
 #endif /* !defined(__NetBSD__) */
 
 /* Ioctls */
+#if defined(__NetBSD__)
+int	inteldrm_irq_emit(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_irq_wait(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_get_vblank_pipe(struct inteldrm_softc *dev_priv, void *data);
+int	inteldrm_set_vblank_pipe(struct inteldrm_softc *dev_priv, void *data);
+#endif /* defined(__NetBSD__) */
 int	inteldrm_getparam(struct inteldrm_softc *dev_priv, void *data);
 int	inteldrm_setparam(struct inteldrm_softc *dev_priv, void *data);
 int	i915_gem_init_ioctl(struct drm_device *, void *, struct drm_file *);
@@ -292,6 +298,18 @@ static const struct drm_pcidev inteldrm_pciidlist[] = {
 	    CHIP_SANDYBRIDGE|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN6},
 	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE2G_M_GT2_PLUS,
 	    CHIP_SANDYBRIDGE|CHIP_M|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN6},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_D_GT1,
+	    CHIP_IVYBRIDGE|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_M_GT1,
+	    CHIP_IVYBRIDGE|CHIP_M|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_S_GT1,
+	    CHIP_IVYBRIDGE|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_D_GT2,
+	    CHIP_IVYBRIDGE|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_M_GT2,
+	    CHIP_IVYBRIDGE|CHIP_M|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
+	{PCI_VENDOR_INTEL, PCI_PRODUCT_INTEL_CORE3G_S_GT2,
+	    CHIP_IVYBRIDGE|CHIP_I965|CHIP_I9XX|CHIP_HWS|CHIP_GEN7},
 	{0, 0, 0}
 };
 
@@ -461,6 +479,8 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		dev_priv->gen = 5;
 	else if (dev_priv->flags & CHIP_GEN6)
 		dev_priv->gen = 6;
+	else if (dev_priv->flags & CHIP_GEN7)
+		dev_priv->gen = 7;
 	KASSERT(dev_priv->gen != 0);
 
 	dev_priv->pc = pa->pa_pc;
@@ -586,7 +606,7 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 		dev_priv->num_fence_regs = 8;
 
 	/* Initialise fences to zero, else on some macs we'll get corruption */
-	if (IS_GEN6(dev_priv)) {
+	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv)) {
 		for (i = 0; i < 16; i++)
 			I915_WRITE64(FENCE_REG_SANDYBRIDGE_0 + (i * 8), 0);
 	} else if (IS_I965G(dev_priv)) {
@@ -847,6 +867,18 @@ inteldrm_doioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 
 	if (file_priv->authenticated == 1) {
 		switch (cmd) {
+#if defined(__NetBSD__)
+		/*
+		 * Legacy ioctls for compatibility with older X.org intel(4)
+		 * drivers, e.g., the one in NetBSD 6.
+		 */
+		case DRM_IOCTL_I915_IRQ_EMIT:
+			return (inteldrm_irq_emit(dev_priv, data));
+		case DRM_IOCTL_I915_IRQ_WAIT:
+			return (inteldrm_irq_wait(dev_priv, data));
+		case DRM_IOCTL_I915_GET_VBLANK_PIPE:
+			return (inteldrm_get_vblank_pipe(dev_priv, data));
+#endif /* defined(__NetBSD__) */
 		case DRM_IOCTL_I915_GETPARAM:
 			return (inteldrm_getparam(dev_priv, data));
 		case DRM_IOCTL_I915_GEM_EXECBUFFER2:
@@ -882,6 +914,16 @@ inteldrm_doioctl(struct drm_device *dev, u_long cmd, caddr_t data,
 
 	if (file_priv->master == 1) {
 		switch (cmd) {
+#if defined(__NetBSD__)
+		/*
+		 * Legacy ioctls for compatibility with older X.org intel(4)
+		 * drivers, e.g., the one in NetBSD 6.
+		 */
+		case DRM_IOCTL_I915_INIT:
+			return 0;
+		case DRM_IOCTL_I915_SET_VBLANK_PIPE:
+			return (inteldrm_set_vblank_pipe(dev_priv, data));
+#endif /* defined(__NetBSD__) */
 		case DRM_IOCTL_I915_SETPARAM:
 			return (inteldrm_setparam(dev_priv, data));
 		case DRM_IOCTL_I915_GEM_INIT:
@@ -905,7 +947,7 @@ inteldrm_ironlake_intr(void *arg)
 	struct inteldrm_softc	*dev_priv = arg;
 	struct drm_device	*dev = device_private(dev_priv->drmdev);
 	u_int32_t		 de_iir, gt_iir, de_ier, pch_iir;
-	int			 ret = 0;
+	int			 ret = 0, i;
 
 	de_ier = I915_READ(DEIER);
 	I915_WRITE(DEIER, de_ier & ~DE_MASTER_IRQ_CONTROL);
@@ -933,10 +975,17 @@ inteldrm_ironlake_intr(void *arg)
 	if (gt_iir & GT_MASTER_ERROR)
 		inteldrm_error(dev_priv);
 
-	if (de_iir & DE_PIPEA_VBLANK)
-		drm_handle_vblank(dev, 0);
-	if (de_iir & DE_PIPEB_VBLANK)
-		drm_handle_vblank(dev, 1);
+	if (IS_GEN7(dev_priv)) {
+		for (i = 0; i < 3; i++) {
+			if (de_iir & (DE_PIPEA_VBLANK_IVB << (5 * i)))
+				drm_handle_vblank(dev, i);
+		}
+	} else {
+		if (de_iir & DE_PIPEA_VBLANK)
+			drm_handle_vblank(dev, 0);
+		if (de_iir & DE_PIPEB_VBLANK)
+			drm_handle_vblank(dev, 1);
+	}
 
 	/* should clear PCH hotplug event before clearing CPU irq */
 	I915_WRITE(SDEIIR, pch_iir);
@@ -1306,6 +1355,49 @@ inteldrm_lastclose(struct drm_device *dev)
 	dev_priv->agpdmat = NULL;
 }
 
+#if defined(__NetBSD__)
+int
+inteldrm_irq_emit(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_irq_emit_t	*irqemit = data;
+	int			 seqno;
+
+	mtx_enter(&dev_priv->request_lock);
+	seqno = (int)i915_add_request(dev_priv);
+	mtx_leave(&dev_priv->request_lock);
+
+	if (seqno == 0)
+		return (ENOMEM);
+
+	return (copyout(&seqno, irqemit->irq_seq, sizeof(int)));
+}
+
+int
+inteldrm_irq_wait(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_irq_wait_t	*irqwait = data;
+
+	return i915_wait_request(dev_priv, (uint32_t)irqwait->irq_seq, 1);
+}
+
+int
+inteldrm_get_vblank_pipe(struct inteldrm_softc *dev_priv, void *data)
+{
+	drm_i915_vblank_pipe_t	*pipe = data;
+
+	pipe->pipe = DRM_I915_VBLANK_PIPE_A | DRM_I915_VBLANK_PIPE_B;
+
+	return 0;
+}
+
+int
+inteldrm_set_vblank_pipe(struct inteldrm_softc *dev_priv, void *data)
+{
+
+	return 0;
+}
+#endif /* defined(__NetBSD__) */
+
 int
 inteldrm_getparam(struct inteldrm_softc *dev_priv, void *data)
 {
@@ -1338,6 +1430,10 @@ inteldrm_setparam(struct inteldrm_softc *dev_priv, void *data)
 	drm_i915_setparam_t	*param = data;
 
 	switch (param->param) {
+#if defined(__NetBSD__)
+	case I915_SETPARAM_USE_MI_BATCHBUFFER_START:
+		break;
+#endif /* defined(__NetBSD__) */
 	case I915_SETPARAM_NUM_USED_FENCES:
 		if (param->value > dev_priv->num_fence_regs ||
 		    param->value < 0)
@@ -1899,7 +1995,7 @@ i915_add_request(struct inteldrm_softc *dev_priv)
 	if (dev_priv->mm.next_gem_seqno == 0)
 		dev_priv->mm.next_gem_seqno++;
 
-	if (IS_GEN6(dev_priv))
+	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 		BEGIN_LP_RING(10);
 	else 
 		BEGIN_LP_RING(4);
@@ -2662,7 +2758,7 @@ again:
 	reg->obj = obj;
 	TAILQ_INSERT_TAIL(&dev_priv->mm.fence_list, reg, list);
 
-	if (IS_GEN6(dev_priv))
+	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 		sandybridge_write_fence_reg(reg);
 	else if (IS_I965G(dev_priv))
 		i965_write_fence_reg(reg);
@@ -3533,7 +3629,7 @@ i915_dispatch_gem_execbuffer(struct drm_device *dev,
 	} else {
 		BEGIN_LP_RING(4);
 		if (IS_I965G(dev_priv)) {
-			if (IS_GEN6(dev_priv))
+			if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 				OUT_RING(MI_BATCH_BUFFER_START |
 				    MI_BATCH_NON_SECURE_I965);
 			else
@@ -4490,7 +4586,7 @@ inteldrm_start_ring(struct inteldrm_softc *dev_priv)
 	/* Update our cache of the ring state */
 	inteldrm_update_ring(dev_priv);
 
-	if (IS_GEN6(dev_priv))
+	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 		I915_WRITE(MI_MODE | MI_FLUSH_ENABLE << 16 | MI_FLUSH_ENABLE,
 		    (VS_TIMER_DISPATCH) << 15 | VS_TIMER_DISPATCH);
 	else if (IS_I9XX(dev_priv) && !IS_GEN3(dev_priv))
@@ -4541,7 +4637,7 @@ i915_gem_entervt_ioctl(struct drm_device *dev, void *data,
 	int ret;
 
 	/* XXX until we have support for the rings on sandybridge */
-	if (IS_GEN6(dev_priv))
+	if (IS_GEN6(dev_priv) || IS_GEN7(dev_priv))
 		return (0);
 
 	if (dev_priv->mm.wedged) {
@@ -4625,7 +4721,7 @@ inteldrm_error(struct inteldrm_softc *dev_priv)
 	snprintb(errbuf, sizeof(errbuf), errbitstr, eir);
 	printf("render error detected, EIR: %s\n", errbuf);
 #endif /* !defined(__NetBSD__) */
-	if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv)) {
+	if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv) || IS_GEN7(dev_priv)) {
 		if (eir & I915_ERROR_PAGE_TABLE) {
 			dev_priv->mm.wedged = 1;
 			reset = GRDOM_FULL;
@@ -4711,7 +4807,8 @@ inteldrm_error(struct inteldrm_softc *dev_priv)
 		if (dev_priv->mm.wedged == 0)
 			DRM_ERROR("EIR stuck: 0x%08x, masking\n", eir);
 		I915_WRITE(EMR, I915_READ(EMR) | eir);
-		if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv)) {
+		if (IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv) ||
+		    IS_GEN7(dev_priv)) {
 			I915_WRITE(GTIIR, GT_MASTER_ERROR);
 		} else {
 			I915_WRITE(IIR,

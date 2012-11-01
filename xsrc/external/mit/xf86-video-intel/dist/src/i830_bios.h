@@ -82,6 +82,7 @@ struct bdb_header {
 #define BDB_SDVO_LVDS_PNP_IDS	 24
 #define BDB_SDVO_LVDS_POWER_SEQ	 25
 #define BDB_TV_OPTIONS		 26
+#define BDB_EDP			 27
 #define BDB_LVDS_OPTIONS	 40
 #define BDB_LVDS_LFP_DATA_PTRS	 41
 #define BDB_LVDS_LFP_DATA	 42
@@ -490,6 +491,45 @@ struct bdb_sdvo_lvds_options {
 	uint8_t panel_misc_bits_4;
 } __attribute__ ((packed));
 
+#define EDP_18BPP	0
+#define EDP_24BPP	1
+#define EDP_30BPP	2
+#define EDP_RATE_1_62	0
+#define EDP_RATE_2_7	1
+#define EDP_LANE_1	0
+#define EDP_LANE_2	1
+#define EDP_LANE_4	3
+#define EDP_PREEMPHASIS_NONE	0
+#define EDP_PREEMPHASIS_3_5dB	1
+#define EDP_PREEMPHASIS_6dB	2
+#define EDP_PREEMPHASIS_9_5dB	3
+#define EDP_VSWING_0_4V		0
+#define EDP_VSWING_0_6V		1
+#define EDP_VSWING_0_8V		2
+#define EDP_VSWING_1_2V		3
+
+struct edp_power_seq {
+	uint16_t t3;
+	uint16_t t7;
+	uint16_t t9;
+	uint16_t t10;
+	uint16_t t12;
+} __attribute__ ((packed));
+
+struct edp_link_params {
+	uint8_t rate:4;
+	uint8_t lanes:4;
+	uint8_t preemphasis:4;
+	uint8_t vswing:4;
+} __attribute__ ((packed));
+
+struct bdb_edp {
+	struct edp_power_seq power_seqs[16];
+	uint32_t color_depth;
+	uint32_t sdrrs_msa_timing_delay;
+	struct edp_link_params link_params[16];
+} __attribute__ ((packed));
+
 #ifndef REG_DUMPER
 int i830_bios_init(ScrnInfoPtr scrn);
 #endif
@@ -627,5 +667,22 @@ int i830_bios_init(ScrnInfoPtr scrn);
 #define   SWF14_APM_SUSPEND	0x3
 #define   SWF14_APM_STANDBY	0x1
 #define   SWF14_APM_RESTORE	0x0
+
+/* Add the device class for LFP, TV, HDMI */
+#define	 DEVICE_TYPE_INT_LFP	0x1022
+#define	 DEVICE_TYPE_INT_TV	0x1009
+#define	 DEVICE_TYPE_HDMI	0x60D2
+#define	 DEVICE_TYPE_DP		0x68C6
+#define	 DEVICE_TYPE_eDP	0x78C6
+
+/* define the DVO port for HDMI output type */
+#define		DVO_B		1
+#define		DVO_C		2
+#define		DVO_D		3
+
+/* define the PORT for DP output type */
+#define		PORT_IDPB	7
+#define		PORT_IDPC	8
+#define		PORT_IDPD	9
 
 #endif /* _I830_BIOS_H_ */

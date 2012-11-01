@@ -1,4 +1,4 @@
-/* $OpenBSD: i915_drv.h,v 1.72 2012/05/26 19:30:53 kettenis Exp $ */
+/* $OpenBSD: i915_drv.h,v 1.73 2012/09/25 10:19:46 jsg Exp $ */
 /* i915_drv.h -- Private header for the I915 driver -*- linux-c -*-
  */
 /*
@@ -484,6 +484,8 @@ struct inteldrm_file {
 #define CHIP_IRONLAKE_D	0x400000
 #define CHIP_IRONLAKE_M	0x800000
 #define CHIP_SANDYBRIDGE	0x1000000
+#define CHIP_IVYBRIDGE	0x2000000
+#define CHIP_GEN7	0x4000000
 
 /* flags we use in drm_obj's do_flags */
 #define I915_ACTIVE		0x0010	/* being used by the gpu. */
@@ -679,16 +681,19 @@ read64(struct inteldrm_softc *dev_priv, bus_size_t off)
 
 #define I915_NEED_GFX_HWS(dev_priv) (dev_priv->flags & CHIP_HWS)
 
-#define HAS_RESET(dev_priv)	IS_I965G(dev_priv) && (!IS_GEN6(dev_priv))
+#define HAS_RESET(dev_priv)	IS_I965G(dev_priv) && (!IS_GEN6(dev_priv)) \
+    && (!IS_GEN7(dev_priv))
 
 #define IS_GEN2(dev_priv)	(dev_priv->flags & CHIP_GEN2)
 #define IS_GEN3(dev_priv)	(dev_priv->flags & CHIP_GEN3)
 #define IS_GEN4(dev_priv)	(dev_priv->flags & CHIP_GEN4)
 #define IS_GEN6(dev_priv)	(dev_priv->flags & CHIP_GEN6)
+#define IS_GEN7(dev_priv)	(dev_priv->flags & CHIP_GEN7)
 
 #define I915_HAS_FBC(dev)	(IS_I965GM(dev) || IS_GM45(dev))
 
-#define HAS_PCH_SPLIT(dev)	(IS_IRONLAKE(dev) || IS_GEN6(dev))
+#define HAS_PCH_SPLIT(dev)	(IS_IRONLAKE(dev) || IS_GEN6(dev) || \
+    IS_GEN7(dev))
 
 #define INTEL_INFO(dev)		(dev)
 
@@ -829,6 +834,12 @@ inteldrm_needs_fence(struct inteldrm_obj *obj_priv)
 #undef PCI_PRODUCT_INTEL_CORE2G_M_GT2
 #undef PCI_PRODUCT_INTEL_CORE2G_GT2_PLUS
 #undef PCI_PRODUCT_INTEL_CORE2G_M_GT2_PLUS
+#undef PCI_PRODUCT_INTEL_CORE3G_D_GT1
+#undef PCI_PRODUCT_INTEL_CORE3G_M_GT1
+#undef PCI_PRODUCT_INTEL_CORE3G_S_GT1
+#undef PCI_PRODUCT_INTEL_CORE3G_D_GT2
+#undef PCI_PRODUCT_INTEL_CORE3G_M_GT2
+#undef PCI_PRODUCT_INTEL_CORE3G_S_GT2
 #define PCI_PRODUCT_INTEL_82830M_IGD		PCI_PRODUCT_INTEL_82830MP_IV
 #define PCI_PRODUCT_INTEL_82865G_IGD		PCI_PRODUCT_INTEL_82865_IGD
 #define PCI_PRODUCT_INTEL_82915G_IGD_1		PCI_PRODUCT_INTEL_82915G_IGD
@@ -838,7 +849,6 @@ inteldrm_needs_fence(struct inteldrm_obj *obj_priv)
 #define PCI_PRODUCT_INTEL_82945GME_IGD_1	PCI_PRODUCT_INTEL_82945GME_IGD
 #define PCI_PRODUCT_INTEL_82946GZ_IGD_1		PCI_PRODUCT_INTEL_82946GZ_IGD
 #define PCI_PRODUCT_INTEL_82G35_IGD_1		PCI_PRODUCT_INTEL_82G35_IGD
-#define PCI_PRODUCT_INTEL_82Q965_IGD_1		PCI_PRODUCT_INTEL_82965Q_IGD
 #define PCI_PRODUCT_INTEL_82Q965_IGD_1		PCI_PRODUCT_INTEL_82965Q_IGD
 #define PCI_PRODUCT_INTEL_82G965_IGD_1		PCI_PRODUCT_INTEL_82965G_IGD
 #define PCI_PRODUCT_INTEL_82GM965_IGD_1		PCI_PRODUCT_INTEL_82965PM_IGD
@@ -860,6 +870,12 @@ inteldrm_needs_fence(struct inteldrm_obj *obj_priv)
 #define PCI_PRODUCT_INTEL_CORE2G_M_GT1		PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD
 #define PCI_PRODUCT_INTEL_CORE2G_M_GT2		PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD_1
 #define PCI_PRODUCT_INTEL_CORE2G_M_GT2_PLUS	PCI_PRODUCT_INTEL_SANDYBRIDGE_M_IGD_2
+#define PCI_PRODUCT_INTEL_CORE3G_D_GT1		PCI_PRODUCT_INTEL_IVYBRIDGE_IGD
+#define PCI_PRODUCT_INTEL_CORE3G_M_GT1		PCI_PRODUCT_INTEL_IVYBRIDGE_M_IGD
+#define PCI_PRODUCT_INTEL_CORE3G_S_GT1		PCI_PRODUCT_INTEL_IVYBRIDGE_S_IGD
+#define PCI_PRODUCT_INTEL_CORE3G_D_GT2		PCI_PRODUCT_INTEL_IVYBRIDGE_IGD_1
+#define PCI_PRODUCT_INTEL_CORE3G_M_GT2		PCI_PRODUCT_INTEL_IVYBRIDGE_M_IGD_1
+#define PCI_PRODUCT_INTEL_CORE3G_S_GT2		PCI_PRODUCT_INTEL_IVYBRIDGE_S_IGD_1
 #endif /* defined(__NetBSD__) */
 
 #endif
