@@ -701,14 +701,16 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	/* array of vm pages that physload introduced. */
 	dev_priv->pgs = PHYS_TO_VM_PAGE(dev->agp->base);
 	KASSERT(dev_priv->pgs != NULL);
-#if !defined(__NetBSD__)
 	/*
 	 * XXX mark all pages write combining so user mmaps get the right
 	 * bits. We really need a proper MI api for doing this, but for now
 	 * this allows us to use PAT where available.
 	 */
 	for (i = 0; i < atop(dev->agp->info.ai_aperture_size); i++)
+#if !defined(__NetBSD__)
 		atomic_setbits_int(&(dev_priv->pgs[i].pg_flags), PG_PMAP_WC);
+#else /* !defined(__NetBSD__) */
+		dev_priv->pgs[i].mdpage.mp_pp.pp_flags |= PP_PMAP_WC;
 #endif /* !defined(__NetBSD__) */
 	if (agp_init_map(dev_priv->bst, dev->agp->base,
 	    dev->agp->info.ai_aperture_size, BUS_SPACE_MAP_LINEAR |
@@ -5289,7 +5291,7 @@ inteldrm_swizzle_page(struct vm_page *pg)
 	pmap_kenter_pa(va, VM_PAGE_TO_PHYS(pg), UVM_PROT_RW);
 #else /* !defined(__NetBSD__) */
 	pmap_kenter_pa(va, VM_PAGE_TO_PHYS(pg),
-	    VM_PROT_READ | VM_PROT_WRITE, PMAP_WRITE_COMBINE);
+	    VM_PROT_READ | VM_PROT_WRITE, 0);
 #endif /* !defined(__NetBSD__) */
 	pmap_update(pmap_kernel());
 #endif

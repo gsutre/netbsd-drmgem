@@ -3874,6 +3874,20 @@ int
 pmap_enter_default(pmap_t pmap, vaddr_t va, paddr_t pa, vm_prot_t prot,
     u_int flags)
 {
+#ifndef XEN
+	struct vm_page *pg;
+
+	pg = PHYS_TO_VM_PAGE(pa);
+	if (pg != NULL) {
+		/*
+		 * make sure that if the page is write combined all
+		 * instances of pmap_enter make it so.
+		 */
+		if (pg->mdpage.mp_pp.pp_flags & PP_PMAP_WC)
+			flags |= PMAP_WRITE_COMBINE;
+	}
+#endif
+
 	return pmap_enter_ma(pmap, va, pa, pa, prot, flags, 0);
 }
 

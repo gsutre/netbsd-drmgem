@@ -85,7 +85,8 @@ struct pmap_page {
 };
 
 /* pp_flags */
-#define	PP_EMBEDDED	1
+#define	PP_EMBEDDED	0x1
+#define	PP_PMAP_WC	0x2
 
 #define	PMAP_PAGE_INIT(pp)	/* none */
 
