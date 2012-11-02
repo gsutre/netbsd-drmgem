@@ -838,6 +838,138 @@ uvm_page_physload(paddr_t start, paddr_t end, paddr_t avail_start,
 	}
 }
 
+void
+uvm_page_physload_dev(paddr_t start, paddr_t end, paddr_t avail_start,
+    paddr_t avail_end)
+{
+	int preload, lcv;
+	psize_t npages;
+	paddr_t paddr;
+	struct vm_page *pgs;
+	struct vm_physseg *ps;
+
+	if (uvmexp.pagesize == 0)
+		panic("uvm_page_physload_dev: page size not set!");
+	if (start >= end)
+		panic("uvm_page_physload_dev: start >= end");
+
+	/*
+	 * do we have room?
+	 */
+
+	if (vm_nphysmem == VM_PHYSSEG_MAX) {
+		printf("uvm_page_physload_dev: unable to load physical memory "
+		    "segment\n");
+		printf("\t%d segments allocated, ignoring 0x%llx -> 0x%llx\n",
+		    VM_PHYSSEG_MAX, (long long)start, (long long)end);
+		printf("\tincrease VM_PHYSSEG_MAX\n");
+		return;
+	}
+
+	/*
+	 * check to see if this is a "preload" (i.e. uvm_page_init hasn't been
+	 * called yet, so kmem is not available).
+	 */
+
+	for (lcv = 0 ; lcv < vm_nphysmem ; lcv++) {
+		if (VM_PHYSMEM_PTR(lcv)->pgs)
+			break;
+	}
+	preload = (lcv == vm_nphysmem);
+
+	/*
+	 * VM should be running, attempt to kmem_alloc vm_page structures
+	 */
+
+	KASSERT(!preload);
+
+#if defined(VM_PHYSSEG_NOADD)
+	panic("uvm_page_physload_dev: tried to add RAM after vm_mem_init");
+#endif
+
+	/*
+	 * XXXCDC: need some sort of lockout for this case
+	 * right now it is only used by devices so it should be alright.
+	 */
+
+	npages = end - start;  /* # of pages */
+
+	pgs = kmem_zalloc(sizeof(struct vm_page) * npages, KM_SLEEP);
+	if (pgs == NULL) {
+		printf("uvm_page_physload_dev: can not malloc vm_page "
+		    "structs for segment\n");
+		printf("\tignoring 0x%lx -> 0x%lx\n", start, end);
+		return;
+	}
+
+	/* init phys_addr and free pages, XXX uvmexp.npages */
+
+	for (lcv = 0, paddr = ctob(start); lcv < npages;
+	    lcv++, paddr += PAGE_SIZE) {
+		pgs[lcv].phys_addr = paddr;
+#ifdef __HAVE_VM_PAGE_MD
+		VM_MDPAGE_INIT(&pgs[lcv]);
+#endif
+		if (atop(paddr) >= avail_start &&
+		    atop(paddr) <= avail_end) {
+			pgs[lcv].flags |= PG_DEV;
+			pgs[lcv].wire_count = 1;
+		}
+	}
+	/* XXXCDC: need hook to tell pmap to rebuild pv_list, etc... */
+
+	/*
+	 * now insert us in the proper place in vm_physmem[]
+	 */
+
+#if (VM_PHYSSEG_STRAT == VM_PSTRAT_RANDOM)
+	/* random: put it at the end (easy!) */
+	ps = VM_PHYSMEM_PTR(vm_nphysmem);
+#elif (VM_PHYSSEG_STRAT == VM_PSTRAT_BSEARCH)
+	{
+		int x;
+		/* sort by address for binary search */
+		for (lcv = 0 ; lcv < vm_nphysmem ; lcv++)
+			if (start < VM_PHYSMEM_PTR(lcv)->start)
+				break;
+		ps = VM_PHYSMEM_PTR(lcv);
+		/* move back other entries, if necessary ... */
+		for (x = vm_nphysmem ; x > lcv ; x--)
+			/* structure copy */
+			VM_PHYSMEM_PTR_SWAP(x, x - 1);
+	}
+#elif (VM_PHYSSEG_STRAT == VM_PSTRAT_BIGFIRST)
+	{
+		int x;
+		/* sort by largest segment first */
+		for (lcv = 0 ; lcv < vm_nphysmem ; lcv++)
+			if ((end - start) >
+			    (VM_PHYSMEM_PTR(lcv)->end - VM_PHYSMEM_PTR(lcv)->start))
+				break;
+		ps = VM_PHYSMEM_PTR(lcv);
+		/* move back other entries, if necessary ... */
+		for (x = vm_nphysmem ; x > lcv ; x--)
+			/* structure copy */
+			VM_PHYSMEM_PTR_SWAP(x, x - 1);
+	}
+#else
+	panic("uvm_page_physload_dev: unknown physseg strategy selected!");
+#endif
+
+	ps->start = start;
+	ps->end = end;
+	ps->avail_start = avail_start;
+	ps->avail_end = avail_end;
+
+	ps->pgs = pgs;
+	ps->lastpg = pgs + npages;
+
+	ps->free_list = -1;
+	vm_nphysmem++;
+
+	uvmpdpol_reinit();
+}
+
 /*
  * when VM_PHYSSEG_MAX is 1, we can simplify these functions
  */
@@ -1349,6 +1481,7 @@ uvm_pagealloc_strat(struct uvm_object *obj, voff_t off, struct vm_anon *anon,
 	pg->offset = off;
 	pg->uobject = obj;
 	pg->uanon = anon;
+	KASSERT((pg->flags & PG_DEV) == 0);
 	pg->flags = PG_BUSY|PG_CLEAN|PG_FAKE;
 	if (anon) {
 		anon->an_page = pg;
@@ -1499,6 +1632,8 @@ uvm_pagefree(struct vm_page *pg)
 		panic("uvm_pagefree: freeing free page %p", pg);
 	}
 #endif /* DEBUG */
+
+	KASSERT((pg->flags & PG_DEV) == 0);
 
 	KASSERT((pg->flags & PG_PAGEOUT) == 0);
 	KASSERT(!(pg->pqflags & PQ_FREE));

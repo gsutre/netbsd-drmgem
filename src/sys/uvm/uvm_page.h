@@ -213,6 +213,7 @@ struct vm_page {
 #define	PG_RDONLY	0x0080
 #define	PG_ZERO		0x0100
 #define	PG_MARKER	0x0200
+#define PG_DEV		0x0400		/* page is in device space, lay off */
 
 #define PG_PAGER1	0x1000		/* pager-specific flag */
 

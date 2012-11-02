@@ -700,6 +700,8 @@ void			uvm_pagerealloc(struct vm_page *,
 /* Actually, uvm_page_physload takes PF#s which need their own type */
 void			uvm_page_physload(paddr_t, paddr_t, paddr_t,
 			    paddr_t, int);
+void			uvm_page_physload_dev(paddr_t, paddr_t, paddr_t,
+			    paddr_t);
 void			uvm_setpagesize(void);
 
 /* uvm_pager.c */

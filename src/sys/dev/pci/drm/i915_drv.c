@@ -670,23 +670,38 @@ inteldrm_attach(struct device *parent, struct device *self, void *aux)
 	dev = (struct drm_device *)dev_priv->drmdev;
 
 	/*
-	 * XXX [GS] I'm not sure about what the following does.  It seems
-	 * related to the use of write combining.  But x86_mem_add_mapping
-	 * already does it in NetBSD since BUS_SPACE_MAP_PREFETCHABLE will
-	 * be used in agp_map_subregion.
-	 *
-	 * XXX [GS] See OpenBSD's uvm_page_physload_flags which differs
-	 * from NetBSD's uvm_page_physload.
+	 * XXX I'm not clear on what the following does.  It loads the AGP
+	 * XXX aperture in UVM (but makes sure that UVM does not use it).
+	 * XXX Then the array of vm pages corresponding to the aperture is
+	 * XXX stored in dev_priv->pgs.  These pages are then flagged as
+	 * XXX write combining, and, more importantly, they are used in
+	 * XXX inteldrm_wipe_mappings() to remove all mappings of the pages
+	 * XXX backing a given DRM object.
+	 * XXX
+	 * XXX But how are these mappings created in the first place?  And
+	 * XXX why did the driver also work (with stability issues, though)
+	 * XXX without these AGP aperture pages?
+	 * XXX
+	 * XXX Regarding write combining on NetBSD, x86_mem_add_mapping
+	 * XXX also does it since BUS_SPACE_MAP_PREFETCHABLE will be used
+	 * XXX in agp_map_subregion.  Why do we need more?  [gsutre]
 	 */
-#if !defined(__NetBSD__)
+
 	/* XXX would be a lot nicer to get agp info before now */
+#if !defined(__NetBSD__)
 	uvm_page_physload(atop(dev->agp->base), atop(dev->agp->base +
 	    dev->agp->info.ai_aperture_size), atop(dev->agp->base),
 	    atop(dev->agp->base + dev->agp->info.ai_aperture_size),
 	    PHYSLOAD_DEVICE);
+#else /* !defined(__NetBSD__) */
+	uvm_page_physload_dev(atop(dev->agp->base), atop(dev->agp->base +
+	    dev->agp->info.ai_aperture_size), atop(dev->agp->base),
+	    atop(dev->agp->base + dev->agp->info.ai_aperture_size));
+#endif /* !defined(__NetBSD__) */
 	/* array of vm pages that physload introduced. */
 	dev_priv->pgs = PHYS_TO_VM_PAGE(dev->agp->base);
 	KASSERT(dev_priv->pgs != NULL);
+#if !defined(__NetBSD__)
 	/*
 	 * XXX mark all pages write combining so user mmaps get the right
 	 * bits. We really need a proper MI api for doing this, but for now
@@ -1328,9 +1343,7 @@ void
 inteldrm_lastclose(struct drm_device *dev)
 {
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
-#if !defined(__NetBSD__)
 	struct vm_page		*p;
-#endif /* !defined(__NetBSD__) */
 	int			 ret;
 
 	ret = i915_gem_idle(dev_priv);
@@ -1344,11 +1357,9 @@ inteldrm_lastclose(struct drm_device *dev)
 		 * they get unbound and any accesses will segfault.
 		 * XXX only do ones in GEM.
 		 */
-#if !defined(__NetBSD__)
 		for (p = dev_priv->pgs; p < dev_priv->pgs +
 		    (dev->agp->info.ai_aperture_size / PAGE_SIZE); p++)
 			pmap_page_protect(p, VM_PROT_NONE);
-#endif /* !defined(__NetBSD__) */
 		agp_bus_dma_destroy(dev->agp->agpdev,
 		    dev_priv->agpdmat);
 	}
@@ -3006,12 +3017,10 @@ error:
 void
 inteldrm_wipe_mappings(struct drm_obj *obj)
 {
-#if !defined(__NetBSD__)
 	struct inteldrm_obj	*obj_priv = (struct inteldrm_obj *)obj;
 	struct drm_device	*dev = obj->dev;
 	struct inteldrm_softc	*dev_priv = dev->dev_private;
 	struct vm_page		*pg;
-#endif /* !defined(__NetBSD__) */
 
 	DRM_ASSERT_HELD(obj);
 	/* make sure any writes hit the bus before we do whatever change
@@ -3019,11 +3028,9 @@ inteldrm_wipe_mappings(struct drm_obj *obj)
 	 */
 	DRM_MEMORYBARRIER();
 	/* nuke all our mappings. XXX optimise. */
-#if !defined(__NetBSD__)
 	for (pg = &dev_priv->pgs[atop(obj_priv->gtt_offset)]; pg !=
 	    &dev_priv->pgs[atop(obj_priv->gtt_offset + obj->size)]; pg++)
 		pmap_page_protect(pg, VM_PROT_NONE);
-#endif /* !defined(__NetBSD__) */
 }
 
 /**
