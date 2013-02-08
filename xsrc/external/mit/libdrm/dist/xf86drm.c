@@ -314,7 +314,7 @@ static int drmOpenDevice(long dev, int minor, int type)
 	group = (serv_group >= 0) ? serv_group : DRM_DEV_GID;
     }
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 #if !defined(UDEV)
     if (stat(DRM_DIR_NAME, &st)) {
 	if (!isroot)
@@ -360,7 +360,7 @@ wait_for_udev:
     	}
     }
 #endif
-#endif /* __OpenBSD__ */
+#endif /* !(defined(__OpenBSD__) || defined(__NetBSD__)) */
 
 #ifndef X_PRIVSEP
     fd = open(buf, O_RDWR, 0);
@@ -372,7 +372,7 @@ wait_for_udev:
     if (fd >= 0)
 	return fd;
 
-#if !defined(UDEV) && !defined(__OpenBSD__)
+#if !defined(UDEV) && !(defined(__OpenBSD__) || defined(__NetBSD__))
     /* Check if the device node is not what we expect it to be, and recreate it
      * and try again if so.
      */
@@ -2516,7 +2516,7 @@ void drmCloseOnce(int fd)
 
 int drmSetMaster(int fd)
 {
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	return ioctl(fd, DRM_IOCTL_SET_MASTER, 0);
 #endif
 	return 0;
@@ -2524,7 +2524,7 @@ int drmSetMaster(int fd)
 
 int drmDropMaster(int fd)
 {
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	return ioctl(fd, DRM_IOCTL_DROP_MASTER, 0);
 #endif
 	return 0;

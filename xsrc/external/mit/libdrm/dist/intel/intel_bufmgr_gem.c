@@ -85,7 +85,7 @@ typedef struct _drm_intel_bufmgr_gem {
 
 	pthread_mutex_t lock;
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	struct drm_i915_gem_exec_object *exec_objects;
 #endif
 	struct drm_i915_gem_exec_object2 *exec2_objects;
@@ -370,7 +370,7 @@ drm_intel_gem_bo_reference(drm_intel_bo *bo)
 	atomic_inc(&bo_gem->refcount);
 }
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 /**
  * Adds the given buffer to the list of buffers to be validated (moved into the
  * appropriate memory type) with the next batch submission.
@@ -1164,7 +1164,7 @@ static int drm_intel_gem_bo_map(drm_intel_bo *bo, int write_enable)
 int drm_intel_gem_bo_map_gtt(drm_intel_bo *bo)
 {
 	return drm_intel_gem_bo_map(bo, 1);
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	drm_intel_bufmgr_gem *bufmgr_gem = (drm_intel_bufmgr_gem *) bo->bufmgr;
 	drm_intel_bo_gem *bo_gem = (drm_intel_bo_gem *) bo;
 	struct drm_i915_gem_set_domain set_domain;
@@ -1265,7 +1265,7 @@ static int drm_intel_gem_bo_unmap(drm_intel_bo *bo)
 	}
 
 	if (bo_gem->mapped_cpu_write) {
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 		/* Cause a flush to happen if the buffer's pinned for
 		 * scanout, so the results show up in a timely manner.
 		 * Unlike GTT set domains, this only does work if the
@@ -1419,7 +1419,7 @@ drm_intel_bufmgr_gem_destroy(drm_intel_bufmgr *bufmgr)
 	int i;
 
 	free(bufmgr_gem->exec2_objects);
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	free(bufmgr_gem->exec_objects);
 #endif
 	free(bufmgr_gem->exec_bos);
@@ -1592,7 +1592,7 @@ drm_intel_gem_bo_clear_relocs(drm_intel_bo *bo, int start)
 	bo_gem->reloc_count = start;
 }
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 /**
  * Walk the tree of relocations rooted at BO and accumulate the list of
  * validations to be performed and update the relocation buffers with
@@ -1650,7 +1650,7 @@ drm_intel_gem_bo_process_reloc2(drm_intel_bo *bo)
 }
 
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 static void
 drm_intel_update_buffer_offsets(drm_intel_bufmgr_gem *bufmgr_gem)
 {
@@ -1691,7 +1691,7 @@ drm_intel_update_buffer_offsets2 (drm_intel_bufmgr_gem *bufmgr_gem)
 	}
 }
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 static int
 drm_intel_gem_bo_exec(drm_intel_bo *bo, int used,
 		      drm_clip_rect_t * cliprects, int num_cliprects, int DR4)
@@ -1797,7 +1797,7 @@ drm_intel_gem_bo_mrb_exec2(drm_intel_bo *bo, int used,
 	execbuf.buffer_count = bufmgr_gem->exec_count;
 	execbuf.batch_start_offset = 0;
 	execbuf.batch_len = used;
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	execbuf.cliprects_ptr = (uintptr_t)cliprects;
 	execbuf.num_cliprects = num_cliprects;
 	execbuf.DR1 = 0;
@@ -2304,7 +2304,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	struct drm_i915_gem_get_aperture aperture;
 	drm_i915_getparam_t gp;
 	int ret, tmp;
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	bool exec2 = false;
 #endif
 
@@ -2369,7 +2369,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 
 	gp.value = &tmp;
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	gp.param = I915_PARAM_HAS_EXECBUF2;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (!ret)
@@ -2388,7 +2388,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	bufmgr_gem->has_relaxed_fencing = ret == 0;
 
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	gp.param = I915_PARAM_HAS_LLC;
 	ret = drmIoctl(bufmgr_gem->fd, DRM_IOCTL_I915_GETPARAM, &gp);
 	if (ret == -EINVAL) {
@@ -2398,7 +2398,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 		 */
 		bufmgr_gem->has_llc = (IS_GEN6(bufmgr_gem->pci_device) |
 				IS_GEN7(bufmgr_gem->pci_device));
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	} else
 		bufmgr_gem->has_llc = ret == 0;
 #endif
@@ -2455,7 +2455,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 	bufmgr_gem->bufmgr.bo_get_tiling = drm_intel_gem_bo_get_tiling;
 	bufmgr_gem->bufmgr.bo_set_tiling = drm_intel_gem_bo_set_tiling;
 	bufmgr_gem->bufmgr.bo_flink = drm_intel_gem_bo_flink;
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	/*
 	 * Only the new one is available on OpenBSD
 	 */
@@ -2464,7 +2464,7 @@ drm_intel_bufmgr_gem_init(int fd, int batch_size)
 #endif
 		bufmgr_gem->bufmgr.bo_exec = drm_intel_gem_bo_exec2;
 		bufmgr_gem->bufmgr.bo_mrb_exec = drm_intel_gem_bo_mrb_exec2;
-#ifndef __OpenBSD__
+#if !(defined(__OpenBSD__) || defined(__NetBSD__))
 	} else
 		bufmgr_gem->bufmgr.bo_exec = drm_intel_gem_bo_exec;
 #endif

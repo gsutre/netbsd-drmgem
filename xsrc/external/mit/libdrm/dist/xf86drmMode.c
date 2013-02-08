@@ -738,7 +738,7 @@ int drmCheckModesettingSupported(const char *busid)
 	if (found)
 		return 0;
 #endif
-#ifdef __OpenBSD__
+#if defined(__OpenBSD__) || defined(__NetBSD__)
 	int	fd;
 	struct drm_mode_card_res res;
 	drmModeResPtr r = 0;
