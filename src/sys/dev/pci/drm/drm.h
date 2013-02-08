@@ -55,7 +55,11 @@
 #define DRM_IOC_READWRITE	IOC_INOUT
 #define DRM_IOC(dir, group, nr, size) _IOC(dir, group, nr, size)
 
+#if !defined(__NetBSD__)
 #define DRM_MAJOR       88
+#else /* !defined(__NetBSD__) */
+#define DRM_MAJOR       180
+#endif /* !defined(__NetBSD__) */
 #define DRM_MAX_MINOR   15
 
 #define DRM_NAME	"drm"	  /**< Name in kernel, /dev, and /proc */

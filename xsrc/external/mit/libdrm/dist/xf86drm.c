@@ -59,6 +59,7 @@
 
 #include "xf86drm.h"
 
+#ifndef DRM_MAJOR
 #if defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__DragonFly__)
 #define DRM_MAJOR 145
 #endif
@@ -70,6 +71,7 @@
 #ifndef DRM_MAJOR
 #define DRM_MAJOR 226		/* Linux */
 #endif
+#endif /* DRM_MAJOR */
 
 /*
  * This definition needs to be changed on some systems if dev_t is a structure.
