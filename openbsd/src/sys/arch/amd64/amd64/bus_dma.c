@@ -1,4 +1,4 @@
-/*	$OpenBSD: bus_dma.c,v 1.38 2011/07/03 18:31:02 oga Exp $	*/
+/*	$OpenBSD: bus_dma.c,v 1.40 2012/12/08 12:04:21 mpi Exp $	*/
 /*	$NetBSD: bus_dma.c,v 1.3 2003/05/07 21:33:58 fvdl Exp $	*/
 
 /*-
@@ -30,8 +30,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-
-#include <sys/cdefs.h>
 
 /*
  * The following is included because _bus_dma_uiomove is derived from
@@ -535,7 +533,10 @@ paddr_t
 _bus_dmamem_mmap(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs, off_t off,
     int prot, int flags)
 {
-	int i;
+	int i, pmapflags = 0;
+
+	if (flags & BUS_DMA_NOCACHE)
+		pmapflags |= PMAP_NOCACHE;
 
 	for (i = 0; i < nsegs; i++) {
 #ifdef DIAGNOSTIC
@@ -552,7 +553,7 @@ _bus_dmamem_mmap(bus_dma_tag_t t, bus_dma_segment_t *segs, int nsegs, off_t off,
 			continue;
 		}
 
-		return (segs[i].ds_addr + off);
+		return ((segs[i].ds_addr + off) | pmapflags);
 	}
 
 	/* Page not found. */
