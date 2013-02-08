@@ -351,6 +351,7 @@ agpattach(device_t parent, device_t self, void *aux)
 
 	sc->as_dev = self;
 	sc->as_dmat = pa->pa_dmat;
+	sc->as_memt = pa->pa_memt;
 	sc->as_pc = pa->pa_pc;
 	sc->as_tag = pa->pa_tag;
 	sc->as_id = pa->pa_id;
@@ -821,6 +822,11 @@ agp_generic_unbind_memory(struct agp_softc *sc, struct agp_memory *mem)
 		return EINVAL;
 	}
 
+	if (mem->am_mapref > 0) {
+		aprint_error_dev(sc->as_dev, "memory is mapped\n");
+		mutex_exit(&sc->as_mtx);
+		return EINVAL;
+	}
 
 	/*
 	 * Unbind the individual pages and flush the chipset's
@@ -883,7 +889,23 @@ agp_find_memory(struct agp_softc *sc, int id)
 		if (mem->am_id == id)
 			return mem;
 	}
-	return 0;
+	return (NULL);
+}
+
+static struct agp_memory *
+agp_lookup_memory(struct agp_softc *sc, off_t off)
+{
+	struct agp_memory* mem;
+
+	AGP_DPF(("searching for memory offset 0x%lx\n", (unsigned long)off));
+	TAILQ_FOREACH(mem, &sc->as_memory, am_link) {
+		if (mem->am_is_bound == 0)
+			continue;
+		if (off >= mem->am_offset &&
+		    off < (mem->am_offset + mem->am_size))
+			return (mem);
+	}
+	return (NULL);
 }
 
 /* Implementation of the userland ioctl api */
@@ -1275,4 +1297,102 @@ agp_resume(device_t dv, const pmf_qual_t *qual)
 	agp_flush_cache();
 
 	return true;
+}
+
+void *
+agp_map(struct agp_softc *sc, bus_size_t address, bus_size_t size,
+    bus_space_handle_t *memh)
+{
+	struct agp_memory* mem;
+
+	if (sc->as_chipc == NULL)
+		return (NULL);
+
+	if (address >= sc->as_apsize)
+		return (NULL);
+
+	if (sc->as_apaddr) {
+		if (bus_space_map(sc->as_memt, sc->as_apaddr + address, size,
+		    BUS_SPACE_MAP_LINEAR | BUS_SPACE_MAP_PREFETCHABLE, memh))
+			return (NULL);
+	} else {
+		/*
+		 * If the aperture base address is 0 assume that the AGP
+		 * bridge does not support remapping for processor accesses.
+		 */
+		mem = agp_lookup_memory(sc, address);
+		if (mem == NULL)
+			return (NULL);
+
+		/*
+		 * Map the whole memory region because it is easier to
+		 * do so and it is improbable that only a part of it
+		 * will be used.
+		 */
+		if (mem->am_mapref == 0)
+			if (bus_dmamem_map(sc->as_dmat, mem->am_dmaseg,
+			    mem->am_nseg, mem->am_size, &mem->am_kva,
+			    BUS_DMA_NOWAIT | BUS_DMA_NOCACHE))
+				return (NULL);
+
+		mem->am_mapref++;
+
+		/*
+		 * XXX Fake a bus handle even if it is managed memory,
+		 * this is needed at least by radeondrm(4).
+		 */
+		*memh = (bus_space_handle_t)((vaddr_t)mem->am_kva + address);
+	}
+
+	return bus_space_vaddr(sc->as_memt, *memh);
+}
+
+void
+agp_unmap(struct agp_softc *sc, void *address, size_t size,
+    bus_space_handle_t memh)
+{
+	struct agp_memory* mem;
+	void *kva;
+
+	if (sc->as_apaddr)
+		return bus_space_unmap(sc->as_memt, memh, size);
+
+	kva = (void *)address;
+	TAILQ_FOREACH(mem, &sc->as_memory, am_link) {
+		if (mem->am_is_bound == 0)
+			continue;
+
+		if (kva >= mem->am_kva && (vaddr_t)kva < ((vaddr_t)mem->am_kva + mem->am_size)) {
+			mem->am_mapref--;
+
+			if (mem->am_mapref == 0) {
+				bus_dmamem_unmap(sc->as_dmat, mem->am_kva,
+				    mem->am_size);
+				mem->am_kva = 0;
+			}
+			break;
+		}
+	}
+}
+
+paddr_t
+agp_mmap(struct agp_softc *sc, off_t off, int prot)
+{
+	struct agp_memory* mem;
+
+	if (sc->as_chipc == NULL)
+		return (-1);
+
+	if (off >= sc->as_apsize)
+		return (-1);
+
+	if (sc->as_apaddr)
+		return bus_space_mmap(sc->as_memt, sc->as_apaddr, off, prot, 0);
+
+	mem = agp_lookup_memory(sc, off);
+	if (mem == NULL)
+		return (-1);
+
+	return bus_dmamem_mmap(sc->as_dmat, mem->am_dmaseg, mem->am_nseg, off,
+	    prot, BUS_DMA_NOCACHE);
 }

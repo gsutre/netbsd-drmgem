@@ -92,6 +92,8 @@ struct agp_memory {
 	off_t		am_offset;		/* page offset if bound */
 	int		am_is_bound;		/* non-zero if bound */
 	bus_addr_t	  am_physical;
+	void *		  am_kva;	/* kva if mapped */
+	u_int32_t	  am_mapref;	/* mapping reference count */
 	void *		  am_virtual;
 	bus_dmamap_t	  am_dmamap;
 	bus_dma_segment_t *am_dmaseg;
@@ -137,6 +139,7 @@ struct agp_softc {
 	bus_size_t		as_apsize;
 	int			as_apflags;
 	bus_dma_tag_t		as_dmat;
+	bus_space_tag_t		as_memt;
 	u_int32_t		as_maxmem;	/* allocation upper bound */
 	u_int32_t		as_allocated;	/* amount allocated */
 	enum agp_acquire_state	as_state;
@@ -204,6 +207,11 @@ int	agp_bus_dma_init(struct agp_softc *, bus_dma_tag_t, bus_addr_t,
 void	agp_bus_dma_destroy(struct agp_softc *, bus_dma_tag_t);
 void	agp_bus_dma_set_alignment(bus_dma_tag_t, bus_dmamap_t,
 	    u_long);
+
+void	*agp_map(struct agp_softc *, bus_addr_t, bus_size_t,
+	    bus_space_handle_t *);
+void	agp_unmap(struct agp_softc *, void *, size_t, bus_space_handle_t);
+paddr_t	agp_mmap(struct agp_softc *, off_t, int);
 
 struct agp_map;
 
