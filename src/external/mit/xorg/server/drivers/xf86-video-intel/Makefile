@@ -17,14 +17,18 @@ MAN=		intel.4
 
 # Source files of local libraries
 SRCS.uxa=	uxa.c uxa-accel.c uxa-glyphs.c uxa-render.c uxa-unaccel.c
-SRCS.legacy=	i810_accel.c i810_cursor.c i810_dga.c i810_driver.c
-SRCS.legacy+=	i810_io.c i810_memory.c i810_video.c i810_wmark.c
+SRCS.legacy=	i810_accel.c i810_cursor.c i810_driver.c
+SRCS.legacy+=	i810_memory.c i810_video.c i810_wmark.c
+SRCS.legacy+=	i810_xaa.c i810_dga.c
+
+# Enable XAA and DGA
+CPPFLAGS+=	-DHAVE_XAA_H -DHAVE_DGAPROC_H
 
 # DRI support
 .if ${X11DRI} != "no"
 SRCS+=		intel_dri.c
 SRCS.legacy+=	i810_dri.c
-CPPFLAGS+=	-DXF86DRI
+CPPFLAGS+=	-DXF86DRI -DHAVE_DRI1
 .endif
 
 # Enable XvMC
