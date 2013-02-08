@@ -5732,7 +5732,7 @@
 ./usr/X11R7/include/freetype2/freetype/ttunpat.h	-unknown-	xorg
 ./usr/X11R7/include/ft2build.h				-unknown-	xorg
 ./usr/X11R7/include/libdrm/drm.h			-unknown-	xorg
-#./usr/X11R7/include/libdrm/drm_mode.h			-unknown-	xorg
+./usr/X11R7/include/libdrm/drm_mode.h			-unknown-	xorg
 ./usr/X11R7/include/libdrm/drm_sarea.h			-unknown-	xorg
 ./usr/X11R7/include/libdrm/i915_drm.h			-unknown-	xorg
 ./usr/X11R7/include/libdrm/intel_bufmgr.h		-unknown-	xorg
