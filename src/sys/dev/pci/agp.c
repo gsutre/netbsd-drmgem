@@ -1126,11 +1126,7 @@ agpmmap(dev_t dev, off_t offset, int prot)
 	if (sc == NULL)
 		return ENODEV;
 
-	if (offset > AGP_GET_APERTURE(sc))
-		return -1;
-
-	return (bus_space_mmap(sc->as_apt, sc->as_apaddr, offset, prot,
-	    BUS_SPACE_MAP_LINEAR));
+	return agp_mmap(sc, offset, prot);
 }
 
 const struct cdevsw agp_cdevsw = {
@@ -1387,7 +1383,8 @@ agp_mmap(struct agp_softc *sc, off_t off, int prot)
 		return (-1);
 
 	if (sc->as_apaddr)
-		return bus_space_mmap(sc->as_memt, sc->as_apaddr, off, prot, 0);
+		return bus_space_mmap(sc->as_memt, sc->as_apaddr, off, prot,
+		    BUS_SPACE_MAP_LINEAR);
 
 	mem = agp_lookup_memory(sc, off);
 	if (mem == NULL)
