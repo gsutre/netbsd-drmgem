@@ -240,6 +240,7 @@ I810PreInit(ScrnInfoPtr scrn, int flags)
    rgb defaultWeight = { 0, 0, 0 };
    int mem;
    Bool enable;
+   struct intel_chipset chipset;
 
    if (scrn->numEntities != 1)
       return FALSE;
@@ -364,7 +365,7 @@ I810PreInit(ScrnInfoPtr scrn, int flags)
     */
    I810DoDDC(scrn, pI810->pEnt->index);
 
-   intel_detect_chipset(scrn, pI810->pEnt, pI810->PciInfo);
+   intel_detect_chipset(scrn, pI810->PciInfo, &chipset);
 
    pI810->LinearAddr = pI810->PciInfo->regions[0].base_addr;
    xf86DrvMsg(scrn->scrnIndex, X_PROBED, "Linear framebuffer at 0x%lX\n",
