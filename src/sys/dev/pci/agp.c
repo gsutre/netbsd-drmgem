@@ -1296,7 +1296,7 @@ agp_resume(device_t dv, const pmf_qual_t *qual)
 }
 
 void *
-agp_map(struct agp_softc *sc, bus_size_t address, bus_size_t size,
+agp_map(struct agp_softc *sc, bus_addr_t address, bus_size_t size,
     bus_space_handle_t *memh)
 {
 	struct agp_memory* mem;
