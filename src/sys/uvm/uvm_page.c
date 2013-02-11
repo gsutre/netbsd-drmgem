@@ -898,7 +898,8 @@ uvm_page_physload_dev(paddr_t start, paddr_t end, paddr_t avail_start,
 	if (pgs == NULL) {
 		printf("uvm_page_physload_dev: can not malloc vm_page "
 		    "structs for segment\n");
-		printf("\tignoring 0x%lx -> 0x%lx\n", start, end);
+		printf("\tignoring 0x%llx -> 0x%llx\n", (long long)start,
+		    (long long)end);
 		return;
 	}
 
