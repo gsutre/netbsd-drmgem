@@ -107,9 +107,6 @@ struct cfattach __CONCAT(name,_ca) = {					\
 	.ca_childdetached	= NULL,					\
 }
 
-/* OpenBSD queue(3) compatibility definitions. */
-#define TAILQ_END(head)		NULL
-
 /* OpenBSD UVM pager compatibility definitions. */
 #define VM_PAGER_OK		0
 #define VM_PAGER_ERROR		EIO
