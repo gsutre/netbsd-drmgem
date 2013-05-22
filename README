@@ -29,6 +29,15 @@ one may choose to use the automated build script that is provided with the port.
 Last, it is possible to manually build the required components.  Let us present
 in detail these three alternatives.
 
+The port is based on NetBSD -current sources.  Upstream changes are merged in as
+needed (typically when a user reports a build failure).  The date of the latest
+update can be found in the commit history of the netbsd-current branch:
+
+http://github.com/gsutre/netbsd-drmgem/commits/netbsd-current
+
+A priori, the port is only compatible with NetBSD -current of the same date.  In
+reality, compatibility often remains for months.
+
 
 Automated build script
 --------------------------------------------------------------------------------
@@ -45,6 +54,11 @@ WARNING: this script modifies the local X11R7 installation!
 The <time stamp> specifies the date of NetBSD -current sources.  You may use any
 date compatible with the CVS date format.  But, obviously, it is safer to choose
 a date that is close to the sources of the running NetBSD system.
+
+A typical use case for this script is the following.  First, upgrade the system
+to NetBSD -current with sources dated from <time stamp>.  Daily binary snapshots
+from http://releng.netbsd.org/ may be used for this.  Then, run autobuild.sh as
+instructed above.
 
 
 Manual build
