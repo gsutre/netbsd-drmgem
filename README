@@ -58,7 +58,7 @@ a date that is close to the sources of the running NetBSD system.
 A typical use case for this script is the following.  First, upgrade the system
 to NetBSD -current with sources dated from <time stamp>.  Daily binary snapshots
 from http://releng.netbsd.org/ may be used for this.  Then, run autobuild.sh as
-instructed above.
+instructed above, with the same <time stamp>.
 
 
 Manual build
