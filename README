@@ -16,8 +16,8 @@ This project ports these three components from OpenBSD to NetBSD.  Support for
 (embedded) display port has been, in addition, ported directly from Linux.  The
 port focusses on Intel GPUs and removes support for other graphics hardware.
 
-Note: This port is for NetBSD's native X.org.  It's not compatible with pkgsrc's
-      X.org.                    ^^^^^^
+Note: This port targets NetBSD -current's native X.org.  It is incompatible with
+NetBSD 6 or pkgsrc's X.org.
 
 
 *****      Use at your own risk        ******        Work in progress      *****
