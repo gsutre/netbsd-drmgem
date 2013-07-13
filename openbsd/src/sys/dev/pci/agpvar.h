@@ -1,4 +1,4 @@
-/*	$OpenBSD: agpvar.h,v 1.23 2012/12/06 15:05:21 mpi Exp $	*/
+/*	$OpenBSD: agpvar.h,v 1.26 2013/03/18 12:02:56 jsg Exp $	*/
 /*	$NetBSD: agpvar.h,v 1.4 2001/10/01 21:54:48 fvdl Exp $	*/
 
 /*-
@@ -42,6 +42,11 @@
 #endif
 
 #define AGPUNIT(x)	minor(x)
+
+/* we can't use the BUS_DMA_NOCACHE here or it won't get mapped via the gtt */
+#define BUS_DMA_GTT_NOCACHE		(1 << 30)
+#define BUS_DMA_GTT_CACHE_LLC		(1 << 29)
+#define BUS_DMA_GTT_CACHE_LLC_MLC	(1 << 28)
 
 struct agp_attach_args {
 	char			*aa_busname;
@@ -131,6 +136,7 @@ struct agp_softc {
 	pcitag_t			 sc_pcitag;
 	bus_addr_t			 sc_apaddr;
 	bus_size_t			 sc_apsize;
+	uint32_t			 sc_stolen_entries;
 	pcireg_t			 sc_id;
 
 	int				 sc_opened;
@@ -187,6 +193,7 @@ int	agp_bus_dma_init(struct agp_softc *, bus_addr_t, bus_addr_t,
 void	agp_bus_dma_destroy(struct agp_softc *, bus_dma_tag_t);
 void	agp_bus_dma_set_alignment(bus_dma_tag_t, bus_dmamap_t,
 	    u_long);
+void	agp_bus_dma_rebind(bus_dma_tag_t, bus_dmamap_t, int);
 
 void	*agp_map(struct agp_softc *, bus_addr_t, bus_size_t,
 	    bus_space_handle_t *);

@@ -1,4 +1,4 @@
-/*	$OpenBSD: agp_i810.c,v 1.71 2012/09/25 10:19:46 jsg Exp $	*/
+/*	$OpenBSD: agp_i810.c,v 1.74 2013/03/18 12:02:56 jsg Exp $	*/
 
 /*-
  * Copyright (c) 2000 Doug Rabson
@@ -59,6 +59,10 @@
 #define	INTEL_LOCAL	0x2
 /* Memory is snooped, must not be accessed through gtt from the cpu. */
 #define	INTEL_COHERENT	0x6	
+
+#define GEN6_PTE_UNCACHED		(1 << 1)
+#define GEN6_PTE_CACHE_LLC		(2 << 1)
+#define GEN6_PTE_CACHE_LLC_MLC		(3 << 1)
 
 enum {
 	CHIP_NONE	= 0,	/* not integrated graphics */
@@ -594,6 +598,7 @@ agp_i810_attach(struct device *parent, struct device *self, void *aux)
 
 	isc->agpdev = (struct agp_softc *)agp_attach_bus(pa, &agp_i810_methods,
 	    isc->isc_apaddr, isc->isc_apsize, &isc->dev);
+	isc->agpdev->sc_stolen_entries = isc->stolen;
 	return;
 out:
 
@@ -725,8 +730,21 @@ agp_i810_bind_page(void *sc, bus_addr_t offset, paddr_t physical, int flags)
 	 * COHERENT mappings mean set the snoop bit. this should never be
 	 * accessed by the gpu through the gtt.
 	 */
-	if (flags & BUS_DMA_COHERENT)
-		physical |= INTEL_COHERENT;
+	switch (isc->chiptype) {
+	case CHIP_SANDYBRIDGE:
+	case CHIP_IVYBRIDGE:
+		if (flags & BUS_DMA_GTT_NOCACHE)
+			physical |= GEN6_PTE_UNCACHED;
+		if (flags & BUS_DMA_GTT_CACHE_LLC)
+			physical |= GEN6_PTE_CACHE_LLC;
+		if (flags & BUS_DMA_GTT_CACHE_LLC_MLC)
+			physical |= GEN6_PTE_CACHE_LLC_MLC;
+		break;
+	default:
+		if (flags & BUS_DMA_COHERENT)
+			physical |= INTEL_COHERENT;
+		break;
+	}
 
 	intagp_write_gtt(isc, offset - isc->isc_apaddr, physical);
 }
@@ -945,14 +963,19 @@ intagp_write_gtt(struct agp_i810_softc *isc, bus_size_t off, paddr_t v)
 	if (v != 0) {
 		pte = v | INTEL_ENABLED;
 		/* 965+ can do 36-bit addressing, add in the extra bits */
-		if (isc->chiptype == CHIP_I965 ||
-		    isc->chiptype == CHIP_G4X ||
-		    isc->chiptype == CHIP_PINEVIEW ||
-		    isc->chiptype == CHIP_G33 ||
-		    isc->chiptype == CHIP_IRONLAKE ||
-		    isc->chiptype == CHIP_SANDYBRIDGE ||
-		    isc->chiptype == CHIP_IVYBRIDGE) {
+		switch (isc->chiptype) {
+		case CHIP_I965:
+		case CHIP_G4X:
+		case CHIP_PINEVIEW:
+		case CHIP_G33:
+		case CHIP_IRONLAKE:
 			pte |= (v & 0x0000000f00000000ULL) >> 28;
+			break;
+		/* gen6+ can do 40 bit addressing */
+		case CHIP_SANDYBRIDGE:
+		case CHIP_IVYBRIDGE:
+			pte |= (v & 0x000000ff00000000ULL) >> 28;
+			break;
 		}
 	}
 
