@@ -16,8 +16,19 @@ This project ports these three components from OpenBSD to NetBSD.  Support for
 (embedded) display port has been, in addition, ported directly from Linux.  The
 port focusses on Intel GPUs and removes support for other graphics hardware.
 
-Note: This port targets NetBSD -current's native X.org.  It is incompatible with
-NetBSD 6 or pkgsrc's X.org.
+Notes:
+
+- This port targets NetBSD -current's native X.org.  It is incompatible with
+  NetBSD 6 or pkgsrc's X.org.
+
+- There is no KMS support in this port.  OpenBSD -current now has KMS support,
+  but this was not the case when the port was developed.  So, in short, the port
+  is based on OpenBSD -current sources from 2013-03-18 12:36 UTC.
+
+- Taylor Campbell is currently porting Linux's DRM+GEM+KMS to NetBSD.  His first
+  goal is to support Intel integrated GPUs.  See his post:
+
+  http://mail-index.netbsd.org/tech-x11/2013/02/06/msg001229.html
 
 
 *****      Use at your own risk        ******        Work in progress      *****
