@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.1092 2013/04/27 22:21:14 christos Exp $
+# $NetBSD: GENERIC,v 1.1096 2013/06/30 21:38:57 rmind Exp $
 #
 # GENERIC machine description file
 #
@@ -22,7 +22,7 @@ include 	"arch/i386/conf/std.i386"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident 		"GENERIC-$Revision: 1.1092 $"
+#ident 		"GENERIC-$Revision: 1.1096 $"
 
 maxusers	64		# estimated number of users
 
@@ -200,7 +200,6 @@ options 	NFSSERVER	# Network File System server
 options 	INET		# IP + ICMP + TCP + UDP
 options 	INET6		# IPv6
 #options 	IPSEC		# IP security
-#options 	IPSEC_NAT_T	# IPsec NAT traversal (NAT-T)
 #options 	IPSEC_DEBUG	# debug for IP security
 #options 	MPLS		# MultiProtocol Label Switching (needs ifmpls)
 #options 	MROUTING	# IP multicast routing
@@ -209,7 +208,6 @@ options 	NETATALK	# AppleTalk networking protocols
 #options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
 #options 	PPP_DEFLATE	# Deflate compression support for PPP
 options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
-options 	PFIL_HOOKS	# pfil(9) packet filter hooks
 options 	IPFILTER_LOG	# ipmon(8) log support
 options 	IPFILTER_LOOKUP	# ippool(8) support
 options 	IPFILTER_COMPAT # Compat for IP-Filter
@@ -733,6 +731,9 @@ gpiolock*	at gpio?
 # Software pulsing GPIO pins
 gpiopwm*	at gpio?
 
+# Soekris 6501 GPIO/LED driver (provides gpiobus, needs gpio)
+#soekrisgpio0	at isa? port 0x680
+
 # SCSI Controllers and Devices
 
 # PCI SCSI controllers
@@ -1218,6 +1219,10 @@ irframe* at stuirda?
 # SigmaTel STIr4200 USB/IrDA Bridge
 ustir*	at uhub? port ?
 irframe* at ustir?
+
+# KingSun/DonShine USB/IrDA Bridge
+udsir*	at uhub? port ?
+irframe* at udsir?
 
 # Windows Media Center IR transceiver
 irmce*	at uhub? port ?

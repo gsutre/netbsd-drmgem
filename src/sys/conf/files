@@ -1,4 +1,4 @@
-#	$NetBSD: files,v 1.1070 2013/04/28 03:11:32 christos Exp $
+#	$NetBSD: files,v 1.1077 2013/06/29 21:06:57 rmind Exp $
 #	@(#)files.newconf	7.5 (Berkeley) 5/10/93
 
 version 	20100430
@@ -64,7 +64,7 @@ defflag opt_dtrace.h		KDTRACE_HOOKS
 defflag	opt_sysv.h		SYSVMSG SYSVSEM	SYSVSHM
 defparam opt_sysvparam.h	SHMMAXPGS SEMMNI SEMMNS SEMUME SEMMNU
 
-defflag	opt_ntp.h		PPS_SYNC NTP
+defflag	opt_ntp.h		PPS_SYNC PPS_DEBUG NTP
 
 defflag	opt_ptm.h		NO_DEV_PTM COMPAT_BSDPTY
 
@@ -93,9 +93,9 @@ defflag	opt_veriexec.h		VERIFIED_EXEC_FP_SHA1
 
 # Per system call number counts and times
 defflag opt_syscall_stats.h	SYSCALL_STATS
-defflag opt_syscall_stats.h	SYSCALL_TIMES: SYSCALL_STATS 
+defflag opt_syscall_stats.h	SYSCALL_TIMES: SYSCALL_STATS
 # Assume cpu_hascounter() returns true - to use disabled rdtsc() (for soekris)
-defflag opt_syscall_stats.h	SYSCALL_TIMES_HASCOUNTER: SYSCALL_TIMES 
+defflag opt_syscall_stats.h	SYSCALL_TIMES_HASCOUNTER: SYSCALL_TIMES
 file kern/subr_syscall_stats.c	syscall_stats
 
 defparam opt_pax.h		PAX_MPROTECT
@@ -212,7 +212,6 @@ obsolete defflag		IPX		# obsolete
 obsolete defparam opt_md.h	MEMORY_RBFLAGS	# superseded by
 						# MEMORY_DISK_RBFLAGS
 
-defflag				PFIL_HOOKS	# pfil(9)
 defflag	opt_bridge_ipf.h	BRIDGE_IPF	# bridge(4) use inet_pfil_hooks
 defflag	opt_ppp.h		PPP_DEFLATE PPP_BSDCOMP PPP_FILTER
 						# Include deflate or bsd
@@ -1173,7 +1172,6 @@ define	sdmmcbus { }			# SD/MMC attachment
 
 # We need the USB bus controllers here so different busses can
 # use them in an 'attach-with'.
-# UHCI USB controller
 #
 
 defparam USB_MEM_RESERVE
@@ -1183,6 +1181,8 @@ file	dev/usb/usbroothub_subr.c	usbroothub
 
 define	usb_dma
 
+# UHCI USB controller
+#
 device	uhci: usbus, usbroothub, usb_dma
 file	dev/usb/uhci.c			uhci			needs-flag
 
@@ -1196,7 +1196,7 @@ file	dev/usb/ohci.c			ohci			needs-flag
 device	ehci: usbus, usbroothub, usb_dma
 file	dev/usb/ehci.c			ehci			needs-flag
 
-# XHCI USB3 controller
+# xHCI USB3 controller
 #
 device	xhci: usbus, usbroothub, usb_dma
 file	dev/usb/xhci.c			xhci			needs-flag
@@ -1468,7 +1468,7 @@ file	dev/radio.c			radio			needs-flag
 file	dev/rndpseudo.c			rnd			needs-flag
 file	dev/sequencer.c			sequencer		needs-flag
 file	dev/video.c			video			needs-flag
-file	dev/vnd.c			vnd	
+file	dev/vnd.c			vnd
 file	kern/bufq_disksort.c		bufq_disksort
 file	kern/bufq_fcfs.c		bufq_fcfs
 file	kern/bufq_priocscan.c		bufq_priocscan
@@ -1524,6 +1524,7 @@ file	kern/kern_rate.c
 file	kern/kern_resource.c
 file	kern/kern_rndpool.c
 file	kern/kern_rndq.c
+file	kern/kern_rndsink.c
 file	kern/kern_runq.c
 file	kern/kern_rwlock.c
 file	kern/kern_rwlock_obj.c
@@ -1677,7 +1678,7 @@ file	net/if_gif.c			gif			needs-flag
 file	net/if_gre.c			gre			needs-flag
 file	net/if_hippisubr.c		hippi			needs-flag
 file	net/if_ieee1394subr.c		ieee1394
-file	net/if_loop.c			loop	
+file	net/if_loop.c			loop
 file	net/if_media.c
 file	net/if_mpls.c			ifmpls			needs-flag
 file	net/if_ppp.c			ppp			needs-flag
@@ -1687,11 +1688,11 @@ file	net/if_sl.c			sl			needs-flag
 file	net/if_spppsubr.c		sppp
 file	net/if_strip.c			strip			needs-flag
 file	net/if_tokensubr.c		token			needs-flag
-file	net/if_tap.c			tap	
+file	net/if_tap.c			tap
 file	net/if_tun.c			tun
 file	net/if_vlan.c			vlan			needs-flag
 file	net/if_pppoe.c			pppoe			needs-flag
-file	net/pfil.c			pfil_hooks | ipfilter | pf
+file	net/pfil.c
 file	net/ppp-deflate.c		ppp & ppp_deflate
 file	net/ppp_tty.c			ppp
 file	net/net_stats.c
@@ -1702,7 +1703,7 @@ file	net/route.c
 file	net/rtbl.c
 file	net/rtsock.c
 file	net/slcompress.c		sl | ppp | strip | (irip & irip_vj)
-file	net/zlib.c			(ppp & ppp_deflate) | kame_ipsec | opencrypto | vnd_compression
+file	net/zlib.c			(ppp & ppp_deflate) | opencrypto | vnd_compression
 file	netinet/accf_data.c		accf_data
 file	netinet/accf_http.c		accf_http
 file	netinet/cpu_in_cksum.c		(inet | inet6) & !cpu_in_cksum
@@ -1712,7 +1713,7 @@ file	netinet/in4_cksum.c		inet
 file	netinet/in_cksum.c		inet
 file	netinet/in_gif.c		gif & inet
 file	netinet/ip_carp.c		carp & (inet | inet6)	needs-flag
-file	netinet/ip_ecn.c		kame_ipsec | fast_ipsec | gif | stf
+file	netinet/ip_ecn.c		ipsec | gif | stf
 file	netinet/ip_encap.c		inet | inet6
 file	netinet/ip_etherip.c		etherip & inet
 file	netinet6/ip6_etherip.c		etherip & inet6
