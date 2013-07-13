@@ -1,4 +1,4 @@
-/* $OpenBSD: vga_pci.c,v 1.69 2012/10/08 21:47:50 deraadt Exp $ */
+/* $OpenBSD: vga_pci.c,v 1.71 2013/03/18 10:12:40 kettenis Exp $ */
 /* $NetBSD: vga_pci.c,v 1.3 1998/06/08 06:55:58 thorpej Exp $ */
 
 /*
@@ -227,7 +227,6 @@ vga_pci_attach(struct device *parent, struct device *self, void *aux)
 	struct pci_attach_args *pa = aux;
 	pcireg_t reg;
 	struct vga_pci_softc *sc = (struct vga_pci_softc *)self;
-
 #if !defined(SMALL_KERNEL) && NACPI > 0
 	int prod, vend, subid, subprod, subvend, i;
 #endif
@@ -239,18 +238,18 @@ vga_pci_attach(struct device *parent, struct device *self, void *aux)
 	reg |= PCI_COMMAND_MASTER_ENABLE;
 	pci_conf_write(pa->pa_pc, pa->pa_tag, PCI_COMMAND_STATUS_REG, reg);
 
+	sc->sc_type = WSDISPLAY_TYPE_PCIVGA;
+
 #ifdef VESAFB
 	if (vesabios_softc != NULL && vesabios_softc->sc_nmodes > 0) {
 		sc->sc_textmode = vesafb_get_mode(sc);
 		printf(", vesafb\n");
 		sc->sc_vc = vga_extended_attach(self, pa->pa_iot, pa->pa_memt,
-		    WSDISPLAY_TYPE_PCIVGA, vga_pci_mmap);
+		    sc->sc_type, vga_pci_mmap);
 		return;
 	}
 #endif
 	printf("\n");
-	sc->sc_vc = vga_common_attach(self, pa->pa_iot, pa->pa_memt,
-	    WSDISPLAY_TYPE_PCIVGA);
 
 	vga_pci_bar_init(sc, pa);
 
@@ -294,6 +293,9 @@ vga_pci_attach(struct device *parent, struct device *self, void *aux)
 #if NDRM > 0
 	config_found_sm(self, aux, NULL, drmsubmatch);
 #endif
+
+	sc->sc_vc = vga_common_attach(self, pa->pa_iot, pa->pa_memt,
+	    sc->sc_type);
 }
 
 int

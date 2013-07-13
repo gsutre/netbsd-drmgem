@@ -655,6 +655,10 @@ DRM_LIBS
 DRM_CFLAGS
 XORG_LIBS
 XORG_CFLAGS
+DGA_FALSE
+DGA_TRUE
+XAA_FALSE
+XAA_TRUE
 HAVE_GEN4ASM_FALSE
 HAVE_GEN4ASM_TRUE
 GEN4ASM_LIBS
@@ -813,6 +817,8 @@ with_xorg_module_dir
 enable_dri
 enable_xvmc
 enable_kms_only
+enable_xaa
+enable_dga
 enable_debug
 '
       ac_precious_vars='build_alias
@@ -1479,6 +1485,10 @@ Optional Features:
   --disable-dri           Disable DRI support [[default=auto]]
   --disable-xvmc          Disable XvMC support [[default=yes]]
   --enable-kms-only       Assume KMS support [[default=no]]
+  --enable-xaa            Enable legacy X Acceleration Architecture (XAA)
+                          [default=auto]
+  --enable-dga            Enable legacy Direct Graphics Access (DGA)
+                          [default=auto]
   --enable-debug          Enables internal debugging [[default=yes]]
 
 Optional Packages:
@@ -1908,6 +1918,97 @@ $as_echo "$ac_res" >&6; }
   eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
 
 } # ac_fn_c_check_func
+
+# ac_fn_c_check_header_mongrel LINENO HEADER VAR INCLUDES
+# -------------------------------------------------------
+# Tests whether HEADER exists, giving a warning if it cannot be compiled using
+# the include files in INCLUDES and setting the cache variable VAR
+# accordingly.
+ac_fn_c_check_header_mongrel ()
+{
+  as_lineno=${as_lineno-"$1"} as_lineno_stack=as_lineno_stack=$as_lineno_stack
+  if eval \${$3+:} false; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+else
+  # Is the header compilable?
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking $2 usability" >&5
+$as_echo_n "checking $2 usability... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+$4
+#include <$2>
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_header_compiler=yes
+else
+  ac_header_compiler=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_header_compiler" >&5
+$as_echo "$ac_header_compiler" >&6; }
+
+# Is the header present?
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking $2 presence" >&5
+$as_echo_n "checking $2 presence... " >&6; }
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <$2>
+_ACEOF
+if ac_fn_c_try_cpp "$LINENO"; then :
+  ac_header_preproc=yes
+else
+  ac_header_preproc=no
+fi
+rm -f conftest.err conftest.i conftest.$ac_ext
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_header_preproc" >&5
+$as_echo "$ac_header_preproc" >&6; }
+
+# So?  What about this header?
+case $ac_header_compiler:$ac_header_preproc:$ac_c_preproc_warn_flag in #((
+  yes:no: )
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2: accepted by the compiler, rejected by the preprocessor!" >&5
+$as_echo "$as_me: WARNING: $2: accepted by the compiler, rejected by the preprocessor!" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2: proceeding with the compiler's result" >&5
+$as_echo "$as_me: WARNING: $2: proceeding with the compiler's result" >&2;}
+    ;;
+  no:yes:* )
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2: present but cannot be compiled" >&5
+$as_echo "$as_me: WARNING: $2: present but cannot be compiled" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2:     check for missing prerequisite headers?" >&5
+$as_echo "$as_me: WARNING: $2:     check for missing prerequisite headers?" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2: see the Autoconf documentation" >&5
+$as_echo "$as_me: WARNING: $2: see the Autoconf documentation" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2:     section \"Present But Cannot Be Compiled\"" >&5
+$as_echo "$as_me: WARNING: $2:     section \"Present But Cannot Be Compiled\"" >&2;}
+    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: $2: proceeding with the compiler's result" >&5
+$as_echo "$as_me: WARNING: $2: proceeding with the compiler's result" >&2;}
+( $as_echo "## ---------------------------------------------------------------------- ##
+## Report this to https://bugs.freedesktop.org/enter_bug.cgi?product=xorg ##
+## ---------------------------------------------------------------------- ##"
+     ) | sed "s/^/$as_me: WARNING:     /" >&2
+    ;;
+esac
+  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for $2" >&5
+$as_echo_n "checking for $2... " >&6; }
+if eval \${$3+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  eval "$3=\$ac_header_compiler"
+fi
+eval ac_res=\$$3
+	       { $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_res" >&5
+$as_echo "$ac_res" >&6; }
+fi
+  eval $as_lineno_stack; ${as_lineno_stack:+:} unset as_lineno
+
+} # ac_fn_c_check_header_mongrel
 cat >config.log <<_ACEOF
 This file contains any messages produced by compilers while
 running configure, to aid debugging if configure makes a mistake.
@@ -17705,6 +17806,86 @@ else
 fi
 
 
+# Check whether --enable-xaa was given.
+if test "${enable_xaa+set}" = set; then :
+  enableval=$enable_xaa; XAA="$enableval"
+else
+  XAA=auto
+fi
+
+if test "x$XAA" != xno; then
+	save_CFLAGS=$CFLAGS
+	CFLAGS=$XORG_CFLAGS
+	for ac_header in xaa.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "xaa.h" "ac_cv_header_xaa_h" "$ac_includes_default"
+if test "x$ac_cv_header_xaa_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_XAA_H 1
+_ACEOF
+ XAA=yes
+else
+  XAA=no
+fi
+
+done
+
+	CFLAGS=$save_CFLAGS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to include XAA support" >&5
+$as_echo_n "checking whether to include XAA support... " >&6; }
+ if test "x$XAA" = xyes; then
+  XAA_TRUE=
+  XAA_FALSE='#'
+else
+  XAA_TRUE='#'
+  XAA_FALSE=
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $XAA" >&5
+$as_echo "$XAA" >&6; }
+
+# Check whether --enable-dga was given.
+if test "${enable_dga+set}" = set; then :
+  enableval=$enable_dga; DGA="$enableval"
+else
+  DGA=auto
+fi
+
+if test "x$DGA" != xno; then
+	save_CFLAGS=$CFLAGS
+	CFLAGS=$XORG_CFLAGS
+	for ac_header in dgaproc.h
+do :
+  ac_fn_c_check_header_compile "$LINENO" "dgaproc.h" "ac_cv_header_dgaproc_h" "#include <dixstruct.h>
+"
+if test "x$ac_cv_header_dgaproc_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_DGAPROC_H 1
+_ACEOF
+ DGA=yes
+else
+  DGA=no
+fi
+
+done
+
+	CFLAGS=$save_CFLAGS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether to include DGA support" >&5
+$as_echo_n "checking whether to include DGA support... " >&6; }
+ if test "x$DGA" = xyes; then
+  DGA_TRUE=
+  DGA_FALSE='#'
+else
+  DGA_TRUE='#'
+  DGA_FALSE=
+fi
+
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $DGA" >&5
+$as_echo "$DGA" >&6; }
+
+
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
   enableval=$enable_debug; DEBUG="$enableval"
@@ -18323,6 +18504,9 @@ fi
 $as_echo "#define XF86DRI 1" >>confdefs.h
 
 
+$as_echo "#define HAVE_DRI1 1" >>confdefs.h
+
+
 $as_echo "#define XF86DRI_DEVEL 1" >>confdefs.h
 
 fi
@@ -18583,6 +18767,14 @@ Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${HAVE_GEN4ASM_TRUE}" && test -z "${HAVE_GEN4ASM_FALSE}"; then
   as_fn_error $? "conditional \"HAVE_GEN4ASM\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${XAA_TRUE}" && test -z "${XAA_FALSE}"; then
+  as_fn_error $? "conditional \"XAA\" was never defined.
+Usually this means the macro was only invoked conditionally." "$LINENO" 5
+fi
+if test -z "${DGA_TRUE}" && test -z "${DGA_FALSE}"; then
+  as_fn_error $? "conditional \"DGA\" was never defined.
 Usually this means the macro was only invoked conditionally." "$LINENO" 5
 fi
 if test -z "${DRI_TRUE}" && test -z "${DRI_FALSE}"; then

@@ -16,8 +16,19 @@ This project ports these three components from OpenBSD to NetBSD.  Support for
 (embedded) display port has been, in addition, ported directly from Linux.  The
 port focusses on Intel GPUs and removes support for other graphics hardware.
 
-Note: This port is for NetBSD's native X.org.  It's not compatible with pkgsrc's
-      X.org.                    ^^^^^^
+Notes:
+
+- This port targets NetBSD -current's native X.org.  It is incompatible with
+  NetBSD 6 or pkgsrc's X.org.
+
+- There is no KMS support in this port.  OpenBSD -current now has KMS support,
+  but this was not the case when the port was developed.  So, in short, the port
+  is based on OpenBSD -current sources from 2013-03-18 12:36 UTC.
+
+- Taylor Campbell is currently porting Linux's DRM+GEM+KMS to NetBSD.  His first
+  goal is to support Intel integrated GPUs.  See his post:
+
+  http://mail-index.netbsd.org/tech-x11/2013/02/06/msg001229.html
 
 
 *****      Use at your own risk        ******        Work in progress      *****
@@ -28,6 +39,15 @@ There are several ways to build and install this port.  The safest option is to
 one may choose to use the automated build script that is provided with the port.
 Last, it is possible to manually build the required components.  Let us present
 in detail these three alternatives.
+
+The port is based on NetBSD -current sources.  Upstream changes are merged in as
+needed (typically when a user reports a build failure).  The date of the latest
+update can be found in the commit history of the netbsd-current branch:
+
+http://github.com/gsutre/netbsd-drmgem/commits/netbsd-current
+
+A priori, the port is only compatible with NetBSD -current of the same date.  In
+reality, compatibility often remains for months.
 
 
 Automated build script
@@ -45,6 +65,11 @@ WARNING: this script modifies the local X11R7 installation!
 The <time stamp> specifies the date of NetBSD -current sources.  You may use any
 date compatible with the CVS date format.  But, obviously, it is safer to choose
 a date that is close to the sources of the running NetBSD system.
+
+A typical use case for this script is the following.  First, upgrade the system
+to NetBSD -current with sources dated from <time stamp>.  Daily binary snapshots
+from http://releng.netbsd.org/ may be used for this.  Then, run autobuild.sh as
+instructed above, with the same <time stamp>.
 
 
 Manual build

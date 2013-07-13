@@ -7,11 +7,12 @@ device-softc-split:	with split device_t/softc
 
 netbsd-current:		vanilla NetBSD -current relevant source files
 
-openbsd-current:	vanilla OpenBSD -current relevant source files
-
 
 Obsolete branches (merged in master or simply abandoned)
 --------------------------------------------------------------------------------
 
 display-port:		adds (e)DP support to Xenocara's Intel Xorg driver
                         (merged in master on 2012-09-28)
+
+openbsd-current:	vanilla OpenBSD -current relevant source files
+                        (sources from 2013-03-18 12:36 UTC)

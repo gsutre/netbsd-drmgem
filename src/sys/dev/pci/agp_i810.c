@@ -145,11 +145,15 @@ agp_i810_write_gtt_entry(struct agp_i810_softc *isc, off_t off, bus_addr_t v)
 	 * The compiler isn't smart enough, hence the casts to uintmax_t.
 	 */
 	if (sizeof(bus_addr_t) > sizeof(u_int32_t)) {
+		/* gen6+ can do 40 bit addressing. */
+		if (isc->chiptype == CHIP_SNB) {
+			if (((uintmax_t)v >> 40) != 0)
+				return EINVAL;
+			pte |= (v >> 28) & 0xff0;
 		/* 965+ can do 36-bit addressing, add in the extra bits. */
-		if (isc->chiptype == CHIP_I965 ||
+		} else if (isc->chiptype == CHIP_I965 ||
 		    isc->chiptype == CHIP_G33 ||
-		    isc->chiptype == CHIP_G4X ||
-		    isc->chiptype == CHIP_SNB) {
+		    isc->chiptype == CHIP_G4X) {
 			if (((uintmax_t)v >> 36) != 0)
 				return EINVAL;
 			pte |= (v >> 28) & 0xf0;

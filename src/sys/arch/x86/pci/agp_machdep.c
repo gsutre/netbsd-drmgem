@@ -47,6 +47,7 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
+#include <sys/proc.h>
 
 #include <dev/pci/pcivar.h>
 #include <dev/pci/pcireg.h>
@@ -72,6 +73,47 @@ static void	agp_sg_bind_page(void *, bus_addr_t, paddr_t, int);
 static void	agp_sg_unbind_page(void *, bus_addr_t);
 static void	agp_sg_flush_tlb(void *);
 
+/*
+ * XXX The following cache flushing functions belong elsewhere.
+ */
+
+static __inline int
+cpu_has_clflush(struct cpu_info *ci)
+{
+	return ((ci->ci_feat_val[0] & CPUID_CFLUSH) &&
+	    (ci->ci_cflush_lsize > 0));
+}
+
+static __inline void
+clflush(vaddr_t addr)
+{
+	__asm __volatile("clflush %0" : "+m" (addr));
+}
+
+/*
+ * pmap_clflush_cache: flush the cache for a virtual address.
+ */
+static void
+pmap_clflush_cache(vaddr_t addr, vsize_t len)
+{
+	vaddr_t	i;
+
+	KDASSERT(cpu_has_clflush(curcpu()));
+
+	/* all cpus that have clflush also have mfence. */
+	x86_mfence();
+	for (i = addr; i < addr + len; i += curcpu()->ci_cflush_lsize)
+		clflush(i);
+	x86_mfence();
+}
+
+#ifdef __HAVE_DIRECT_MAP
+#define pmap_clflush_page(paddr) do {					\
+	KDASSERT(PHYS_TO_VM_PAGE(paddr) != NULL);			\
+	pmap_clflush_cache(PMAP_DIRECT_MAP(paddr), PAGE_SIZE);		\
+} while (/* CONSTCOND */ 0)
+#endif /* __HAVE_DIRECT_MAP */
+
 void
 agp_flush_cache(void)
 {
@@ -81,11 +123,10 @@ agp_flush_cache(void)
 void
 agp_flush_cache_range(vaddr_t va, vsize_t sz)
 {
-#if defined(__HAVE_PMAP_FLUSH_CACHE)
-	pmap_flush_cache(va, sz);
-#else /* defined(__HAVE_PMAP_FLUSH_CACHE) */
-	wbinvd();
-#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) */
+	if (cpu_has_clflush(curcpu()))
+		pmap_clflush_cache(va, sz);
+	else
+		wbinvd();
 }
 
 /*
@@ -334,13 +375,9 @@ void
 intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
     bus_addr_t offset, bus_size_t size, int ops)
 {
-#if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
-	bus_dma_segment_t	*segp;
 	struct sg_page_map	*spm;
 	vaddr_t			 addr;
-	paddr_t	 		 pa;
-	bus_addr_t		 poff, endoff, soff;
-#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
+	bus_addr_t		 endoff, soff;
 
 #ifdef DIAGNOSTIC
 	if ((ops & (BUS_DMASYNC_PREREAD | BUS_DMASYNC_PREWRITE)) != 0 &&
@@ -374,8 +411,7 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 	 */
 	if (ops & BUS_DMASYNC_POSTREAD || ops & BUS_DMASYNC_PREREAD ||
 	    ops & BUS_DMASYNC_PREWRITE) {
-#if defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE)
-		if (curcpu()->ci_cflush_lsize == 0) {
+		if (!cpu_has_clflush(curcpu())) {
 			/* save some wbinvd()s. we're MD anyway so it's ok */
 			wbinvd();
 			return;
@@ -389,11 +425,22 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 		case X86_DMA_BUFTYPE_LINEAR:
 			addr = (vaddr_t)spm->spm_origbuf + soff;
 			while (soff < endoff) {
-				pmap_flush_cache(addr, PAGE_SIZE);
+				pmap_clflush_cache(addr, PAGE_SIZE);
 				soff += PAGE_SIZE;
 				addr += PAGE_SIZE;
-			} break;
+			}
+			break;
 		case X86_DMA_BUFTYPE_RAW:
+#ifndef __HAVE_DIRECT_MAP
+			/* XXX Need an equivalent to pmap_clflush_page. */
+			wbinvd();
+			return;
+#else
+		{
+			bus_dma_segment_t	*segp;
+			paddr_t			 pa;
+			bus_addr_t		 poff;
+
 			segp = (bus_dma_segment_t *)spm->spm_origbuf;
 			poff = 0;
 
@@ -408,7 +455,7 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 			while (poff < endoff) {
 				for (; pa < segp->ds_addr + segp->ds_len &&
 				    poff < endoff; pa += PAGE_SIZE) {
-					pmap_flush_page(pa);
+					pmap_clflush_page(pa);
 					poff += PAGE_SIZE;
 				}
 				segp++;
@@ -416,6 +463,8 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 					pa = segp->ds_addr;
 			}
 			break;
+		}
+#endif /* __HAVE_DIRECT_MAP */
 		/* You do not want to load mbufs or uios onto a graphics card */
 		case X86_DMA_BUFTYPE_MBUF:
 			/* FALLTHROUGH */
@@ -426,9 +475,6 @@ intagp_dma_sync(void *ctx, bus_dma_tag_t tag, bus_dmamap_t dmam,
 			    spm->spm_buftype);
 		}
 		x86_mfence();
-#else /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
-		wbinvd();
-#endif /* defined(__HAVE_PMAP_FLUSH_CACHE) && defined(__HAVE_PMAP_FLUSH_PAGE) */
 	}
 }
 #endif /* NAGP_I810 > 0 */
