@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.374 2013/05/03 15:45:24 jakllsch Exp $
+# $NetBSD: GENERIC,v 1.379 2013/06/30 21:38:55 rmind Exp $
 #
 # GENERIC machine description file
 #
@@ -22,7 +22,7 @@ include	"arch/amd64/conf/std.amd64"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident 		"GENERIC-$Revision: 1.374 $"
+#ident 		"GENERIC-$Revision: 1.379 $"
 
 maxusers	64		# estimated number of users
 
@@ -177,7 +177,6 @@ options 	NFSSERVER	# Network File System server
 options 	INET		# IP + ICMP + TCP + UDP
 options 	INET6		# IPV6
 #options 	IPSEC		# IP security
-#options 	IPSEC_NAT_T	# IPsec NAT traversal (NAT-T)
 #options 	IPSEC_DEBUG	# debug for IP security
 #options 	MPLS		# MultiProtocol Label Switching (needs ifmpls)
 #options 	MROUTING	# IP multicast routing
@@ -186,7 +185,6 @@ options 	NETATALK	# AppleTalk networking protocols
 options 	PPP_BSDCOMP	# BSD-Compress compression support for PPP
 options 	PPP_DEFLATE	# Deflate compression support for PPP
 options 	PPP_FILTER	# Active filter support for PPP (requires bpf)
-options 	PFIL_HOOKS	# pfil(9) packet filter hooks
 options 	IPFILTER_LOG	# ipmon(8) log support
 options 	IPFILTER_LOOKUP	# ippool(8) support
 options 	IPFILTER_COMPAT # Compat for IP-Filter
@@ -393,6 +391,7 @@ sysbeep0	at pcppi?
 #savagedrm*	at drm?		# S3 Savage DRM driver
 #sisdrm* 	at drm?		# SiS DRM driver
 #tdfxdrm*	at drm?		# 3dfx (voodoo) DRM driver
+#viadrm* 	at drm?		# VIA DRM driver
 
 # New DRM/GEM driver ported from OpenBSD (Intel only)
 inteldrm*	at drm?
@@ -535,6 +534,9 @@ ld*	at iop? tid ?			# block devices
 
 # Pulsing GPIO pins in software
 #gpiopwm*	at gpio?
+
+# Soekris 6501 GPIO/LED driver (provides gpiobus, needs gpio)
+#soekrisgpio0	at isa? port 0x680
 
 # SCSI Controllers and Devices
 
@@ -903,6 +905,10 @@ irframe* at stuirda?
 # SigmaTel STIr4200 USB/IrDA Bridge
 ustir*	at uhub? port ?
 irframe* at ustir?
+
+# KingSun/DonShine USB/IrDA Bridge
+udsir*	at uhub? port ?
+irframe* at udsir?
 
 # Windows Media Center IR transceiver
 irmce*	at uhub? port ?
