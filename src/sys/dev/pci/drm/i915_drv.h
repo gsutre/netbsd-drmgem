@@ -92,7 +92,11 @@ struct workq;
  * XXX fence lock ,object lock
  */
 struct inteldrm_softc {
+#if !defined(__NetBSD__)
 	struct device		 dev;
+#else /* !defined(__NetBSD__) */
+	struct device		*dev;
+#endif /* !defined(__NetBSD__) */
 	struct device		*drmdev;
 	bus_dma_tag_t		 agpdmat; /* tag from intagp for GEM */
 	bus_dma_tag_t		 dmat;

@@ -199,8 +199,12 @@ drm_probe(struct device *parent, struct cfdata *match, void *aux)
 void
 drm_attach(struct device *parent, struct device *self, void *aux)
 {
-	struct drm_device	*dev = (struct drm_device *)self;
+	struct drm_device	*dev = device_private(self);
 	struct drm_attach_args	*da = aux;
+
+#if defined(__NetBSD__)
+	dev->device = self;
+#endif /* defined(__NetBSD__) */
 
 	dev->dev_private = parent;
 	dev->driver = da->driver;
@@ -292,7 +296,7 @@ error:
 int
 drm_detach(struct device *self, int flags)
 {
-	struct drm_device *dev = (struct drm_device *)self;
+	struct drm_device *dev = device_private(self);
 
 #if defined(__NetBSD__)
 	pmf_device_deregister(self);
@@ -359,14 +363,7 @@ struct cfdriver drm_cd = {
 	0, "drm", DV_DULL
 };
 #else /* !defined(__NetBSD__) */
-/*
- * We do not use CFATTACH_DECL_NEW, in order to be compatible with
- * the rest of the code, which does for instance
- *	struct drm_device *dev = (struct drm_device *)self;
- * instead of
- *	struct drm_device *dev = device_private(self);
- */
-CFATTACH_DECL(drmdev, sizeof(struct drm_device),
+CFATTACH_DECL_NEW(drmdev, sizeof(struct drm_device),
     drm_probe, drm_attach, drm_detach, drm_activate);
 #endif /* !defined(__NetBSD__) */
 
@@ -603,7 +600,11 @@ drmclose(dev_t kdev, int flags, int fmt, struct lwp *p)
 		dev->driver->close(dev, file_priv);
 
 	DRM_DEBUG("pid = %d, device = %p, open_count = %d\n",
+#if !defined(__NetBSD__)
 	    DRM_CURRENTPID, &dev->device, dev->open_count);
+#else /* !defined(__NetBSD__) */
+	    DRM_CURRENTPID, dev->device, dev->open_count);
+#endif /* !defined(__NetBSD__) */
 
 	if (dev->lock.hw_lock && _DRM_LOCK_IS_HELD(dev->lock.hw_lock->lock)
 	    && dev->lock.file_priv == file_priv) {
@@ -694,7 +695,11 @@ drmioctl(dev_t kdev, u_long cmd, caddr_t data, int flags,
 	++file_priv->ioctl_count;
 
 	DRM_DEBUG("pid=%d, cmd=0x%02lx, nr=0x%02lx, dev %p, auth=%d\n",
+#if !defined(__NetBSD__)
 	    DRM_CURRENTPID, cmd, DRM_IOCTL_NR(cmd), &dev->device,
+#else /* !defined(__NetBSD__) */
+	    DRM_CURRENTPID, cmd, DRM_IOCTL_NR(cmd), dev->device,
+#endif /* !defined(__NetBSD__) */
 	    file_priv->authenticated);
 
 	switch (cmd) {

@@ -157,7 +157,7 @@ inteldrm_pipe_enabled(struct inteldrm_softc *dev_priv, int pipe)
 u_int32_t
 i915_get_vblank_counter(struct drm_device *dev, int pipe)
 {
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 	bus_size_t		 high_frame, low_frame;
 	u_int32_t		 high1, high2, low;
 
@@ -220,7 +220,7 @@ i915_user_irq_put(struct inteldrm_softc *dev_priv)
 int
 i915_enable_vblank(struct drm_device *dev, int pipe)
 {
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 
 	if (inteldrm_pipe_enabled(dev_priv, pipe) == 0)
 		return (EINVAL);
@@ -244,7 +244,7 @@ i915_enable_vblank(struct drm_device *dev, int pipe)
 void
 i915_disable_vblank(struct drm_device *dev, int pipe)
 {
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 
 	mtx_enter(&dev_priv->user_irq_lock);
 	if (IS_GEN7(dev_priv))
@@ -265,7 +265,7 @@ i915_disable_vblank(struct drm_device *dev, int pipe)
 int
 i915_driver_irq_install(struct drm_device *dev)
 {
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 
 	dev->vblank->vb_max = 0xffffff; /* only 24 bits of frame count */
 	if (IS_G4X(dev_priv) || IS_IRONLAKE(dev_priv) || IS_GEN6(dev_priv) ||
@@ -355,7 +355,7 @@ ironlake_irq_install(struct inteldrm_softc *dev_priv)
 void
 i915_driver_irq_uninstall(struct drm_device *dev)
 {
-	struct inteldrm_softc	*dev_priv = dev->dev_private;
+	struct inteldrm_softc	*dev_priv = device_private(dev->dev_private);
 
 	I915_WRITE(HWSTAM, 0xffffffff);
 
