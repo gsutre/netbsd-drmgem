@@ -39,6 +39,10 @@
 
 
 #include <sys/param.h>
+#include <sys/device.h>
+#if !defined(__NetBSD__)
+#define device_private(dev)		((void *)(dev))
+#endif /* !defined(__NetBSD__) */
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/pool.h>
@@ -89,23 +93,6 @@
 
 #if defined(__NetBSD__)
 MALLOC_DECLARE(M_DRM);
-
-/*
- * OpenBSD attachment compatibility macro.
- * Taken from NetBSD src/sys/sys/device.h revision 1.142.
- */
-#define	CFATTACH_DECL(name, ddsize, matfn, attfn, detfn, actfn) \
-struct cfattach __CONCAT(name,_ca) = {					\
-	.ca_name		= ___STRING(name),			\
-	.ca_devsize		= ddsize,				\
-	.ca_flags		= 0,					\
-	.ca_match 		= matfn,				\
-	.ca_attach		= attfn,				\
-	.ca_detach		= detfn,				\
-	.ca_activate		= actfn,				\
-	.ca_rescan		= NULL,					\
-	.ca_childdetached	= NULL,					\
-}
 
 /* OpenBSD UVM pager compatibility definitions. */
 #define VM_PAGER_OK		0
@@ -317,7 +304,11 @@ do {									\
 	    curproc->p_pid, __func__ , ## arg)
 
 
+#if !defined(__NetBSD__)
 #define DRM_INFO(fmt, arg...)  printf("%s: " fmt, dev_priv->dev.dv_xname, ## arg)
+#else /* !defined(__NetBSD__) */
+#define DRM_INFO(fmt, arg...)  printf("%s: " fmt, dev_priv->dev->dv_xname, ## arg)
+#endif /* !defined(__NetBSD__) */
 
 #ifdef DRMDEBUG
 #undef DRM_DEBUG
@@ -642,7 +633,11 @@ struct drm_driver_info {
  * DRM device functions structure
  */
 struct drm_device {
+#if !defined(__NetBSD__)
 	struct device	  device; /* softc is an extension of struct device */
+#else /* !defined(__NetBSD__) */
+	struct device	  *device;
+#endif /* !defined(__NetBSD__) */
 
 	const struct drm_driver_info *driver;
 
@@ -694,7 +689,7 @@ struct drm_device {
 	struct drm_agp_head	*agp;
 	struct drm_sg_mem	*sg;  /* Scatter gather memory */
 	atomic_t		*ctx_bitmap;
-	void			*dev_private;
+	struct device		*dev_private;
 	struct drm_local_map	*agp_buffer_map;
 
 	/* GEM info */

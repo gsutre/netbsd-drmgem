@@ -3,7 +3,7 @@ Main branches
 
 master:			main development trunk
 
-device-softc-split:	with split device_t/softc
+diagnostic:		with additional runtime checks and debug messages
 
 netbsd-current:		vanilla NetBSD -current relevant source files
 
@@ -11,8 +11,11 @@ netbsd-current:		vanilla NetBSD -current relevant source files
 Obsolete branches (merged in master or simply abandoned)
 --------------------------------------------------------------------------------
 
+device-softc-split:	with split device_t/softc
+			(merged in master on 2013-07-14)
+
 display-port:		adds (e)DP support to Xenocara's Intel Xorg driver
-                        (merged in master on 2012-09-28)
+			(merged in master on 2012-09-28)
 
 openbsd-current:	vanilla OpenBSD -current relevant source files
-                        (sources from 2013-03-18 12:36 UTC)
+			(sources from 2013-03-18 12:36 UTC)
