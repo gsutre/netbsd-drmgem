@@ -4136,7 +4136,7 @@ i915_gem_object_pin(struct drm_obj *obj, uint32_t alignment, int needs_fence)
 	int			 ret;
 
 	DRM_ASSERT_HELD(obj);
-	inteldrm_verify_inactive(dev->dev_private, __FILE__, __LINE__);
+	inteldrm_verify_inactive(device_private(dev->dev_private), __FILE__, __LINE__);
 	/*
 	 * if already bound, but alignment is unsuitable, unbind so we can
 	 * fix it. Similarly if we have constraints due to fence registers,
@@ -4191,7 +4191,7 @@ i915_gem_object_pin(struct drm_obj *obj, uint32_t alignment, int needs_fence)
 		if (!inteldrm_is_active(obj_priv))
 			i915_list_remove(obj_priv);
 	}
-	inteldrm_verify_inactive(dev->dev_private, __FILE__, __LINE__);
+	inteldrm_verify_inactive(device_private(dev->dev_private), __FILE__, __LINE__);
 
 	return (0);
 }
@@ -4202,7 +4202,7 @@ i915_gem_object_unpin(struct drm_obj *obj)
 	struct drm_device	*dev = obj->dev;
 	struct inteldrm_obj	*obj_priv = (struct inteldrm_obj *)obj;
 
-	inteldrm_verify_inactive(dev->dev_private, __FILE__, __LINE__);
+	inteldrm_verify_inactive(device_private(dev->dev_private), __FILE__, __LINE__);
 	KASSERT(obj_priv->pin_count >= 1);
 	KASSERT(obj_priv->dmamap != NULL);
 	DRM_ASSERT_HELD(obj);
@@ -4217,7 +4217,7 @@ i915_gem_object_unpin(struct drm_obj *obj)
 		atomic_dec(&dev->pin_count);
 		atomic_sub(obj->size, &dev->pin_memory);
 	}
-	inteldrm_verify_inactive(dev->dev_private, __FILE__, __LINE__);
+	inteldrm_verify_inactive(device_private(dev->dev_private), __FILE__, __LINE__);
 }
 
 int
