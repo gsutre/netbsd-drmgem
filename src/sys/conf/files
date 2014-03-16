@@ -1,4 +1,4 @@
-#	$NetBSD: files,v 1.1078 2013/07/27 07:02:03 kiyohara Exp $
+#	$NetBSD: files,v 1.1085 2014/03/05 03:16:43 ozaki-r Exp $
 #	@(#)files.newconf	7.5 (Berkeley) 5/10/93
 
 version 	20100430
@@ -170,6 +170,7 @@ include "crypto/nist_ctr_drbg/files.nist_ctr_drbg"
 # Kernel history/tracing. Old UVMHIST depends upon this.
 #
 defflag opt_kernhist.h			KERNHIST KERNHIST_PRINT
+defparam opt_kernhist.h			KERNHIST_DELAY
 file	kern/kern_history.c		kernhist
 
 #
@@ -956,8 +957,9 @@ define	ata_udma
 define	ata_piobm
 device	wdc: ata, wdc_common
 
-defflag	opt_ata.h	ATADEBUG
-defflag	opt_wdc.h	WDC_NO_IDS
+defflag opt_ata.h	ATADEBUG
+defparam opt_ata.h	ATADEBUG_MASK
+defflag opt_wdc.h	WDC_NO_IDS
 
 device	atabus: atapi,ata_hl
 attach	atabus at ata
@@ -1209,8 +1211,7 @@ file	dev/ic/sl811hs.c		slhci			needs-flag
 
 # DesignWare OTG host controller
 #
-device dotg: usbus, usbroothub, usb_dma
-file	dev/usb/dwc_otg.c		dotg			needs-flag
+include "external/bsd/dwc2/conf/files.dwc2"
 
 # USB HID processing (as used by bluetooth and usb code)
 define	hid
@@ -1505,6 +1506,7 @@ file	kern/kern_idle.c
 file	kern/kern_hook.c
 file	kern/kern_kthread.c
 file	kern/kern_ktrace.c		ktrace
+file	kern/kern_ktrace_vfs.c		ktrace
 file	kern/kern_ksyms.c		ksyms | ddb | modular needs-flag
 file	kern/kern_lock.c
 file	kern/kern_lwp.c
@@ -1647,6 +1649,7 @@ file	kern/vfs_vnops.c
 file	kern/vfs_wapbl.c		wapbl
 file	kern/vfs_xattr.c
 file	kern/vnode_if.c
+file	miscfs/deadfs/dead_vfsops.c
 file	miscfs/deadfs/dead_vnops.c
 file	miscfs/fifofs/fifo_vnops.c
 file	miscfs/genfs/genfs_io.c
@@ -1704,7 +1707,7 @@ file	net/route.c
 file	net/rtbl.c
 file	net/rtsock.c
 file	net/slcompress.c		sl | ppp | strip | (irip & irip_vj)
-file	net/zlib.c			(ppp & ppp_deflate) | opencrypto | vnd_compression
+file	net/zlib.c			(ppp & ppp_deflate) | opencrypto | vnd_compression | kdtrace_hooks
 file	netinet/accf_data.c		accf_data
 file	netinet/accf_http.c		accf_http
 file	netinet/cpu_in_cksum.c		(inet | inet6) & !cpu_in_cksum

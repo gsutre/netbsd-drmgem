@@ -1,4 +1,4 @@
-/*	$NetBSD: pmap.c,v 1.179 2012/11/13 14:07:42 chs Exp $	*/
+/*	$NetBSD: pmap.c,v 1.181 2013/11/06 20:19:03 mrg Exp $	*/
 
 /*-
  * Copyright (c) 2008, 2010 The NetBSD Foundation, Inc.
@@ -171,7 +171,7 @@
  */
 
 #include <sys/cdefs.h>
-__KERNEL_RCSID(0, "$NetBSD: pmap.c,v 1.179 2012/11/13 14:07:42 chs Exp $");
+__KERNEL_RCSID(0, "$NetBSD: pmap.c,v 1.181 2013/11/06 20:19:03 mrg Exp $");
 
 #include "opt_user_ldt.h"
 #include "opt_lockdebug.h"
@@ -505,8 +505,8 @@ extern int mem_cluster_cnt;
 #define PTESLEW(pte, id) ((pte)+(id)*NPTECL)
 #define VASLEW(va,id) ((va)+(id)*NPTECL*PAGE_SIZE)
 #else
-#define PTESLEW(pte, id) (pte)
-#define VASLEW(va,id) (va)
+#define PTESLEW(pte, id) ((void)id, pte)
+#define VASLEW(va,id) ((void)id, va)
 #endif
 
 /*
@@ -3549,12 +3549,10 @@ pmap_page_remove(struct vm_page *pg)
 	struct pv_entry *killlist = NULL;
 	struct vm_page *ptp;
 	pt_entry_t expect;
-	lwp_t *l;
 	int count;
 
 	KASSERT(uvm_page_locked_p(pg));
 
-	l = curlwp;
 	pp = VM_PAGE_TO_PP(pg);
 	expect = pmap_pa2pte(VM_PAGE_TO_PHYS(pg)) | PG_V;
 	count = SPINLOCK_BACKOFF_MIN;
@@ -4222,9 +4220,10 @@ pmap_growkernel(vaddr_t maxkvaddr)
 	struct pmap *kpm = pmap_kernel();
 #if !defined(XEN) || !defined(__x86_64__)
 	struct pmap *pm;
+	long old;
 #endif
 	int s, i;
-	long needed_kptp[PTP_LEVELS], target_nptp, old;
+	long needed_kptp[PTP_LEVELS], target_nptp;
 	bool invalidate = false;
 
 	s = splvm();	/* to be safe */
@@ -4237,7 +4236,10 @@ pmap_growkernel(vaddr_t maxkvaddr)
 	}
 
 	maxkvaddr = x86_round_pdr(maxkvaddr);
+#if !defined(XEN) || !defined(__x86_64__)
 	old = nkptp[PTP_LEVELS - 1];
+#endif
+
 	/*
 	 * This loop could be optimized more, but pmap_growkernel()
 	 * is called infrequently.
