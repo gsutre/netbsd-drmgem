@@ -316,6 +316,10 @@ drm_detach(struct device *self, int flags)
 		retcode = drm_mtrr_del(0, dev->agp->info.ai_aperture_base,
 		    dev->agp->info.ai_aperture_size, DRM_MTRR_WC);
 		DRM_DEBUG("mtrr_del = %d", retcode);
+
+#ifndef DRMDEBUG	/* Appease GCC 4.8.  [gsutre] */
+		(void)retcode;
+#endif
 	}
 
 

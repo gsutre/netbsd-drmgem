@@ -94,6 +94,10 @@ drm_ctxbitmap_init(struct drm_device *dev)
 	   	DRM_DEBUG("drm_ctxbitmap_init : %d\n", temp);
 	}
 
+#ifndef DRMDEBUG	/* Appease GCC 4.8.  [gsutre] */
+	(void)temp;
+#endif
+
 	return (0);
 }
 

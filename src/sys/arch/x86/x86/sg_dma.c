@@ -805,7 +805,9 @@ sg_dmamap_load_seg(bus_dma_tag_t t, struct sg_cookie *sg,
 {
 	int i;
 	int left;
-	int seg;
+#if 0
+	int seg;	/* XXX Never read!  [gsutre] */
+#endif
 
 	/*
 	 * Keep in mind that each segment could span
@@ -821,7 +823,9 @@ sg_dmamap_load_seg(bus_dma_tag_t t, struct sg_cookie *sg,
 	 * (It's bad enough as it is.)
 	 */
 	left = size;
+#if 0
 	seg = 0;
+#endif
 	for (i = 0; left > 0 && i < nsegs; i++) {
 		bus_addr_t a, aend;
 		bus_size_t len = segs[i].ds_len;
