@@ -314,6 +314,10 @@ drm_rmmap_locked(struct drm_device *dev, struct drm_local_map *map)
 			retcode = drm_mtrr_del(0, map->offset, map->size,
 			    DRM_MTRR_WC);
 			DRM_DEBUG("mtrr_del = %d\n", retcode);
+
+#ifndef DRMDEBUG	/* Appease GCC 4.8.  [gsutre] */
+			(void)retcode;
+#endif
 		}
 		break;
 	case _DRM_AGP:
@@ -531,6 +535,10 @@ drm_addbufs_agp(struct drm_device *dev, struct drm_buf_desc *request)
 	DRM_DEBUG("alignment:  %d\n",  alignment);
 	DRM_DEBUG("page_order: %d\n",  page_order);
 	DRM_DEBUG("total:      %d\n",  total);
+
+#ifndef DRMDEBUG	/* Appease GCC 4.8.  [gsutre] */
+	(void)total;
+#endif
 
 	/* Make sure buffers are located in AGP memory that we own */
 
@@ -785,6 +793,10 @@ drm_addbufs_sg(struct drm_device *dev, struct drm_buf_desc *request)
 	DRM_DEBUG("alignment:  %d\n",  alignment);
 	DRM_DEBUG("page_order: %d\n",  page_order);
 	DRM_DEBUG("total:      %d\n",  total);
+
+#ifndef DRMDEBUG	/* Appease GCC 4.8.  [gsutre] */
+	(void)total;
+#endif
 
 	entry = &dma->bufs[order];
 

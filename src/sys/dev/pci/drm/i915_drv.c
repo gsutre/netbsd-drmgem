@@ -5267,17 +5267,21 @@ inteldrm_teardown_mchbar(struct inteldrm_softc *dev_priv,
     struct pci_attach_args *bpa, int disable, bus_space_handle_t mchbsh)
 #endif /* !defined(__NetBSD__) */
 {
+#if !defined(__NetBSD__)
 	u_int64_t	mchbar_addr;
 	pcireg_t	tmp, low, high = 0;
+#else /* !defined(__NetBSD__) */
+	pcireg_t	tmp;
+#endif /* !defined(__NetBSD__) */
 	int		reg = IS_I965G(dev_priv) ? MCHBAR_I965 : MCHBAR_I915;
 
 	switch(disable) {
 	case 2:
+#if !defined(__NetBSD__)
 		if (IS_I965G(dev_priv))
 			high = pci_conf_read(bpa->pa_pc, bpa->pa_tag, reg + 4);
 		low = pci_conf_read(bpa->pa_pc, bpa->pa_tag, reg);
 		mchbar_addr = ((u_int64_t)high << 32) | low;
-#if !defined(__NetBSD__)
 		if (bpa->pa_memex)
 			extent_free(bpa->pa_memex, mchbar_addr, MCHBAR_SIZE, 0);
 #else /* !defined(__NetBSD__) */
