@@ -1,4 +1,4 @@
-# $NetBSD: GENERIC,v 1.1099 2014/01/26 19:16:16 dsl Exp $
+# $NetBSD: GENERIC,v 1.1101 2014/03/24 14:15:38 szptvlfn Exp $
 #
 # GENERIC machine description file
 #
@@ -22,7 +22,7 @@ include 	"arch/i386/conf/std.i386"
 
 options 	INCLUDE_CONFIG_FILE	# embed config file in kernel binary
 
-#ident 		"GENERIC-$Revision: 1.1099 $"
+#ident 		"GENERIC-$Revision: 1.1101 $"
 
 maxusers	64		# estimated number of users
 
@@ -113,7 +113,7 @@ options 	DIAGNOSTIC	# expensive kernel consistency checks
 #options 	LOCKDEBUG	# expensive locking checks/support
 #options 	KMEMSTATS	# kernel memory statistics (vmstat -m)
 options 	DDB		# in-kernel debugger
-#options 	DDB_ONPANIC=1	# see also sysctl(8): `ddb.onpanic'
+#options 	DDB_ONPANIC=1	# see also sysctl(7): `ddb.onpanic'
 options 	DDB_HISTORY_SIZE=512	# enable history editing in DDB
 #options 	DDB_VERBOSE_HELP
 #options 	KGDB		# remote debugger
@@ -1340,11 +1340,13 @@ sbp*	at ieee1394if? euihi ? euilo ?	# SCSI over IEEE1394
 
 # PCI SD/MMC controller
 sdhc*	at pci?				# SD Host Controller
+rtsx*	at pci?				# Realtek RTS5209/RTS5229 Card Reader
 
 # CardBus SD/MMC controller
 sdhc*	at cardbus? function ?		# SD Host Controller
 
 sdmmc*	at sdhc?			# SD/MMC bus
+sdmmc*	at rtsx?			# SD/MMC bus
 ld*	at sdmmc?
 
 
