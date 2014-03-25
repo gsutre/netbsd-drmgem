@@ -5,8 +5,7 @@
 LIB=	drm_intel
 .PATH: ${X11SRCDIR.drm}/intel
 
-SRCS=	intel_bufmgr.c intel_bufmgr_fake.c intel_bufmgr_gem.c \
-	intel_decode.c mm.c
+SRCS=	intel_bufmgr.c intel_bufmgr_fake.c intel_bufmgr_gem.c mm.c
 
 CFLAGS+=	-std=c99
 

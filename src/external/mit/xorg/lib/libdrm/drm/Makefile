@@ -7,7 +7,6 @@
 .PATH:	${NETBSDSRCDIR}/sys/dev/pci/drm
 
 INCS=	drm.h \
-	drm_fourcc.h \
 	drm_mode.h \
 	drm_sarea.h \
 	i915_drm.h
