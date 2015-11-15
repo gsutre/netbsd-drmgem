@@ -1,3 +1,7 @@
+Important notice: This port is obsolete.  NetBSD now includes support for modern
+Intel and Radeon devices on x86 (since NetBSD 7.0).
+
+
 +------------------------------------------------------------------------------+
 |             Porting DRM/GEM from OpenBSD to NetBSD (Intel only)              |
 +------------------------------------------------------------------------------+
